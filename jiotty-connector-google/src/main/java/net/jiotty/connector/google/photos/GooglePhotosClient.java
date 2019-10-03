@@ -2,15 +2,24 @@ package net.jiotty.connector.google.photos;
 
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
 public interface GooglePhotosClient {
-    CompletableFuture<GoogleMediaItem> uploadMediaItem(Path file, Executor executor);
+    CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor);
+
+    default CompletableFuture<GoogleMediaItem> uploadMediaItem(Path file, Executor executor) {
+        return uploadMediaItem(Optional.empty(), file, executor);
+    }
 
     default CompletableFuture<GoogleMediaItem> uploadMediaItem(Path file) {
-        return uploadMediaItem(file, ForkJoinPool.commonPool());
+        return uploadMediaItem(Optional.empty(), file, ForkJoinPool.commonPool());
+    }
+
+    default CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file) {
+        return uploadMediaItem(albumId, file, ForkJoinPool.commonPool());
     }
 
     CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor);

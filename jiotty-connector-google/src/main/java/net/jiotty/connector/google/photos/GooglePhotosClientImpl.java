@@ -24,6 +24,7 @@ import java.lang.annotation.Target;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -50,7 +51,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     }
 
     @Override
-    public CompletableFuture<GoogleMediaItem> uploadMediaItem(Path file, Executor executor) {
+    public CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor) {
         return supplyAsync(() -> {
             logger.debug("Started uploading {}", file);
             String fileName = file.getFileName().toString();
@@ -69,8 +70,9 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             NewMediaItem newMediaItem = NewMediaItemFactory
                     .createNewMediaItem(uploadToken, fileName);
             List<NewMediaItem> newItems = of(newMediaItem);
-
-            List<NewMediaItemResult> newMediaItemResultsList = client.batchCreateMediaItems(newItems).getNewMediaItemResultsList();
+            List<NewMediaItemResult> newMediaItemResultsList = albumId
+                    .map(theAlbumId -> client.batchCreateMediaItems(theAlbumId, newItems))
+                    .orElseGet(() -> client.batchCreateMediaItems(newItems)).getNewMediaItemResultsList();
             checkState(newMediaItemResultsList.size() == 1,
                     "expected media item creation result list size 1, got: %s", newMediaItemResultsList);
             NewMediaItemResult newMediaItemResult = newMediaItemResultsList.get(0);
