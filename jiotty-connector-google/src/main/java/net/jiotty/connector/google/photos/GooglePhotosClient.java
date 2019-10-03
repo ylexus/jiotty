@@ -22,6 +22,7 @@ public interface GooglePhotosClient {
         return uploadMediaItem(albumId, file, ForkJoinPool.commonPool());
     }
 
+
     CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor);
 
     default CompletableFuture<GooglePhotosAlbum> createAlbum(String name) {
