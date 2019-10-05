@@ -2,17 +2,21 @@ package net.jiotty.connector.nest;
 
 import net.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.jiotty.common.inject.ExposedKeyModule;
+import net.jiotty.common.lang.TypedBuilder;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-// TODO use builder pattern in all jiotty modules
 public final class NestModule extends BaseLifecycleComponentModule implements ExposedKeyModule<NestThermostat> {
     private final String accessToken;
     private final String deviceId;
 
-    public NestModule(String accessToken, String deviceId) {
+    private NestModule(String accessToken, String deviceId) {
         this.accessToken = checkNotNull(accessToken);
         this.deviceId = checkNotNull(deviceId);
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     @Override
@@ -21,5 +25,25 @@ public final class NestModule extends BaseLifecycleComponentModule implements Ex
         bindConstant().annotatedWith(NestThermostatImpl.DeviceId.class).to(deviceId);
         bind(getExposedKey()).to(boundLifecycleComponent(NestThermostatImpl.class));
         expose(getExposedKey());
+    }
+
+    public static class Builder implements TypedBuilder<ExposedKeyModule<NestThermostat>> {
+        private String accessToken;
+        private String deviceId;
+
+        public Builder setAccessToken(String accessToken) {
+            this.accessToken = checkNotNull(accessToken);
+            return this;
+        }
+
+        public Builder setDeviceId(String deviceId) {
+            this.deviceId = checkNotNull(deviceId);
+            return this;
+        }
+
+        @Override
+        public ExposedKeyModule<NestThermostat> build() {
+            return new NestModule(accessToken, deviceId);
+        }
     }
 }

@@ -35,7 +35,7 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
     public synchronized void doStart() {
         try {
             device = new RM2Device(host, new Mac(macAddress));
-            checkState(device.auth(), "Unable to authenticate BroadLink device on [TODO]");
+            checkState(device.auth(), "Unable to authenticate BroadLink device on host %s, MAC %s", host, macAddress);
             logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
         } catch (IOException e) {
             throw new RuntimeException("Unable to initialize Broadlink device", e);

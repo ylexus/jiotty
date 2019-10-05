@@ -5,16 +5,16 @@ import net.jiotty.appliance.Bindings.ApplianceExecutor;
 import net.jiotty.common.async.SchedulingExecutor;
 import net.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.jiotty.common.inject.ExposedKeyModule;
+import net.jiotty.common.inject.SpecifiedAnnotation;
 
 import javax.inject.Singleton;
-import java.lang.annotation.Annotation;
 import java.util.concurrent.Executor;
 
 public abstract class ApplianceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Appliance> {
     private final Key<Appliance> exposedKey;
 
-    public ApplianceModule(Class<? extends Annotation> targetAnnotation) {
-        exposedKey = Key.get(Appliance.class, targetAnnotation);
+    public ApplianceModule(SpecifiedAnnotation targetAnnotation) {
+        exposedKey = targetAnnotation.specify(Appliance.class);
     }
 
     @Override

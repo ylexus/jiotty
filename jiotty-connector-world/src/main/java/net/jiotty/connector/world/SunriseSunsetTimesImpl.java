@@ -1,6 +1,5 @@
 package net.jiotty.connector.world;
 
-import net.jiotty.common.inject.BaseLifecycleComponent;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 
@@ -12,7 +11,7 @@ import static net.jiotty.common.rest.RestClients.call;
 import static net.jiotty.common.rest.RestClients.newClient;
 import static okhttp3.HttpUrl.parse;
 
-final class SunriseSunsetTimesImpl extends BaseLifecycleComponent implements SunriseSunsetTimes {
+final class SunriseSunsetTimesImpl implements SunriseSunsetTimes {
     private static final String API_URL = "https://api.sunrise-sunset.org/json";
     private final OkHttpClient client;
 
