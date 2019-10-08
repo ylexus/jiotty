@@ -5,7 +5,7 @@ import com.google.inject.AbstractModule;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 final class ApplicationSupportModule extends AbstractModule {
-    private ApplicationLifecycleControl applicationLifecycleControl;
+    private final ApplicationLifecycleControl applicationLifecycleControl;
 
     ApplicationSupportModule(ApplicationLifecycleControl applicationLifecycleControl) {
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);

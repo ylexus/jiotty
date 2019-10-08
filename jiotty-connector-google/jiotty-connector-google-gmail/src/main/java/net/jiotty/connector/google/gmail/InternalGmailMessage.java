@@ -32,7 +32,7 @@ final class InternalGmailMessage implements GmailMessage {
     private final Gmail gmail;
     private final InternalGmailObjectFactory internalGmailObjectFactory;
     private final Message message;
-    private transient String asString;
+    private String asString;
 
     @Inject
     InternalGmailMessage(@GmailService Gmail gmail,
@@ -53,7 +53,7 @@ final class InternalGmailMessage implements GmailMessage {
     }
 
     @Override
-    public Collection<GmailMessageAttachment> getAttachments(Predicate<String> mimeTypePredicate) {
+    public Collection<GmailMessageAttachment> getAttachments(Predicate<? super String> mimeTypePredicate) {
         return message.getPayload().getParts().stream()
                 .filter(messagePart -> mimeTypePredicate.test(messagePart.getMimeType()))
                 .map(messagePart -> internalGmailObjectFactory.createAttachment(message, messagePart))
@@ -99,7 +99,7 @@ final class InternalGmailMessage implements GmailMessage {
     }
 
     @Override
-    final public String toString() {
+    public String toString() {
         if (asString == null) {
             asString = message.getPayload().getHeaders().stream()
                     .filter(messagePartHeader -> TO_STRING_HEADERS.contains(messagePartHeader.getName()))
@@ -109,12 +109,12 @@ final class InternalGmailMessage implements GmailMessage {
         return asString;
     }
 
-    private List<String> toListOfIds(Collection<GmailLabel> labelsToAdd) {
+    private static List<String> toListOfIds(Collection<GmailLabel> labelsToAdd) {
         return labelsToAdd.stream().map(gmailLabel -> ((InternalGmailLabel) gmailLabel).getId()).collect(toList());
     }
 
     private CompletableFuture<Collection<GmailLabel>> listLabels() {
-        return supplyAsync(() -> getAsUnchecked(() -> gmail.users().labels().list(Constants.ME).execute()))
+        return supplyAsync(() -> getAsUnchecked(() -> gmail.users().labels().list(ME).execute()))
                 .thenApply(listLabelsResponse -> listLabelsResponse.getLabels().stream()
                         .map(InternalGmailLabel::new)
                         .collect(toImmutableList()));
@@ -122,7 +122,7 @@ final class InternalGmailMessage implements GmailMessage {
 
     private CompletableFuture<GmailLabel> createLabel(String labelName) {
         return supplyAsync(() -> getAsUnchecked(() -> gmail.users().labels().create(
-                Constants.ME,
+                ME,
                 new Label()
                         .setName(labelName)
                         .setLabelListVisibility("labelShow")

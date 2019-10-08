@@ -18,9 +18,9 @@ final class SparkRestServer extends BaseLifecycleComponent implements RestServer
     }
 
     @Override
-    public void post(String path, Route route) {
+    public void post(String url, Route route) {
         checkStarted();
-        http.post(path, route);
+        http.post(url, route);
     }
 
     @Override

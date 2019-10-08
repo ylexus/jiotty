@@ -2,7 +2,7 @@
 Jiotty is a library of java components aimed at home automation (IoT) enthusiasts who prefer to solder, assemble and code it all themselves as opposed to using 
 one of existing automation hub solutions. This gives them 100% flexibility in all the automation tasks.
 # Structure
-Jiotty consists of a number of small independent modules that typically allow communication with a Thing, for example, Google Drive, 
+Jiotty consists of a number of small independent modules. Each module typically allows communication with a single Thing, for example, Google Drive, 
 a thermostat or a smart plug.
 # Design principles
 I am a fan of Google Guice as a dependency injection framework, a clearly visible point of entry to every API and good
@@ -28,6 +28,9 @@ module
 ```
 
 and then on application termination call `stop()` on the same components in reverse order. Refer to the source code of `Application` as an example.
+
+# Getting started
+TODO when deployed to Central
 
 # Quality
 At the moment most of the code is used in my home automation scenarios, so I have good confidence in its quality. 

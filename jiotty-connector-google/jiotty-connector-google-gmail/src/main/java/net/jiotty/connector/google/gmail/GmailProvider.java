@@ -5,7 +5,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.common.collect.ImmutableList;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -37,10 +37,10 @@ final class GmailProvider implements Provider<Gmail> {
     static Gmail getService(GoogleApiSettings settings) {
         return serviceBySettings.computeIfAbsent(settings, googleApiSettings -> getAsUnchecked(() -> {
             // Build a new authorized API client service.
-            final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-            return new Gmail.Builder(HTTP_TRANSPORT,
+            NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+            return new Gmail.Builder(httpTransport,
                     JacksonFactory.getDefaultInstance(),
-                    authorize(HTTP_TRANSPORT, "gmail", googleApiSettings.credentialsUrl(), SCOPES).getCredential())
+                    authorize(httpTransport, "gmail", googleApiSettings.credentialsUrl(), SCOPES).getCredential())
                     .setApplicationName(googleApiSettings.applicationName())
                     .build();
         }));

@@ -19,9 +19,6 @@ import static net.jiotty.connector.webclient.Web.executeWebScript;
 final class FieldglassTimeSheetsClientImpl implements FieldglassTimeSheetsClient {
     private static final String EXPECTED_CSV_MIME_TYPE = "application/msexcel";
 
-    FieldglassTimeSheetsClientImpl() {
-    }
-
     @Override
     public CompletableFuture<List<TimeSheet>> getTimeSheetTable(String username, String password) {
         return CompletableFuture.supplyAsync(() -> executeWebScript(webClient -> {

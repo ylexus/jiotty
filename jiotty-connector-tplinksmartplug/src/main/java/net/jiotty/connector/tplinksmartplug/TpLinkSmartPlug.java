@@ -110,7 +110,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                                 .toString()))
                         .build(),
                 JsonNode.class)
-                .thenApply(this::verifyResponse)
+                .thenApply(TpLinkSmartPlug::verifyResponse)
                 .thenApply(resultJsonNode -> {
                     logger.info("Obtained token");
                     return getRequiredNodeString(resultJsonNode, "token");
@@ -143,10 +143,10 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                                 .toString()))
                         .build(),
                 JsonNode.class)
-                .thenAccept(this::verifyResponse);
+                .thenAccept(TpLinkSmartPlug::verifyResponse);
     }
 
-    private JsonNode verifyResponse(JsonNode response) {
+    private static JsonNode verifyResponse(JsonNode response) {
         /*
         {
             "error_code": 0,

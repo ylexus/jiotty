@@ -6,7 +6,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.common.collect.ImmutableList;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -28,10 +28,10 @@ public final class GoogleDriveProvider implements Provider<Drive> {
     public Drive get() {
         return getAsUnchecked(() -> {
             // Build a new authorized API client service.
-            final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-            return new Drive.Builder(HTTP_TRANSPORT,
+            NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+            return new Drive.Builder(httpTransport,
                     JacksonFactory.getDefaultInstance(),
-                    authorize(HTTP_TRANSPORT, "gdrive", settings.credentialsUrl(), ImmutableList.of(DriveScopes.DRIVE)).getCredential())
+                    authorize(httpTransport, "gdrive", settings.credentialsUrl(), ImmutableList.of(DriveScopes.DRIVE)).getCredential())
                     .setApplicationName(settings.applicationName())
                     .build();
         });

@@ -29,6 +29,7 @@ public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
         this.name = checkNotNull(name);
         this.fileData = fileData;
         if (parent != null) {
+            //noinspection ThisEscapedInObjectConstruction OK in this particular case
             parent.childrenByName.put(name, this);
         }
     }

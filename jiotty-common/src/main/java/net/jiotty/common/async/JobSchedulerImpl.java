@@ -29,6 +29,7 @@ final class JobSchedulerImpl extends BaseLifecycleComponent implements JobSchedu
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
     }
 
+    @SuppressWarnings("ReturnOfInnerClass") // we are a singleton
     @Override
     public Closeable monthly(String jobName, int dayOfMonth, Runnable task) {
         checkStarted();
@@ -66,9 +67,9 @@ final class JobSchedulerImpl extends BaseLifecycleComponent implements JobSchedu
         private void scheduleNext() {
             LocalDateTime dateTimeNow = currentDateTimeProvider.currentDateTime();
             LocalDate dateNow = dateTimeNow.toLocalDate();
-            LocalDateTime nextDateTime = dateNow.plusMonths(1).withDayOfMonth(this.dayOfMonth).atTime(3, 0, 0);
+            LocalDateTime nextDateTime = dateNow.plusMonths(1).withDayOfMonth(dayOfMonth).atTime(3, 0, 0);
 
-            logger.info("Next [{}] job scheduled for {}", this.jobName, nextDateTime);
+            logger.info("Next [{}] job scheduled for {}", jobName, nextDateTime);
             scheduleHandle = schedulingExecutor.schedule(Duration.between(dateTimeNow, nextDateTime), this::trigger);
         }
 

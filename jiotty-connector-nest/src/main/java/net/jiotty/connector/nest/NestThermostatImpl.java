@@ -28,8 +28,8 @@ final class NestThermostatImpl extends BaseLifecycleComponent implements NestThe
 
     @Inject
     NestThermostatImpl(String accessToken, String deviceId) {
-        this.authorization = "Bearer " + accessToken;
-        this.client = newClient(builder -> builder
+        authorization = "Bearer " + accessToken;
+        client = newClient(builder -> builder
                 .authenticator((route, response) -> response.request().newBuilder()
                         .header(AUTHORIZATION, authorization)
                         .build())

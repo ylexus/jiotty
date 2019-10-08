@@ -23,6 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.file.Files.*;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static net.jiotty.common.lang.Locks.inLock;
@@ -30,7 +31,7 @@ import static net.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class VarStoreImpl implements VarStore {
-    private final static ObjectMapper mapper = new ObjectMapper()
+    private static final ObjectMapper mapper = new ObjectMapper()
             .registerModule(new Jdk8Module())
             .registerModule(new JavaTimeModule())
             .registerModule(new GuavaModule())
@@ -38,10 +39,12 @@ final class VarStoreImpl implements VarStore {
 
     private final Path storeFile;
     private final Lock lock = new ReentrantLock();
+    private final Path storeFileTmp;
 
     @Inject
     VarStoreImpl(@AppName String applicationName) {
         storeFile = Paths.get(System.getProperty("user.home"), "." + applicationName, "data.json");
+        storeFileTmp = storeFile.resolveSibling("data.json.tmp");
     }
 
     @Override
@@ -50,7 +53,8 @@ final class VarStoreImpl implements VarStore {
             ObjectNode configNode = readConfig();
 
             configNode.set(key, mapper.valueToTree(value));
-            mapper.writeValue(storeFile.toFile(), configNode);
+            mapper.writeValue(storeFileTmp.toFile(), configNode);
+            move(storeFileTmp, storeFile, REPLACE_EXISTING);
         }));
     }
 

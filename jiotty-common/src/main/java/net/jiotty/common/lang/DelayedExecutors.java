@@ -19,9 +19,11 @@ final class DelayedExecutors {
         static final ScheduledThreadPoolExecutor delayer;
 
         static {
-            (delayer = new ScheduledThreadPoolExecutor(
-                    1, new DaemonThreadFactory())).
-                    setRemoveOnCancelPolicy(true);
+            delayer = new ScheduledThreadPoolExecutor(1, new DaemonThreadFactory());
+            delayer.setRemoveOnCancelPolicy(true);
+        }
+
+        private Delayer() {
         }
 
         static void delay(Runnable command, long delay, TimeUnit unit) {
@@ -39,12 +41,10 @@ final class DelayedExecutors {
         }
     }
 
-    // Little class-ified lambdas to better support monitoring
-
-    static final class DelayedExecutor implements Executor {
-        final long delay;
-        final TimeUnit unit;
-        final Executor executor;
+    private static final class DelayedExecutor implements Executor {
+        private final long delay;
+        private final TimeUnit unit;
+        private final Executor executor;
 
         DelayedExecutor(long delay, TimeUnit unit, Executor executor) {
             this.delay = delay;
@@ -53,17 +53,17 @@ final class DelayedExecutors {
         }
 
         @Override
-        public void execute(@Nonnull Runnable r) {
-            Delayer.delay(new TaskSubmitter(executor, r), delay, unit);
+        public void execute(@Nonnull Runnable command) {
+            Delayer.delay(new TaskSubmitter(executor, command), delay, unit);
         }
     }
 
     /**
      * Action to submit user task
      */
-    static final class TaskSubmitter implements Runnable {
-        final Executor executor;
-        final Runnable action;
+    private static final class TaskSubmitter implements Runnable {
+        private final Executor executor;
+        private final Runnable action;
 
         TaskSubmitter(Executor executor, Runnable action) {
             this.executor = executor;

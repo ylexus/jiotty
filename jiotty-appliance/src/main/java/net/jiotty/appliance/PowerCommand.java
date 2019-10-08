@@ -13,6 +13,7 @@ public enum PowerCommand implements Command {
                 Optional.empty();
     }
 
+    @SuppressWarnings("ClassNameSameAsAncestorName") // by design
     public interface Visitor<T> extends Command.Visitor<T> {
         T visit(PowerCommand command);
     }

@@ -16,7 +16,7 @@ public interface GoogleSpreadsheet {
 
     CompletableFuture<byte[]> export(String sheetName);
 
-    static Object singleCell(List<List<Object>> lists) {
+    static Object singleCell(List<? extends List<Object>> lists) {
         return getOnlyElement(getOnlyElement(lists));
     }
 }

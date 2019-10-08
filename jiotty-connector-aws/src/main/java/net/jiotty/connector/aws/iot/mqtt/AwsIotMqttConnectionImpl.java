@@ -42,6 +42,7 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
     private final Duration timeout;
     private final AWSIotMqttClient client;
     private final Set<String> subscribedTopics = Sets.newConcurrentHashSet();
+    private final Object subscriptionLock = new Object();
 
     @Inject
     AwsIotMqttConnectionImpl(@ClientEndpoint String clientEndpoint,
@@ -75,61 +76,65 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
     }
 
     @Override
-    public synchronized <T> CompletableFuture<Closeable> subscribe(String topic, Class<T> payloadType, BiConsumer<String, T> callback) {
-        checkStarted();
-        checkState(subscribedTopics.add(topic), "already subscribed to topic %s", topic);
-        CompletableFuture<Closeable> result = new CompletableFuture<>();
-        try {
-            client.subscribe(new AWSIotTopic(topic, AWSIotQos.QOS1) {
-                @Override
-                public void onSuccess() {
-                    logger.info("Subscribed to {}", topic);
-                    result.complete(idempotent(() -> asUnchecked(() -> {
-                        try {
-                            client.unsubscribe(topic, timeout.toMillis());
-                        } finally {
-                            subscribedTopics.remove(topic);
-                        }
-                    })));
-                }
-
-                @Override
-                public void onTimeout() {
-                    onSubscriptionFailure("timed out");
-                }
-
-                @Override
-                public void onFailure() {
-                    onSubscriptionFailure("failed");
-                }
-
-                @Override
-                public void onMessage(AWSIotMessage message) {
-                    String stringPayload = message.getStringPayload();
-                    T payload = null;
-                    try {
-                        payload = Json.parse(stringPayload, payloadType);
-                    } catch (RuntimeException e) {
-                        logger.error("Unable to parse payload as {}: {}", payloadType, stringPayload, e);
+    public <T> CompletableFuture<Closeable> subscribe(String topic, Class<T> payloadType, BiConsumer<? super String, ? super T> callback) {
+        synchronized (subscriptionLock) {
+            checkStarted();
+            checkState(subscribedTopics.add(topic), "already subscribed to topic %s", topic);
+            CompletableFuture<Closeable> result = new CompletableFuture<>();
+            try {
+                client.subscribe(new AWSIotTopic(topic, AWSIotQos.QOS1) {
+                    @SuppressWarnings("AmbiguousFieldAccess") // it's one and the same
+                    @Override
+                    public void onSuccess() {
+                        logger.info("Subscribed to {}", topic);
+                        result.complete(idempotent(() -> asUnchecked(() -> {
+                            try {
+                                client.unsubscribe(topic, timeout.toMillis());
+                            } finally {
+                                subscribedTopics.remove(topic);
+                            }
+                        })));
                     }
-                    if (payload != null) {
+
+                    @Override
+                    public void onTimeout() {
+                        onSubscriptionFailure("timed out");
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        onSubscriptionFailure("failed");
+                    }
+
+                    @Override
+                    public void onMessage(AWSIotMessage message) {
+                        String stringPayload = message.getStringPayload();
+                        T parsedPayload = null;
                         try {
-                            callback.accept(message.getTopic(), payload);
+                            parsedPayload = Json.parse(stringPayload, payloadType);
                         } catch (RuntimeException e) {
-                            logger.error("Message handler failure", e);
+                            logger.error("Unable to parse payload as {}: {}", payloadType, stringPayload, e);
+                        }
+                        if (parsedPayload != null) {
+                            try {
+                                callback.accept(message.getTopic(), parsedPayload);
+                            } catch (RuntimeException e) {
+                                logger.error("Message handler failure", e);
+                            }
                         }
                     }
-                }
 
-                private void onSubscriptionFailure(String reason) {
-                    subscribedTopics.remove(topic);
-                    result.completeExceptionally(new RuntimeException("Subscription " + reason));
-                }
-            });
-        } catch (AWSIotException e) {
-            result.completeExceptionally(e);
+                    @SuppressWarnings("AmbiguousFieldAccess") // it's one and the same
+                    private void onSubscriptionFailure(String reason) {
+                        subscribedTopics.remove(topic);
+                        result.completeExceptionally(new RuntimeException("Subscription " + reason));
+                    }
+                });
+            } catch (AWSIotException e) {
+                result.completeExceptionally(e);
+            }
+            return result;
         }
-        return result;
     }
 
     @Override

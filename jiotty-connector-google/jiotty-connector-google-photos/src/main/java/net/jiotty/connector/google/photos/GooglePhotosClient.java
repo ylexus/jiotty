@@ -9,6 +9,7 @@ import java.util.concurrent.ForkJoinPool;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType") // it's quite useful in this case
 public interface GooglePhotosClient {
+    // TODO document MediaItemCreationFailedException here
     CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor);
 
     default CompletableFuture<GoogleMediaItem> uploadMediaItem(Path file, Executor executor) {

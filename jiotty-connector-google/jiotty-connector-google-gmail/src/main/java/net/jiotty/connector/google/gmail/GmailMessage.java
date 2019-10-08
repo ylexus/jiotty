@@ -16,7 +16,7 @@ public interface GmailMessage {
         return getHeader(name).orElseThrow(() -> new IllegalStateException("No header '" + name + "' in the message"));
     }
 
-    Collection<GmailMessageAttachment> getAttachments(Predicate<String> mimeTypePredicate);
+    Collection<GmailMessageAttachment> getAttachments(Predicate<? super String> mimeTypePredicate);
 
     CompletableFuture<Void> applyLabels(LabelsChange labelsChange);
 

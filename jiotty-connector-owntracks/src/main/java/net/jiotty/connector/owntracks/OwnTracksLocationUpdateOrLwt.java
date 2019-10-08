@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.Optional;
 
+@SuppressWarnings("ClassReferencesSubclass") // by design
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "_type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = OwnTrackLocationUpdate.class, name = "location"),
@@ -12,6 +13,7 @@ import java.util.Optional;
 })
 interface OwnTracksLocationUpdateOrLwt {
     default Optional<OwnTrackLocationUpdate> asLocationUpdate() {
+        //noinspection InstanceofThis by design
         return this instanceof OwnTrackLocationUpdate ? Optional.of((OwnTrackLocationUpdate) this) : Optional.empty();
     }
 }

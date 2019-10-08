@@ -3,7 +3,7 @@ package net.jiotty.common.lang;
 import java.util.concurrent.Executor;
 
 public final class DispatchingConflatingRunnable implements Runnable {
-    private final static Object VALUE = new Object();
+    private static final Object VALUE = new Object();
     private final DispatchingConflatingConsumer<Object> conflatingConsumer;
 
     public DispatchingConflatingRunnable(Executor executor, Runnable delegate) {

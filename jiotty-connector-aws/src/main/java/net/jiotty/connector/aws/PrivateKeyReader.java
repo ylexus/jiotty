@@ -38,15 +38,8 @@ import java.security.spec.RSAPrivateCrtKeySpec;
  * It can read PEM files with PKCS#8 or PKCS#1 encodings. It doesn't support
  * encrypted PEM files.
  */
+@SuppressWarnings("ALL") // copied form Amazon example, not coded to our standards
 public class PrivateKeyReader {
-
-    // Private key file using PKCS #1 encoding
-    public static final String P1_BEGIN_MARKER = "-----BEGIN RSA PRIVATE KEY"; //$NON-NLS-1$
-    public static final String P1_END_MARKER = "-----END RSA PRIVATE KEY"; //$NON-NLS-1$
-
-    // Private key file using PKCS #8 encoding
-    public static final String P8_BEGIN_MARKER = "-----BEGIN PRIVATE KEY"; //$NON-NLS-1$
-    public static final String P8_END_MARKER = "-----END PRIVATE KEY"; //$NON-NLS-1$
 
     /**
      * Get a Private Key for the file.
@@ -93,38 +86,7 @@ public class PrivateKeyReader {
     }
 
     /**
-     * Get a RSA Private Key from InputStream.
-     *
-     * @param fileName file name
-     * @return Private key
-     * @throws IOException              IOException resulted from invalid file IO
-     * @throws GeneralSecurityException GeneralSecurityException resulted from invalid key format
-     */
-    static PrivateKey getPrivateKey(String fileName) throws IOException, GeneralSecurityException {
-        try (InputStream stream = new FileInputStream(fileName)) {
-            return getPrivateKey(stream, null);
-        }
-    }
-
-    /**
-     * Get a Private Key from InputStream.
-     *
-     * @param fileName  file name
-     * @param algorithm the name of the key algorithm, for example "RSA" or "EC"
-     * @return Private key
-     * @throws IOException              IOException resulted from invalid file IO
-     * @throws GeneralSecurityException GeneralSecurityException resulted from invalid key data
-     */
-    static PrivateKey getPrivateKey(String fileName, String algorithm) throws IOException,
-            GeneralSecurityException {
-        try (InputStream stream = new FileInputStream(fileName)) {
-            return getPrivateKey(stream, algorithm);
-        }
-    }
-
-    /**
      * Convert PKCS#1 encoded private key into RSAPrivateCrtKeySpec.
-     * <p>
      * <p/>
      * The ASN.1 syntax for the private key with CRT is
      *
@@ -180,38 +142,19 @@ public class PrivateKeyReader {
  * A bare-minimum ASN.1 DER decoder, just having enough functions to decode
  * PKCS#1 private keys. Especially, it doesn't handle explicitly tagged types
  * with an outer tag.
- * <p>
  * <p/>
  * This parser can only handle one layer. To parse nested constructs, get a new
  * parser for each layer using <code>Asn1Object.getParser()</code>.
- * <p>
  * <p/>
  * There are many DER decoders in JRE but using them will tie this program to a
  * specific JCE/JVM.
  *
  * @author zhang
  */
+@SuppressWarnings("ALL")
+        // Amazon sources not matching our style
 class DerParser {
 
-    // Classes
-    public final static int UNIVERSAL = 0x00;
-    public final static int APPLICATION = 0x40;
-    public final static int CONTEXT = 0x80;
-    public final static int PRIVATE = 0xC0;
-    // Tag and data types
-    public final static int ANY = 0x00;
-    public final static int BOOLEAN = 0x01;
-    public final static int BIT_STRING = 0x03;
-    public final static int OCTET_STRING = 0x04;
-    public final static int NULL = 0x05;
-    public final static int OBJECT_IDENTIFIER = 0x06;
-    public final static int REAL = 0x09;
-    public final static int ENUMERATED = 0x0a;
-    public final static int RELATIVE_OID = 0x0d;
-    public final static int SET = 0x11;
-    public final static int T61_STRING = 0x14;
-    public final static int UTC_TIME = 0x17;
-    public final static int GENERALIZED_TIME = 0x18;
     // Constructed Flag
     final static int CONSTRUCTED = 0x20;
     final static int INTEGER = 0x02;
@@ -321,6 +264,8 @@ class DerParser {
  *
  * @author zhang
  */
+@SuppressWarnings("ALL")
+        // Amazaon sources not matching our style
 class Asn1Object {
 
     private final int type;
@@ -363,55 +308,6 @@ class Asn1Object {
 
     public int getType() {
         return type;
-    }
-
-    public int getLength() {
-        return length;
-    }
-
-    public byte[] getValue() {
-        return value;
-    }
-
-    /**
-     * Get value as string. Most strings are treated as Latin-1.
-     *
-     * @return Java string
-     * @throws IOException IOException resulted from invalid file IO
-     */
-    public String getString() throws IOException {
-
-        String encoding;
-
-        switch (type) {
-
-            // Not all are Latin-1 but it's the closest thing
-            case DerParser.NUMERIC_STRING:
-            case DerParser.PRINTABLE_STRING:
-            case DerParser.VIDEOTEX_STRING:
-            case DerParser.IA5_STRING:
-            case DerParser.GRAPHIC_STRING:
-            case DerParser.ISO646_STRING:
-            case DerParser.GENERAL_STRING:
-                encoding = "ISO-8859-1"; //$NON-NLS-1$
-                break;
-
-            case DerParser.BMP_STRING:
-                encoding = "UTF-16BE"; //$NON-NLS-1$
-                break;
-
-            case DerParser.UTF8_STRING:
-                encoding = "UTF-8"; //$NON-NLS-1$
-                break;
-
-            case DerParser.UNIVERSAL_STRING:
-                throw new IOException("Invalid DER: can't handle UCS-4 string"); //$NON-NLS-1$
-
-            default:
-                throw new IOException("Invalid DER: object is not a string"); //$NON-NLS-1$
-        }
-
-        return new String(value, encoding);
     }
 
     /**

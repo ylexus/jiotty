@@ -35,9 +35,9 @@ public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleCom
     protected void configure() {
         install(new FactoryModuleBuilder()
                 .implement(asReifiedTypeLiteral(new TypeToken<Consumer<T>>() {}), asReifiedTypeLiteral(new TypeToken<ThresholdThrottlingConsumer<T>>() {}))
-                .build(getExposedKey()));
+                .build(exposedKey));
 
-        expose(getExposedKey());
+        expose(exposedKey);
     }
 
     private <U> TypeLiteral<U> asReifiedTypeLiteral(TypeToken<U> typeToken) {
@@ -49,6 +49,7 @@ public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleCom
             return setValueType(TypeToken.of(valueType));
         }
 
+        @SuppressWarnings("MethodMayBeStatic")
         private <T> Builder<T> setValueType(TypeToken<T> valueType) {
             return new Builder<>(valueType);
         }

@@ -2,8 +2,8 @@ package net.jiotty.connector.google.drive;
 
 import com.google.api.services.drive.Drive;
 import net.jiotty.common.inject.ExposedKeyModule;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 import net.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
 
 import javax.inject.Singleton;
 

@@ -49,27 +49,27 @@ final class OwnTracksImpl implements OwnTracks {
         });
     }
 
-    private DeviceKey parseTopic(String theTopic) {
+    private static DeviceKey parseTopic(String theTopic) {
         String[] topicParts = theTopic.split("/");
         checkState(topicParts.length >= 3,
                 "owntracks topic format unrecognized: %s, should have at least 3 parts but had %s", theTopic, topicParts.length);
         return DeviceKey.of(topicParts[1], topicParts[2]);
     }
 
-    private Consumer<OwnTracksUpdate<OwnTracksLocationUpdateOrLwt>> lwtIgnored(Consumer<OwnTracksUpdate<OwnTrackLocationUpdate>> handler) {
+    private static Consumer<OwnTracksUpdate<OwnTracksLocationUpdateOrLwt>> lwtIgnored(Consumer<OwnTracksUpdate<OwnTrackLocationUpdate>> handler) {
         return updateOrLwt -> updateOrLwt.payload().asLocationUpdate().ifPresent(ownTrackLocationUpdate ->
                 handler.accept(OwnTracksUpdate.of(updateOrLwt.deviceKey(), ownTrackLocationUpdate)));
     }
 
-    private <T extends HasFixTimestamp> Consumer<OwnTracksUpdate<T>> orderProtected(Consumer<OwnTracksUpdate<T>> delegate) {
+    private static <T extends HasFixTimestamp> Consumer<OwnTracksUpdate<T>> orderProtected(Consumer<OwnTracksUpdate<T>> delegate) {
         return new OrderProtectingConsumer<>(delegate);
     }
 
-    private <T> Consumer<T> dispatched(Consumer<T> delegate, Executor executor) {
+    private static <T> Consumer<T> dispatched(Consumer<T> delegate, Executor executor) {
         return new DispatchedConsumer<>(delegate, executor);
     }
 
-    private <T> Consumer<OwnTracksJsonMessage> parsed(Consumer<OwnTracksUpdate<T>> handler, Class<T> type) {
+    private static <T> Consumer<OwnTracksJsonMessage> parsed(Consumer<OwnTracksUpdate<T>> handler, Class<T> type) {
         return ownTracksJsonMessage -> handler.accept(OwnTracksUpdate.of(ownTracksJsonMessage.deviceKey(), Json.parse(ownTracksJsonMessage.payload(), type)));
     }
 

@@ -82,7 +82,7 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
         closeIfNotNull(executor);
     }
 
-    private Runnable executedBy(Runnable action, Executor executor) {
+    private static Runnable executedBy(Runnable action, Executor executor) {
         return () -> executor.execute(action);
     }
 
@@ -111,7 +111,7 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
         sunriseSunsetTimes.getCurrentSunriseSunset(coordinates)
                 .whenCompleteAsync((sunriseSunsetData, e) -> {
                     if (e != null) {
-                        logger.error("Unable to get current SS times, will retry in 5 mins", e);
+                        logger.error("Unable to get current SS times, will retry in 5 minutes", e);
                         executor.schedule(Duration.ofMinutes(5), this::onTimesRefresh);
                     } else {
                         logger.debug("Refreshed SS data: {}", sunriseSunsetData);

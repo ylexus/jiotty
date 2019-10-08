@@ -10,10 +10,13 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import static net.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 public final class Json {
-    private final static ObjectMapper mapper = new ObjectMapper()
+    private static final ObjectMapper mapper = new ObjectMapper()
             .registerModule(new Jdk8Module())
             .registerModule(new JavaTimeModule())
             .registerModule(new GuavaModule());
+
+    private Json() {
+    }
 
     public static JsonNode parse(String json) {
         return getAsUnchecked(() -> mapper.readTree(json));

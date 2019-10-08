@@ -8,8 +8,8 @@ public final class Optionals {
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType") // as designed
-    public static <T> OrElse ifPresent(Optional<T> optional,
-                                       Consumer<T> presentValueConsumer) {
+    public static <T> OrElse ifPresent(Optional<? extends T> optional,
+                                       Consumer<? super T> presentValueConsumer) {
         if (optional.isPresent()) {
             presentValueConsumer.accept(optional.get());
             return action -> {};

@@ -2,7 +2,7 @@ package net.jiotty.connector.google.gmail;
 
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.model.Message;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
@@ -31,10 +31,11 @@ import static net.jiotty.connector.google.gmail.Constants.ME;
 @Plugin(name = "GmailAppender",
         category = Core.CATEGORY_NAME,
         elementType = Appender.ELEMENT_TYPE)
-public class GmailAppender extends AbstractAppender {
+public final class GmailAppender extends AbstractAppender {
     private final String emailAddress;
-    private GoogleApiSettings googleApiSettings;
+    private final GoogleApiSettings googleApiSettings;
 
+    @SuppressWarnings("ConstructorWithTooManyParameters")
     private GmailAppender(String name,
                           Filter filter,
                           Layout<? extends Serializable> layout,
@@ -51,6 +52,7 @@ public class GmailAppender extends AbstractAppender {
         googleApiSettings = GoogleApiSettings.of(applicationName, credentialsUrl);
     }
 
+    @SuppressWarnings({"BooleanParameter", "MethodWithTooManyParameters"})
     @PluginFactory
     public static GmailAppender createAppender(@PluginAttribute("name") String name,
                                                @PluginAttribute("ignoreExceptions") boolean ignoreExceptions,
@@ -60,10 +62,7 @@ public class GmailAppender extends AbstractAppender {
                                                @PluginElement("Layout") Layout<? extends Serializable> layout,
                                                @PluginElement("Filters") Filter filter) {
 
-        if (name == null) {
-            LOGGER.error("No name provided for StubAppender");
-            return null;
-        }
+        checkArgument(name != null, "No name provided for %s", GmailAppender.class.getSimpleName());
 
         if (layout == null) {
             layout = PatternLayout.createDefaultLayout();
@@ -81,7 +80,7 @@ public class GmailAppender extends AbstractAppender {
 
             email.setFrom(new InternetAddress(emailAddress));
             email.addRecipient(RecipientType.TO, new InternetAddress(emailAddress));
-            email.setSubject("Home Automator alert: " + event.getLevel());
+            email.setSubject(googleApiSettings.applicationName() + " alert: " + event.getLevel());
             email.setText(toSerializable(event).toString());
 
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -92,6 +91,7 @@ public class GmailAppender extends AbstractAppender {
             message.setRaw(encodedEmail);
             GmailProvider.getService(googleApiSettings).users().messages().send(ME, message).execute();
         } catch (MessagingException | IOException e) {
+            //noinspection CallToPrintStackTrace OK for appender
             e.printStackTrace();
         }
     }

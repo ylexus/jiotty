@@ -18,7 +18,7 @@ import static net.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class InternalGoogleDrivePath implements GoogleDrivePath {
     private static final String MIME_TYPE_FOLDER = "application/vnd.google-apps.folder";
 
-    private static final Logger logger = LoggerFactory.getLogger(GoogleDriveClientImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(InternalGoogleDrivePath.class);
 
     private final String id;
     private final List<String> path;

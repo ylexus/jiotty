@@ -16,6 +16,9 @@ import static net.jiotty.common.lang.MoreThrowables.asUnchecked;
 public final class RestServers {
     private static final Logger logger = LoggerFactory.getLogger(RestServers.class);
 
+    private RestServers() {
+    }
+
     public static Object withErrorsHandledJson(String handlerName, Response response, CompletableFuture<?> handler) {
         response.header("Content-Type", "application/json");
         return withErrorsHandled(handlerName, handler,

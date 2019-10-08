@@ -97,10 +97,11 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     protected void doStop() {
         synchronized (lock) {
             asUnchecked(client::disconnect);
+            asUnchecked(client::close); // I have a right as both this component and the client provider are singletons
         }
     }
 
-    private <T, U> BiConsumer<T, U> exceptionLogging(BiConsumer<T, U> messageToStringDataCallback) {
+    private static <T, U> BiConsumer<T, U> exceptionLogging(BiConsumer<T, U> messageToStringDataCallback) {
         return (t, u) -> guarded(logger, "handling message", () -> messageToStringDataCallback.accept(t, u)).run();
     }
 
@@ -133,6 +134,7 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             this.delegate = checkNotNull(delegate);
         }
 
+        @SuppressWarnings("ParameterNameDiffersFromOverriddenParameter")
         @Override
         public void accept(String topic, MqttMessage message) {
             delegate.accept(topic, new String(message.getPayload(), UTF_8));

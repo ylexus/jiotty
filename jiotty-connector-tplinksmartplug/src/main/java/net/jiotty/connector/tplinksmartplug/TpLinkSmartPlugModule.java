@@ -11,7 +11,7 @@ import net.jiotty.common.lang.TypedBuilder;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
-public class TpLinkSmartPlugModule extends ApplianceModule {
+public final class TpLinkSmartPlugModule extends ApplianceModule {
     private final String username;
     private final String password;
     private final String termId;
@@ -29,8 +29,12 @@ public class TpLinkSmartPlugModule extends ApplianceModule {
         this.deviceId = checkNotNull(deviceId);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     @Override
-    protected final Key<? extends Appliance> configureDependencies() {
+    protected Key<? extends Appliance> configureDependencies() {
         bindConstant().annotatedWith(TpLinkSmartPlug.Username.class).to(username);
         bindConstant().annotatedWith(TpLinkSmartPlug.Password.class).to(password);
         bindConstant().annotatedWith(TpLinkSmartPlug.TermId.class).to(termId);

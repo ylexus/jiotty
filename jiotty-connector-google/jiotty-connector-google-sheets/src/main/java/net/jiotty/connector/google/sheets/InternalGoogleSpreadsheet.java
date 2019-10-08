@@ -54,11 +54,11 @@ final class InternalGoogleSpreadsheet implements GoogleSpreadsheet {
     }
 
     @Override
-    public CompletableFuture<byte[]> export(String sheetTitle) {
+    public CompletableFuture<byte[]> export(String sheetName) {
         Integer sheetId = spreadsheet.getSheets().stream()
-                .filter(sheet -> sheet.getProperties().getTitle().equals(sheetTitle))
+                .filter(sheet -> sheet.getProperties().getTitle().equals(sheetName))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No sheet with title " + sheetTitle))
+                .orElseThrow(() -> new IllegalArgumentException("No sheet with title " + sheetName))
                 .getProperties()
                 .getSheetId();
         checkState(sheetId != null);

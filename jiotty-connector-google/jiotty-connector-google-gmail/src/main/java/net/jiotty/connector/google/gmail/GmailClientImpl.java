@@ -58,6 +58,7 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
         this.executorFactory = checkNotNull(executorFactory);
     }
 
+    @SuppressWarnings("ReturnOfInnerClass") // we are a singleton
     @Override
     public Closeable subscribe(String query, Consumer<GmailMessage> handler) {
         Subscription subscription = new Subscription(query, handler);
@@ -125,15 +126,17 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
                 String pageToken = null;
                 AtomicReference<BigInteger> newHistoryIdRef = new AtomicReference<>();
                 do {
-                    ListMessagesResponse response = messagesRequests.list(Constants.ME)
+                    ListMessagesResponse response = messagesRequests.list(ME)
                             .setQ(query)
                             .setPageToken(pageToken)
                             .execute();
                     if (response.getMessages() == null) {
+                        //noinspection BreakStatement
                         break;
                     }
                     BatchRequest batch = gmail.batch();
                     JsonBatchCallback<Message> callback = new JsonBatchCallback<Message>() {
+                        @SuppressWarnings("ParameterNameDiffersFromOverriddenParameter")
                         @Override
                         public void onSuccess(Message message, HttpHeaders responseHeaders) {
                             newHistoryIdRef.set(onMessage(message, newHistoryIdRef.get()));
@@ -145,7 +148,7 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
                         }
                     };
                     response.getMessages().forEach(message ->
-                            asUnchecked(() -> messagesRequests.get(Constants.ME, message.getId()).setFormat("full").queue(batch, callback)));
+                            asUnchecked(() -> messagesRequests.get(ME, message.getId()).setFormat("full").queue(batch, callback)));
                     batch.execute();
                     pageToken = response.getNextPageToken();
                 } while (pageToken != null);
