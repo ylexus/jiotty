@@ -15,7 +15,7 @@ public final class Runnables {
             try {
                 delegate.run();
             } catch (Throwable e) {
-                logger.error("Failed while " + taskDescription, e);
+                logger.error("Failed while {}", taskDescription, e);
             }
         };
     }

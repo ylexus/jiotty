@@ -20,7 +20,10 @@ import java.util.function.Supplier;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class Web {
-    private static final Logger logger = LoggerFactory.getLogger(Problem.class);
+    private static final Logger logger = LoggerFactory.getLogger(Web.class);
+
+    private Web() {
+    }
 
     public static <T> T executeWebScript(Script<T> script) {
         ProblemAccumulator problemAccumulator = new ProblemAccumulator();
@@ -100,7 +103,7 @@ public final class Web {
         }
     }
 
-    private static class Problem {
+    private static final class Problem {
         private final String pattern;
         private final Object[] arguments;
 

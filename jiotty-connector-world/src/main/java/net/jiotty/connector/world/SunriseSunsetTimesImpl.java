@@ -16,7 +16,7 @@ final class SunriseSunsetTimesImpl implements SunriseSunsetTimes {
     private final OkHttpClient client;
 
     SunriseSunsetTimesImpl() {
-        this.client = newClient(OkHttpClient.Builder::build);
+        client = newClient(OkHttpClient.Builder::build);
     }
 
     @Override
@@ -30,7 +30,7 @@ final class SunriseSunsetTimesImpl implements SunriseSunsetTimes {
                 .get()
                 .build()), SunriseSunsetResponse.class)
                 .thenApply(sunriseSunsetResponse -> {
-                    checkState(sunriseSunsetResponse.status().equals("OK"), "status not OK in response %s", sunriseSunsetResponse);
+                    checkState("OK".equals(sunriseSunsetResponse.status()), "status not OK in response %s", sunriseSunsetResponse);
                     checkState(sunriseSunsetResponse.results().isPresent(), "no results in response %s", sunriseSunsetResponse);
                     return sunriseSunsetResponse.results().get();
                 });

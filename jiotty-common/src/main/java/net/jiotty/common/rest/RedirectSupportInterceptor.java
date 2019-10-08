@@ -39,7 +39,7 @@ final class RedirectSupportInterceptor implements Interceptor {
 
         long t2 = System.nanoTime();
         logger.debug(String.format("Received response for %s in %.1fms%n%s",
-                response.request().url(), (t2 - t1) / 1e6d, response.headers()));
+                response.request().url(), (t2 - t1) / 1.0e6d, response.headers()));
 
         if ((response.code() == 307) || (response.code() == 308)) {
             String location = response.header(LOCATION);
@@ -51,6 +51,7 @@ final class RedirectSupportInterceptor implements Interceptor {
         return response;
     }
 
+    @SuppressWarnings({"resource", "IOResourceOpenedButNotSafelyClosed"}) // code copied from somewhere, not 100% adhering to our style
     private static String bodyToString(Request request) {
         Buffer sink = new Buffer();
         RequestBody requestBody = request.body();

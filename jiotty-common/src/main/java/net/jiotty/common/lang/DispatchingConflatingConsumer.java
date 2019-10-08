@@ -18,8 +18,8 @@ public final class DispatchingConflatingConsumer<T> implements Consumer<T> {
     }
 
     @Override
-    public void accept(T newValue) {
-        if (inbox.add(newValue)) {
+    public void accept(T t) {
+        if (inbox.add(t)) {
             executor.execute(this::processQueue);
         }
     }

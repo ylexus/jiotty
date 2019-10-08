@@ -30,6 +30,7 @@ public final class TimeSheet {
     }
 
     // Unit testing
+    @SuppressWarnings("ConstructorWithTooManyParameters")
     public TimeSheet(Status status, String id, LocalDate startDate, LocalDate endDate, double standardDays, double otherDays) {
         this.status = checkNotNull(status);
         this.id = checkNotNull(id);
@@ -63,11 +64,12 @@ public final class TimeSheet {
         return otherDays;
     }
 
+    @SuppressWarnings({"OverlyComplexBooleanExpression", "FloatingPointEquality", "NonFinalFieldReferenceInEquals"}) // acceptable in equals
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TimeSheet timeSheet = (TimeSheet) o;
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        TimeSheet timeSheet = (TimeSheet) obj;
         return standardDays == timeSheet.standardDays &&
                 otherDays == timeSheet.otherDays &&
                 status == timeSheet.status &&
@@ -76,6 +78,7 @@ public final class TimeSheet {
                 endDate.equals(timeSheet.endDate);
     }
 
+    @SuppressWarnings({"NonFinalFieldReferencedInHashCode", "ObjectInstantiationInEqualsHashCode"}) // fields must be non-final
     @Override
     public int hashCode() {
         return Objects.hash(status, id, startDate, endDate, standardDays, otherDays);

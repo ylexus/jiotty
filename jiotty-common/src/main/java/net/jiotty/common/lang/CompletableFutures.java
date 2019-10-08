@@ -14,8 +14,12 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 import static net.jiotty.common.lang.DelayedExecutors.delayedExecutor;
 
+@SuppressWarnings("WeakerAccess") // it's a library
 public final class CompletableFutures {
-    public static <T> CompletableFuture<T> completable(Future<T> future) {
+    private CompletableFutures() {
+    }
+
+    public static <T> CompletableFuture<T> completable(Future<? extends T> future) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return future.get();
@@ -25,6 +29,7 @@ public final class CompletableFutures {
         });
     }
 
+    @SuppressWarnings("ZeroLengthArrayAllocation") // this is what we need
     public static CompletableFuture<Void> allOf(ImmutableList<CompletableFuture<?>> futures) {
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
@@ -57,6 +62,7 @@ public final class CompletableFutures {
                                 .addAll(builder2.build()),
                 builder -> {
                     ImmutableList<CompletableFuture<T>> listOfFutures = builder.build();
+                    //noinspection ZeroLengthArrayAllocation
                     return CompletableFuture.allOf(listOfFutures.toArray(new CompletableFuture[0]))
                             .thenApply(ignored -> unmodifiableList(listOfFutures.stream()
                                     .map(CompletableFuture::join)

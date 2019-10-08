@@ -17,9 +17,11 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.jiotty.appliance.Bindings.ApplianceExecutor;
 
 final class ConflatingAsyncAppliance implements Appliance {
-    private final AtomicReference<Command> queue = new AtomicReference<>();
     private final Appliance delegate;
     private final Executor executor;
+
+    private final Object lock = new Object();
+    private final AtomicReference<Command> queue = new AtomicReference<>();
     private CompletableFuture<?> lastResult;
 
     @Inject
@@ -44,12 +46,14 @@ final class ConflatingAsyncAppliance implements Appliance {
         return enqueueCommand(command);
     }
 
-    private synchronized CompletableFuture<?> enqueueCommand(Command newCommand) {
-        Command previousCommand = queue.getAndSet(newCommand);
-        if (previousCommand == null) {
-            lastResult = processQueue();
+    private CompletableFuture<?> enqueueCommand(Command newCommand) {
+        synchronized (lock) {
+            Command previousCommand = queue.getAndSet(newCommand);
+            if (previousCommand == null) {
+                lastResult = processQueue();
+            }
+            return lastResult;
         }
-        return lastResult;
     }
 
     private CompletableFuture<?> processQueue() {

@@ -2,7 +2,7 @@ package net.jiotty.connector.google.photos;
 
 import com.google.common.collect.ImmutableList;
 import com.google.photos.library.v1.PhotosLibrarySettings;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -20,7 +20,7 @@ final class PhotosLibrarySettingsProvider implements Provider<PhotosLibrarySetti
 
     @Inject
     PhotosLibrarySettingsProvider(@Settings GoogleApiSettings settings) {
-        this.credentialsUrl = settings.credentialsUrl();
+        credentialsUrl = settings.credentialsUrl();
     }
 
     @Override

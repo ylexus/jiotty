@@ -3,6 +3,7 @@ package net.jiotty.connector.google.common.impl;
 import com.google.inject.Module;
 import net.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.jiotty.common.lang.TypedBuilder;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.jiotty.connector.google.common.impl.Bindings.Settings;
@@ -23,7 +24,7 @@ public abstract class BaseGoogleServiceModule extends BaseLifecycleComponentModu
 
     protected abstract void doConfigure();
 
-    public static abstract class BaseBuilder<T extends Module, B extends BaseBuilder<T, B>> implements TypedBuilder<T> {
+    public abstract static class BaseBuilder<T extends Module, B extends BaseBuilder<T, B>> implements TypedBuilder<T> {
         private GoogleApiSettings settings;
 
         protected GoogleApiSettings getSettings() {

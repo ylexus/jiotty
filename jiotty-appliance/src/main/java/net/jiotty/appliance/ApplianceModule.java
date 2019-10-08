@@ -13,7 +13,7 @@ import java.util.concurrent.Executor;
 public abstract class ApplianceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Appliance> {
     private final Key<Appliance> exposedKey;
 
-    public ApplianceModule(SpecifiedAnnotation targetAnnotation) {
+    protected ApplianceModule(SpecifiedAnnotation targetAnnotation) {
         exposedKey = targetAnnotation.specify(Appliance.class);
     }
 

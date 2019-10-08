@@ -8,6 +8,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Arrays.asList;
 import static net.jiotty.common.lang.CompositeException.runForAll;
 
+@SuppressWarnings("OverloadedVarargsMethod")
 public interface Closeable {
     void close();
 
@@ -19,13 +20,13 @@ public interface Closeable {
         return forActions(copyOf(actions));
     }
 
-    static Closeable forCloseables(Collection<Closeable> closeables) {
+    static Closeable forCloseables(Collection<? extends Closeable> closeables) {
         return forActions(closeables.stream()
-                .<Runnable>map(closeable -> closeable::close)
+                .<Runnable>map(closeable -> ((Closeable) closeable)::close)
                 .collect(toImmutableList()));
     }
 
-    static Closeable forActions(Collection<Runnable> actions) {
+    static Closeable forActions(Collection<? extends Runnable> actions) {
         return idempotent(() -> runForAll(actions, Runnable::run));
     }
 

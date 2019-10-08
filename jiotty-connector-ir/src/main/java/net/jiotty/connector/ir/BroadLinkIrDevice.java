@@ -23,6 +23,8 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
     private static final Logger logger = LoggerFactory.getLogger(BroadLinkIrDevice.class);
     private final String host;
     private final String macAddress;
+    private final Object lock = new Object();
+    @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // IDEA inspection failure
     private RM2Device device;
 
     @Inject
@@ -32,24 +34,30 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
     }
 
     @Override
-    public synchronized void doStart() {
-        try {
-            device = new RM2Device(host, new Mac(macAddress));
-            checkState(device.auth(), "Unable to authenticate BroadLink device on host %s, MAC %s", host, macAddress);
-            logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to initialize Broadlink device", e);
+    public void doStart() {
+        synchronized (lock) {
+            try {
+                device = new RM2Device(host, new Mac(macAddress));
+                checkState(device.auth(), "Unable to authenticate BroadLink device on host %s, MAC %s", host, macAddress);
+                logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to initialize Broadlink device", e);
+            }
         }
     }
 
     @Override
-    public synchronized void sendCmdPkt(byte[] packetData) {
-        asUnchecked(() -> device.sendCmdPkt(new SendDataCmdPayload(packetData)));
+    public void sendCmdPkt(byte[] packetData) {
+        synchronized (lock) {
+            asUnchecked(() -> device.sendCmdPkt(new SendDataCmdPayload(packetData)));
+        }
     }
 
     @Override
-    protected synchronized void doStop() {
-        device.close();
+    protected void doStop() {
+        synchronized (lock) {
+            device.close();
+        }
     }
 
     @BindingAnnotation

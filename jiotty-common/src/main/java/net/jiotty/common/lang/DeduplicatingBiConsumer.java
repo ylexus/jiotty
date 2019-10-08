@@ -17,11 +17,11 @@ public final class DeduplicatingBiConsumer<T, U> implements BiConsumer<T, U> {
     }
 
     @Override
-    public void accept(T value1, U value2) {
-        if (!value1.equals(lastValue1) || !value2.equals(lastValue2)) {
-            delegate.accept(value1, value2);
-            lastValue1 = value1;
-            lastValue2 = value2;
+    public void accept(T t, U u) {
+        if (!t.equals(lastValue1) || !u.equals(lastValue2)) {
+            delegate.accept(t, u);
+            lastValue1 = t;
+            lastValue2 = u;
         }
     }
 }

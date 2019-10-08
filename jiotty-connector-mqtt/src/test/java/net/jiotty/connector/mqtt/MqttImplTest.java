@@ -37,7 +37,7 @@ class MqttImplTest {
     }
 
     @Test
-    void resubscribesOnReconnect() throws Exception {
+    void resubscribesOnReconnect() throws MqttException {
         IMqttMessageListener messageListener = doSubscribe();
 
         mqttCallback.connectionLost(new RuntimeException("oops"));

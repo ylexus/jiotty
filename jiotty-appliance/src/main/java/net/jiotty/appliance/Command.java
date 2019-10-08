@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+@SuppressWarnings("OverloadedVarargsMethod") // no confusion possible here
 public interface Command {
     <T> Optional<T> accept(Visitor<T> visitor);
 
@@ -31,7 +32,7 @@ public interface Command {
                 "Command %s is not supported", this)));
     }
 
-    default <T> T map(Function<Command, T> mapper) {
+    default <T> T map(Function<? super Command, T> mapper) {
         return mapper.apply(this);
     }
 

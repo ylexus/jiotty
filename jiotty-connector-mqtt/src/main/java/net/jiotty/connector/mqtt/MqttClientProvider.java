@@ -31,6 +31,7 @@ final class MqttClientProvider implements Provider<MqttClient> {
     @Override
     public MqttClient get() {
         logger.info("Creating MQTT client for {} as {}", serverUri, clientId);
+        //noinspection resource closed in MqttImpl
         return getAsUnchecked(() -> new MqttClient(serverUri, clientId, new MemoryPersistence()));
     }
 

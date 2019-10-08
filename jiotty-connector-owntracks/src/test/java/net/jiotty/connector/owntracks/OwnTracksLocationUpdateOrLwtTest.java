@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.*;
 
 class OwnTracksLocationUpdateOrLwtTest {
     @Test
-    void deserialisesLwt() {
+    void deserialiesLwt() {
         OwnTracksLocationUpdateOrLwt locationUpdateOrLwt = Json.parse("{\"tst\":\"1565543099\",\"_type\":\"lwt\"}", OwnTracksLocationUpdateOrLwt.class);
 
         assertThat(locationUpdateOrLwt, is(instanceOf(OwnTracksLwt.class)));
@@ -30,8 +30,8 @@ class OwnTracksLocationUpdateOrLwtTest {
         assertThat(locationUpdate, is(optionalWithValue(equalTo(OwnTrackLocationUpdate.builder()
                 .setAccuracyMeters(65)
                 .setFixTimestampSeconds(1565556840)
-                .setLatitude(51.5870361328125)
-                .setLongitude(-0.38138078849335633)
+                .setLatitude(1.42)
+                .setLongitude(-1.32)
                 .build()))));
     }
 }

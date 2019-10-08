@@ -1,4 +1,4 @@
-package net.jiotty.connector.google.common.impl;
+package net.jiotty.connector.google.common;
 
 import net.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;

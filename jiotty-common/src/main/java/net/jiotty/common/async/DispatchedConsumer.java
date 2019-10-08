@@ -15,7 +15,7 @@ public final class DispatchedConsumer<T> implements Consumer<T> {
     }
 
     @Override
-    public void accept(T value) {
-        executor.execute(() -> delegate.accept(value));
+    public void accept(T t) {
+        executor.execute(() -> delegate.accept(t));
     }
 }

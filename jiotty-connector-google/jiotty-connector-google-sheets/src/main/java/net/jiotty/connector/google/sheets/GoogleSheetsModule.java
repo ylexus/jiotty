@@ -5,8 +5,8 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.jiotty.common.inject.ExposedKeyModule;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 import net.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
 
 import javax.inject.Singleton;
 

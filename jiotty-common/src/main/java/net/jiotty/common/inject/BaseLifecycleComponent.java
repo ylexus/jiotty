@@ -4,9 +4,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.base.Preconditions.checkState;
 
+@SuppressWarnings("AbstractClassWithoutAbstractMethods") // designed for extension
 public abstract class BaseLifecycleComponent implements LifecycleComponent {
-    private AtomicBoolean startAttempted = new AtomicBoolean();
-    private AtomicBoolean started = new AtomicBoolean();
+    private final AtomicBoolean startAttempted = new AtomicBoolean();
+    private final AtomicBoolean started = new AtomicBoolean();
 
     @Override
     public final void start() {

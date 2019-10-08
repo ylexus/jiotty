@@ -13,8 +13,8 @@ import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -38,7 +38,7 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
 
     @Override
     public Closeable schedule(Duration delay, Runnable command) {
-        ScheduledHandle scheduledHandle = new ScheduledHandle(executor.schedule(
+        Closeable scheduledHandle = new ScheduledHandle(executor.schedule(
                 guarded(logger, "scheduled task", command), delay.toNanos(), NANOSECONDS));
         scheduleHandles.add(scheduledHandle);
         return scheduledHandle;
@@ -46,7 +46,7 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
 
     @Override
     public Closeable scheduleAtFixedRate(Duration initialDelay, Duration period, Runnable command) {
-        ScheduledHandle scheduledHandle = new ScheduledHandle(
+        Closeable scheduledHandle = new ScheduledHandle(
                 executor.scheduleAtFixedRate(guarded(logger, "scheduled task", command), initialDelay.toNanos(), period.toNanos(), NANOSECONDS));
         scheduleHandles.add(scheduledHandle);
         return scheduledHandle;
@@ -60,11 +60,11 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
         }
     }
 
-    private class ScheduledHandle extends BaseIdempotentCloseable {
-        private Closeable executorHandle;
+    private final class ScheduledHandle extends BaseIdempotentCloseable {
+        private final Closeable executorHandle;
 
-        private ScheduledHandle(ScheduledFuture<?> scheduledFuture) {
-            this.executorHandle = () -> scheduledFuture.cancel(false);
+        private ScheduledHandle(Future<?> scheduledFuture) {
+            executorHandle = () -> scheduledFuture.cancel(false);
         }
 
         @Override

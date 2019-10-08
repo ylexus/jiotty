@@ -25,17 +25,17 @@ public final class ThresholdThrottlingConsumer<T> implements Consumer<T> {
                                 @Assisted Duration throttlingDuration,
                                 @Assisted Consumer<T> delegate) {
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
-        this.thresholdGatedConsumer = thresholdGated(threshold, delegate);
+        thresholdGatedConsumer = thresholdGated(threshold, delegate);
         this.throttlingDuration = checkNotNull(throttlingDuration);
     }
 
     @Override
-    public void accept(T value) {
+    public void accept(T t) {
         Instant now = currentDateTimeProvider.currentInstant();
         if (nextTimeout != null && now.isAfter(nextTimeout)) {
             thresholdGatedConsumer.reset();
         }
-        this.nextTimeout = now.plus(throttlingDuration);
-        thresholdGatedConsumer.accept(value);
+        nextTimeout = now.plus(throttlingDuration);
+        thresholdGatedConsumer.accept(t);
     }
 }

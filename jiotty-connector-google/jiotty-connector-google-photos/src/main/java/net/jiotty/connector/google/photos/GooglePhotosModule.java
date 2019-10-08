@@ -2,8 +2,8 @@ package net.jiotty.connector.google.photos;
 
 import com.google.photos.library.v1.PhotosLibrarySettings;
 import net.jiotty.common.inject.ExposedKeyModule;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 import net.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
 
 import javax.inject.Singleton;
 

@@ -3,8 +3,8 @@ package net.jiotty.connector.google.gmail;
 import com.google.api.services.gmail.Gmail;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.jiotty.common.inject.ExposedKeyModule;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 import net.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-import net.jiotty.connector.google.common.impl.GoogleApiSettings;
 import net.jiotty.connector.google.gmail.Bindings.GmailService;
 
 import javax.inject.Singleton;

@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -55,12 +56,16 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
         return supplyAsync(() -> {
             logger.debug("Started uploading {}", file);
             String fileName = file.getFileName().toString();
-            UploadMediaItemRequest uploadRequest =
-                    UploadMediaItemRequest.newBuilder()
-                            .setFileName(fileName)
-                            .setDataFile(getAsUnchecked(() -> new RandomAccessFile(file.toFile(), "r")))
-                            .build();
-            UploadMediaItemResponse uploadResponse = client.uploadMediaItem(uploadRequest);
+            UploadMediaItemResponse uploadResponse;
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(file.toFile(), "r")) {
+                UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder()
+                        .setFileName(fileName)
+                        .setDataFile(randomAccessFile)
+                        .build();
+                uploadResponse = client.uploadMediaItem(uploadRequest);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             uploadResponse.getError().ifPresent(error -> {throw new RuntimeException("Failed uploading data", error.getCause());});
             // guaranteed
             @SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -81,8 +86,10 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                 logger.debug("Finished uploading {}, media item {}", file, newMediaItemResult.getMediaItem());
                 return new InternalGoogleMediaItem(newMediaItemResult.getMediaItem());
             } else {
-                throw new RuntimeException(String.format("Unable to create media item for file %s upload token %s, status %s", file, uploadToken, status));
+                throw new MediaItemCreationFailedException(String.format("Unable to create media item for file %s status %s: %s",
+                        file, status.getCode(), status.getMessage()), status);
             }
+
         }, executor);
     }
 
@@ -116,6 +123,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
 
     @Override
     protected void doStart() {
+        //noinspection resource it's closed
         client = getAsUnchecked(() -> PhotosLibraryClient.initialize(photosLibrarySettings));
         closeable = idempotent(() -> client.close());
     }

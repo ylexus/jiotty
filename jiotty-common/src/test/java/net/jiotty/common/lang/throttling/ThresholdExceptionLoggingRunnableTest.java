@@ -14,6 +14,7 @@ import static org.mockito.Mockito.*;
 class ThresholdExceptionLoggingRunnableTest {
     @Mock
     private Runnable delegate;
+    @SuppressWarnings("NonConstantLogger")
     @Mock
     private Logger logger;
     private Runnable runnable;
@@ -35,7 +36,7 @@ class ThresholdExceptionLoggingRunnableTest {
         verifyZeroInteractions(logger);
 
         runnable.run();
-        verify(logger).error(contains("description"), eq(exception));
+        verify(logger).error(any(String.class), contains("description"), eq(exception));
     }
 
     @Test

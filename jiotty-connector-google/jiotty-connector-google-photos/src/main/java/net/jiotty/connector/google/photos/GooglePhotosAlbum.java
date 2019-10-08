@@ -8,7 +8,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 public interface GooglePhotosAlbum {
     CompletableFuture<Void> addPhotosByIds(List<String> mediaItemsIds);
 
-    default CompletableFuture<Void> addPhotos(List<GoogleMediaItem> mediaItems) {
+    default CompletableFuture<Void> addPhotos(List<? extends GoogleMediaItem> mediaItems) {
         return addPhotosByIds(mediaItems.stream().map(GoogleMediaItem::getId).collect(toImmutableList()));
     }
 

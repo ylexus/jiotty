@@ -28,7 +28,7 @@ public final class RestClients {
         return newClient(builder -> {});
     }
 
-    public static OkHttpClient newClient(Consumer<OkHttpClient.Builder> customizer) {
+    public static OkHttpClient newClient(Consumer<? super OkHttpClient.Builder> customizer) {
         AtomicReference<OkHttpClient> clientRef = new AtomicReference<>();
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .followRedirects(true)
@@ -44,17 +44,17 @@ public final class RestClients {
         return client;
     }
 
-    public static <T> CompletableFuture<T> call(Request request, Class<T> responseType) {
+    public static <T> CompletableFuture<T> call(Request request, Class<? extends T> responseType) {
         return call(newClient().newCall(request), responseType);
     }
 
-    public static <T> CompletableFuture<T> call(Call call, Class<T> responseType) {
-        return call(call, responseType, DEFAULT_CALL_RETRY_COUNT);
+    public static <T> CompletableFuture<T> call(Call theCall, Class<? extends T> responseType) {
+        return call(theCall, responseType, DEFAULT_CALL_RETRY_COUNT);
     }
 
-    public static <T> CompletableFuture<T> call(Call call, Class<T> responseType, int retryCount) {
+    public static <T> CompletableFuture<T> call(Call theCall, Class<? extends T> responseType, int retryCount) {
         CompletableFuture<T> future = new CompletableFuture<>();
-        call.enqueue(new Callback() {
+        theCall.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 logger.debug("Call failed: {}, retries left: {}", call, retryCount, e);

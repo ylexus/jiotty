@@ -103,7 +103,7 @@ public final class Application {
         @Override
         public Application build() {
             List<Supplier<Module>> moduleSuppliers = moduleSupplierListBuilder.build();
-            AbstractModule module = new AbstractModule() {
+            Module module = new AbstractModule() {
                 @Override
                 protected void configure() {
                     moduleSuppliers.stream()
