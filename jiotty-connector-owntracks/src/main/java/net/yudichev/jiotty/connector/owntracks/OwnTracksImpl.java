@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -75,7 +77,7 @@ final class OwnTracksImpl implements OwnTracks {
 
     private static class OrderProtectingConsumer<T extends HasFixTimestamp> implements Consumer<OwnTracksUpdate<T>> {
         private final Consumer<OwnTracksUpdate<T>> delegate;
-        private long latestTimestamp = Long.MIN_VALUE;
+        private final Map<DeviceKey, Long> latestTimestampByDeviceKey = new HashMap<>();
 
         OrderProtectingConsumer(Consumer<OwnTracksUpdate<T>> delegate) {
             this.delegate = checkNotNull(delegate);
@@ -84,12 +86,15 @@ final class OwnTracksImpl implements OwnTracks {
         @Override
         public void accept(OwnTracksUpdate<T> t) {
             long timestamp = t.payload().fixTimestampSeconds();
-            if (timestamp > latestTimestamp) {
-                latestTimestamp = timestamp;
-                delegate.accept(t);
-            } else {
-                logger.debug("Ignoring out-of-order message {}, latest timestamp was {}", t, latestTimestamp);
-            }
+            latestTimestampByDeviceKey.compute(t.deviceKey(), (ignored, latestTimestamp) -> {
+                if (latestTimestamp == null || timestamp > latestTimestamp) {
+                    latestTimestamp = timestamp;
+                    delegate.accept(t);
+                } else {
+                    logger.debug("Ignoring out-of-order message {}, latest timestamp was {}", t, latestTimestamp);
+                }
+                return latestTimestamp;
+            });
         }
     }
 }
