@@ -23,4 +23,21 @@ final class InternalGoogleMediaItem implements GoogleMediaItem {
                 .add("mediaItem", mediaItem)
                 .toString();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        InternalGoogleMediaItem anotherItem = (InternalGoogleMediaItem) obj;
+        return mediaItem.equals(anotherItem.mediaItem);
+    }
+
+    @Override
+    public int hashCode() {
+        return mediaItem.hashCode();
+    }
 }

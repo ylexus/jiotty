@@ -45,6 +45,23 @@ final class InternalGooglePhotosAlbum implements GooglePhotosAlbum {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        InternalGooglePhotosAlbum anotherAlbum = (InternalGooglePhotosAlbum) obj;
+        return album.equals(anotherAlbum.album);
+    }
+
+    @Override
+    public int hashCode() {
+        return album.hashCode();
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("album", album)

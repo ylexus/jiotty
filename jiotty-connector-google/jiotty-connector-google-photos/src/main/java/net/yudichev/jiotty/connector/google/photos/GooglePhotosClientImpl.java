@@ -122,6 +122,18 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     }
 
     @Override
+    public CompletableFuture<List<GooglePhotosAlbum>> listAllAlbums(Executor executor) {
+        return supplyAsync(() -> {
+            logger.debug("List all albums");
+            List<GooglePhotosAlbum> result = Streams.stream(client.listAlbums().iterateAll())
+                    .map(album -> new InternalGooglePhotosAlbum(client, album))
+                    .collect(toImmutableList());
+            logger.debug("Listed {} album(s)", result.size());
+            return result;
+        }, executor);
+    }
+
+    @Override
     protected void doStart() {
         //noinspection resource it's closed
         client = getAsUnchecked(() -> PhotosLibraryClient.initialize(photosLibrarySettings));
