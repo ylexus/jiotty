@@ -42,7 +42,10 @@ public final class Application {
         CountDownLatch shutdownLatch = new CountDownLatch(1);
         List<LifecycleComponent> lifecycleComponents = new ArrayList<>();
         try {
-            ApplicationLifecycleControl applicationLifecycleControl = () -> new Thread(shutdownLatch::countDown).start();
+            ApplicationLifecycleControl applicationLifecycleControl = () -> {
+                logger.info("Application requested shutdown");
+                shutdownLatch.countDown();
+            };
 
             logger.info("Starting");
             Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get())
