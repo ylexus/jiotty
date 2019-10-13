@@ -41,12 +41,11 @@ public final class Application {
     public void run() {
         CountDownLatch shutdownLatch = new CountDownLatch(1);
         List<LifecycleComponent> lifecycleComponents = new ArrayList<>();
-        Runnable shutdownAction = () -> {
-            logger.info("Shutting down");
-            stop(lifecycleComponents);
-        };
         try {
-            ApplicationLifecycleControl applicationLifecycleControl = () -> new Thread(shutdownLatch::countDown).start();
+            ApplicationLifecycleControl applicationLifecycleControl = () -> {
+                logger.info("Application requested shutdown");
+                shutdownLatch.countDown();
+            };
 
             logger.info("Starting");
             Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get())
@@ -58,14 +57,18 @@ public final class Application {
             lifecycleComponents.forEach(Application::start);
             logger.info("Started");
 
-            Runtime.getRuntime().addShutdownHook(new Thread(shutdownLatch::countDown));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                logger.info("Shutdown hook fired");
+                shutdownLatch.countDown();
+            }));
         } catch (RuntimeException e) {
             logger.error("Unable to initialize", e);
             shutdownLatch.countDown();
         }
 
         MoreThrowables.asUnchecked(shutdownLatch::await);
-        shutdownAction.run();
+        logger.info("Shutting down");
+        stop(lifecycleComponents);
         logger.info("Shut down");
         LogManager.shutdown();
     }
@@ -86,7 +89,7 @@ public final class Application {
                 logger.info("Stopping component {}", lifecycleComponent.name());
                 lifecycleComponent.stop();
                 logger.info("Stopped component {}", lifecycleComponent.name());
-            } catch (RuntimeException e) {
+            } catch (Throwable e) {
                 logger.error("Failed stopping component {}", lifecycleComponent.name(), e);
             }
         });
