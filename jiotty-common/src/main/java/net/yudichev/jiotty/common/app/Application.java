@@ -9,7 +9,6 @@ import com.google.inject.TypeLiteral;
 import net.yudichev.jiotty.common.inject.LifecycleComponent;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
-import org.apache.logging.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -70,7 +69,6 @@ public final class Application {
         logger.info("Shutting down");
         stop(lifecycleComponents);
         logger.info("Shut down");
-        LogManager.shutdown();
     }
 
     public static Builder builder() {
