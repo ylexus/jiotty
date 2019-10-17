@@ -26,31 +26,41 @@ class StabilisingConsumerTest {
 
     @BeforeEach
     void setUp() {
-        stabilisingConsumer = new StabilisingConsumer<>(scheduler, Duration.ofSeconds(1), delegate);
-        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
+        stabilisingConsumer = new StabilisingConsumer<>(scheduler, Duration.ofSeconds(1), delegate, "Dumbledore"::equals);
     }
 
     @Test
     void doesNotImmediatelyPropagateValue() {
+        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
+
         stabilisingConsumer.accept("Potter");
+
         verify(delegate, never()).accept(any());
     }
 
     @Test
     void schedulesTimeout() {
+        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
+
         stabilisingConsumer.accept("Potter");
+
         verifySchedulerSchedule();
     }
 
     @Test
     void propagatesValueAfterTimeout() {
+        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
+
         stabilisingConsumer.accept("Potter");
         verifySchedulerSchedule().run();
+
         verify(delegate).accept("Potter");
     }
 
     @Test
     void cancelsTimerIfNewValueArrives() {
+        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
+
         stabilisingConsumer.accept("Potter");
         verifySchedulerSchedule();
 
@@ -59,13 +69,36 @@ class StabilisingConsumerTest {
     }
 
     @Test
-    void propagatesModifiedValueIfChangedBeforeTimetout() {
+    void propagatesModifiedValueIfChangedBeforeTimeout() {
+        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
         stabilisingConsumer.accept("Potter");
         verifySchedulerSchedule();
 
         reset(scheduler);
         stabilisingConsumer.accept("Harry");
         verifySchedulerSchedule().run();
+
+        verify(delegate).accept("Harry");
+    }
+
+    @Test
+    void doesNotStabilisePredicateMatchingValue() {
+        stabilisingConsumer.accept("Dumbledore");
+
+        verify(delegate).accept("Dumbledore");
+        verify(scheduler, never()).schedule(any(), any());
+    }
+
+    @Test
+    void stabilisesValueAfterPredicateMatchingValue() {
+        when(scheduler.schedule(any(), any())).thenReturn(timeoutHandle);
+        stabilisingConsumer.accept("Dumbledore");
+        stabilisingConsumer.accept("Harry");
+
+        Runnable timerTask = verifySchedulerSchedule();
+        verify(delegate, never()).accept("Harry");
+
+        timerTask.run();
         verify(delegate).accept("Harry");
     }
 
