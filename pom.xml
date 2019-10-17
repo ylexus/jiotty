@@ -10,6 +10,7 @@
     <version>1.0-SNAPSHOT</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
+    <description>Java components for low level home automation coding</description>
     <url>https://jiotty.yudichev.net</url>
     <licenses>
         <license>
