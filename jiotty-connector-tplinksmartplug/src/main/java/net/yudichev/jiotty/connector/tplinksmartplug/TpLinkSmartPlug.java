@@ -5,9 +5,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.appliance.Appliance;
-import net.yudichev.jiotty.appliance.Bindings.ApplianceExecutor;
 import net.yudichev.jiotty.appliance.Command;
 import net.yudichev.jiotty.appliance.PowerCommand;
+import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
@@ -60,12 +60,12 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                     @Password String password,
                     @TermId String termId,
                     @DeviceId String deviceId,
-                    @ApplianceExecutor SchedulingExecutor executor) {
+                    ExecutorFactory executorFactory) {
         this.username = checkNotNull(username);
         this.password = checkNotNull(password);
         this.termId = checkNotNull(termId);
         this.deviceId = checkNotNull(deviceId);
-        this.executor = checkNotNull(executor);
+        executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug");
     }
 
     @Override
@@ -91,6 +91,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     @Override
     protected void doStop() {
         tokenRefreshSchedule.close();
+        executor.close();
     }
 
     private void refreshToken() {
