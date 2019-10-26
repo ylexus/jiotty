@@ -45,7 +45,6 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
             OFF, 0
     );
 
-
     private final String username;
     private final String password;
     private final String termId;
@@ -78,8 +77,10 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         checkStarted();
         //noinspection RedundantTypeArguments compiler is not coping
         return tokenFuture
-                .thenCompose(token -> command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
-                        post(token, COMMAND_TO_STATE.get(powerCommand))));
+                .thenComposeAsync(token ->
+                                command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
+                                        post(token, COMMAND_TO_STATE.get(powerCommand))),
+                        executor);
     }
 
     @Override
