@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.ir;
 
+import com.github.mob41.blapi.BLDevice;
 import com.github.mob41.blapi.RM2Device;
 import com.github.mob41.blapi.mac.Mac;
 import com.github.mob41.blapi.pkt.cmd.rm2.SendDataCmdPayload;
@@ -14,41 +15,77 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice {
     private static final Logger logger = LoggerFactory.getLogger(BroadLinkIrDevice.class);
+    private static final int INIT_ATTEMPTS = 3;
     private final String host;
     private final String macAddress;
+    private final DeviceSupplier deviceSupplier;
     private final Object lock = new Object();
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // IDEA inspection failure
-    private RM2Device device;
+    private BLDevice device;
 
+    @SuppressWarnings("resource") // guaranteed to be closed
     @Inject
     BroadLinkIrDevice(@Host String host, @MacAddress String macAddress) {
-        this.host = checkNotNull(host);
-        this.macAddress = checkNotNull(macAddress);
+        this(host, macAddress, RM2Device::new);
     }
 
+    BroadLinkIrDevice(String host, String macAddress, DeviceSupplier deviceSupplier) {
+        this.host = checkNotNull(host);
+        this.macAddress = checkNotNull(macAddress);
+        this.deviceSupplier = checkNotNull(deviceSupplier);
+    }
+
+
+    @SuppressWarnings("AssignmentToNull")
     @Override
     public void doStart() {
         synchronized (lock) {
-            try {
-                device = new RM2Device(host, new Mac(macAddress));
-                checkState(device.auth(), "Unable to authenticate BroadLink device on host %s, MAC %s", host, macAddress);
-                logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to initialize Broadlink device", e);
+            int attempts = INIT_ATTEMPTS;
+            while (device == null) {
+                try {
+                    device = deviceSupplier.create(host, new Mac(macAddress));
+                    if (device.auth()) {
+                        logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
+                    } else {
+                        device.close();
+                        device = null;
+                        attempts--;
+                        if (attempts == 0) {
+                            throw new RuntimeException(
+                                    String.format("Failed to authenticate Broadlink device on host %s, MAC %s after %s attempts",
+                                            host, macAddress, INIT_ATTEMPTS));
+                        } else {
+                            logger.info("Unable to authenticate Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts);
+                        }
+                    }
+                } catch (IOException e) {
+                    if (device != null) {
+                        device.close();
+                        device = null;
+                    }
+                    attempts--;
+                    if (attempts == 0) {
+                        throw new RuntimeException(
+                                String.format("Failed to initialize Broadlink device on host %s, MAC %s after %s attempts", host, macAddress, INIT_ATTEMPTS),
+                                e);
+                    } else {
+                        logger.info("Unable to initialize Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts, e);
+                    }
+                }
             }
         }
     }
 
     @Override
-    public void sendCmdPkt(byte[] packetData) {
+    public void sendCommandPacket(byte[] packetData) {
         synchronized (lock) {
+            checkStarted();
             asUnchecked(() -> device.sendCmdPkt(new SendDataCmdPayload(packetData)));
         }
     }
@@ -58,6 +95,10 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
         synchronized (lock) {
             device.close();
         }
+    }
+
+    interface DeviceSupplier {
+        BLDevice create(String host, Mac mac) throws IOException;
     }
 
     @BindingAnnotation
