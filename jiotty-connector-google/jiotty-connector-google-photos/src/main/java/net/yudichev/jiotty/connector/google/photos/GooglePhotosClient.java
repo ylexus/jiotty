@@ -1,7 +1,6 @@
 package net.yudichev.jiotty.connector.google.photos;
 
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -33,9 +32,9 @@ public interface GooglePhotosClient {
         return createAlbum(name, ForkJoinPool.commonPool());
     }
 
-    CompletableFuture<Collection<GooglePhotosAlbum>> listAlbums(Executor executor);
+    CompletableFuture<List<GooglePhotosAlbum>> listAlbums(Executor executor);
 
-    default CompletableFuture<Collection<GooglePhotosAlbum>> listAlbums() {
+    default CompletableFuture<List<GooglePhotosAlbum>> listAlbums() {
         return listAlbums(ForkJoinPool.commonPool());
     }
 
@@ -43,11 +42,5 @@ public interface GooglePhotosClient {
 
     default CompletableFuture<GooglePhotosAlbum> getAlbum(String albumId) {
         return getAlbum(albumId, ForkJoinPool.commonPool());
-    }
-
-    CompletableFuture<List<GooglePhotosAlbum>> listAllAlbums(Executor executor);
-
-    default CompletableFuture<List<GooglePhotosAlbum>> listAllAlbums() {
-        return listAllAlbums(ForkJoinPool.commonPool());
     }
 }

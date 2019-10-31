@@ -46,7 +46,7 @@ public final class CompletableFutures {
         return failure(new RuntimeException(message));
     }
 
-    public static <T> CompletableFuture<T> failure(Exception exception) {
+    public static <T> CompletableFuture<T> failure(Throwable exception) {
         CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(exception);
         return future;
