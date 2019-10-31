@@ -1,9 +1,9 @@
 package net.yudichev.jiotty.connector.google.photos;
 
-import com.google.common.collect.Streams;
 import com.google.inject.BindingAnnotation;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
+import com.google.photos.library.v1.proto.ListAlbumsRequest;
 import com.google.photos.library.v1.proto.NewMediaItem;
 import com.google.photos.library.v1.proto.NewMediaItemResult;
 import com.google.photos.library.v1.upload.UploadMediaItemRequest;
@@ -23,7 +23,6 @@ import java.io.RandomAccessFile;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -104,10 +103,21 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     }
 
     @Override
-    public CompletableFuture<Collection<GooglePhotosAlbum>> listAlbums(Executor executor) {
-        return supplyAsync(() -> Streams.stream(client.listAlbums().iterateAll())
-                        .map(album -> new InternalGooglePhotosAlbum(client, album))
-                        .collect(toImmutableList()),
+    public CompletableFuture<List<GooglePhotosAlbum>> listAlbums(Executor executor) {
+        return supplyAsync(() -> {
+                    logger.debug("List all albums");
+                    PagedRequest<Album> request = new PagedRequest<>(logger, pageToken -> {
+                        ListAlbumsRequest.Builder requestBuilder = ListAlbumsRequest.newBuilder()
+                                .setExcludeNonAppCreatedData(false)
+                                .setPageSize(50);
+                        pageToken.ifPresent(requestBuilder::setPageToken);
+                        return client.listAlbums(requestBuilder.build());
+                    });
+                    List<GooglePhotosAlbum> result = request.getAll().map(album -> new InternalGooglePhotosAlbum(client, album))
+                            .collect(toImmutableList());
+                    logger.debug("Listed {} album(s)", result.size());
+                    return result;
+                },
                 executor);
     }
 
@@ -118,18 +128,6 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             Album album = client.getAlbum(albumId);
             logger.debug("Got album info for albumId {}: {}", albumId, album);
             return new InternalGooglePhotosAlbum(client, album);
-        }, executor);
-    }
-
-    @Override
-    public CompletableFuture<List<GooglePhotosAlbum>> listAllAlbums(Executor executor) {
-        return supplyAsync(() -> {
-            logger.debug("List all albums");
-            List<GooglePhotosAlbum> result = Streams.stream(client.listAlbums().iterateAll())
-                    .map(album -> new InternalGooglePhotosAlbum(client, album))
-                    .collect(toImmutableList());
-            logger.debug("Listed {} album(s)", result.size());
-            return result;
         }, executor);
     }
 
