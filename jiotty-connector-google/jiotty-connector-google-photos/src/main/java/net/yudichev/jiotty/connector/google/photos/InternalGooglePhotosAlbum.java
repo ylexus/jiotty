@@ -35,7 +35,7 @@ final class InternalGooglePhotosAlbum implements GooglePhotosAlbum {
 
             logger.debug("Added");
             return null;
-        });
+        }, executor);
     }
 
     @Override
@@ -47,7 +47,7 @@ final class InternalGooglePhotosAlbum implements GooglePhotosAlbum {
 
             logger.debug("Removed");
             return null;
-        });
+        }, executor);
     }
 
     @Override
