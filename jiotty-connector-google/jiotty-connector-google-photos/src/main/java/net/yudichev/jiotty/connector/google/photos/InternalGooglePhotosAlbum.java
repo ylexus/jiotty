@@ -98,12 +98,12 @@ final class InternalGooglePhotosAlbum implements GooglePhotosAlbum {
             return false;
         }
         InternalGooglePhotosAlbum anotherAlbum = (InternalGooglePhotosAlbum) obj;
-        return album.equals(anotherAlbum.album);
+        return album.getId().equals(anotherAlbum.album.getId());
     }
 
     @Override
     public int hashCode() {
-        return album.hashCode();
+        return album.getId().hashCode();
     }
 
     @Override
