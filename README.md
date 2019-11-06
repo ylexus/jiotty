@@ -30,8 +30,15 @@ module
 and then on application termination call `stop()` on the same components in reverse order. Refer to the source code of `Application` as an example.
 
 # Getting started
-TODO when deployed to Central
-
+Start by including the required `net.yudichev.jiotty` maven module into your project. For example, to work with a TP-Link smart plug, 
+use this maven dependency:
+```xml
+<dependency>
+    <groupId>net.yudichev.jiotty</groupId>
+    <artifactId>jiotty-connector-tplinksmartplug</artifactId>
+    <version>1.0.0</version>
+</dependency>
+``` 
 # Quality
 At the moment most of the code is used in my home automation scenarios, so I have good confidence in its quality. 
 However, only a small part of the code is unit tested and none is documented. 
@@ -39,7 +46,7 @@ I am actively working on this.
         
 # Components
 ## jiotty-appliance
-
+Use this module to implement an appliance - something that can be turned on or off, or receive other commands, such as increasing or decreasing volume.
 ## jiotty-connector-aws
 An higher abstraction over Amazon IoT MQTT messaging.
 
