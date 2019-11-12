@@ -15,14 +15,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.List;
 
 final class GoogleAuthorizationImpl implements GoogleAuthorization {
     private final Credential credential;
     private final GoogleClientSecrets clientSecrets;
 
-    GoogleAuthorizationImpl(NetHttpTransport httpTransport, String apiName, URL credentialsUrl, List<String> scopes) {
+    @SuppressWarnings("ConstructorWithTooManyParameters")
+        // internal API
+    GoogleAuthorizationImpl(NetHttpTransport httpTransport,
+                            Path authDataStoreRootDir,
+                            String apiName,
+                            URL credentialsUrl,
+                            List<String> scopes,
+                            AuthorizationCodeInstalledApp.Browser browser) {
         try {
             // Load client secrets.
             try (InputStream in = credentialsUrl.openStream()) {
@@ -32,12 +39,11 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
             // Build flow and trigger user authorization request.
             GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                     httpTransport, JacksonFactory.getDefaultInstance(), clientSecrets, scopes)
-                    // TODO this directory should be configurable and reflect the application name
-                    .setDataStoreFactory(new FileDataStoreFactory(Paths.get(System.getProperty("user.home"), ".googletokens", apiName).toFile()))
+                    .setDataStoreFactory(new FileDataStoreFactory(authDataStoreRootDir.resolve(apiName).toFile()))
                     .setAccessType("offline")
                     .build();
             LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-            credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+            credential = new AuthorizationCodeInstalledApp(flow, receiver, browser).authorize("user");
         } catch (IOException e) {
             throw new RuntimeException("Failed to create Google authorization", e);
         }

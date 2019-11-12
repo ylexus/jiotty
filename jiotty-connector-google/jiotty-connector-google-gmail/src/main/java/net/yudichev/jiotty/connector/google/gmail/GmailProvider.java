@@ -40,7 +40,15 @@ final class GmailProvider implements Provider<Gmail> {
             NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
             return new Gmail.Builder(httpTransport,
                     JacksonFactory.getDefaultInstance(),
-                    GoogleAuthorization.authorize(httpTransport, "gmail", googleApiSettings.credentialsUrl(), SCOPES).getCredential())
+                    GoogleAuthorization.builder()
+                            .setHttpTransport(httpTransport)
+                            .setAuthDataStoreRootDir(settings.authDataStoreRootDir())
+                            .setApiName("gmail")
+                            .setCredentialsUrl(settings.credentialsUrl())
+                            .addRequiredScopes(SCOPES)
+                            .withBrowser(settings.authorizationBrowser())
+                            .build()
+                            .getCredential())
                     .setApplicationName(googleApiSettings.applicationName())
                     .build();
         }));

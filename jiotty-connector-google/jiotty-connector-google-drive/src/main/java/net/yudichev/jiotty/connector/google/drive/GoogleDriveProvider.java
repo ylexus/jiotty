@@ -5,8 +5,8 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-import com.google.common.collect.ImmutableList;
 import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -14,7 +14,6 @@ import javax.inject.Provider;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings;
-import static net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization.authorize;
 
 public final class GoogleDriveProvider implements Provider<Drive> {
     private final GoogleApiSettings settings;
@@ -31,7 +30,15 @@ public final class GoogleDriveProvider implements Provider<Drive> {
             NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
             return new Drive.Builder(httpTransport,
                     JacksonFactory.getDefaultInstance(),
-                    authorize(httpTransport, "gdrive", settings.credentialsUrl(), ImmutableList.of(DriveScopes.DRIVE)).getCredential())
+                    GoogleAuthorization.builder()
+                            .setHttpTransport(httpTransport)
+                            .setAuthDataStoreRootDir(settings.authDataStoreRootDir())
+                            .setApiName("gdrive")
+                            .setCredentialsUrl(settings.credentialsUrl())
+                            .addRequiredScope(DriveScopes.DRIVE)
+                            .withBrowser(settings.authorizationBrowser())
+                            .build()
+                            .getCredential())
                     .setApplicationName(settings.applicationName())
                     .build();
         });
