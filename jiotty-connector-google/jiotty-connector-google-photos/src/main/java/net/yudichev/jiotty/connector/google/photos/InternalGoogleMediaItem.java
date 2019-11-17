@@ -33,11 +33,11 @@ final class InternalGoogleMediaItem implements GoogleMediaItem {
             return false;
         }
         InternalGoogleMediaItem anotherItem = (InternalGoogleMediaItem) obj;
-        return mediaItem.equals(anotherItem.mediaItem);
+        return mediaItem.getId().equals(anotherItem.mediaItem.getId());
     }
 
     @Override
     public int hashCode() {
-        return mediaItem.hashCode();
+        return mediaItem.getId().hashCode();
     }
 }

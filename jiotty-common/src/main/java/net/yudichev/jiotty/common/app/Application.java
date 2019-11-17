@@ -14,12 +14,16 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import uk.org.lidalia.sysoutslf4j.context.SysOutOverSLF4J;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class Application {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
@@ -32,47 +36,87 @@ public final class Application {
     }
 
     private final Supplier<Module> moduleSupplier;
+    private final List<LifecycleComponent> componentsAttemptedToStart = new CopyOnWriteArrayList<>();
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+    private final CountDownLatch fullyStoppedLatch = new CountDownLatch(1);
+    private final ApplicationLifecycleControl applicationLifecycleControl;
+    private final AtomicBoolean startedAllComponentsSuccessfully = new AtomicBoolean();
+    private final AtomicBoolean runCalled = new AtomicBoolean();
+    private Thread runThread;
 
     private Application(Supplier<Module> moduleSupplier) {
         this.moduleSupplier = checkNotNull(moduleSupplier);
+        applicationLifecycleControl = () -> {
+            logger.info("Application requested shutdown");
+            initiateStop();
+        };
     }
 
     public void run() {
-        CountDownLatch shutdownLatch = new CountDownLatch(1);
-        List<LifecycleComponent> lifecycleComponents = new ArrayList<>();
+        checkState(!runCalled.getAndSet(true), "Application.run() can only be called once");
+        logger.info("Starting");
         try {
-            ApplicationLifecycleControl applicationLifecycleControl = () -> {
-                logger.info("Application requested shutdown");
-                shutdownLatch.countDown();
-            };
-
-            logger.info("Starting");
-            Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get())
-                    .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})
-                    .stream()
-                    .map(lifecycleComponentBinding -> lifecycleComponentBinding.getProvider().get())
-                    .forEach(lifecycleComponents::add);
-
-            lifecycleComponents.forEach(Application::start);
-            logger.info("Started");
+            runThread = Thread.currentThread();
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 logger.info("Shutdown hook fired");
-                shutdownLatch.countDown();
+                initiateStop();
+                MoreThrowables.asUnchecked(() -> {
+                    if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
+                        logger.warn("Timed out waiting for partially initialised application to shut down");
+                    }
+                });
             }));
-        } catch (RuntimeException e) {
+
+            logger.info("Initialising components");
+            List<LifecycleComponent> allComponents = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get())
+                    .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})
+                    .stream()
+                    .map(lifecycleComponentBinding -> lifecycleComponentBinding.getProvider().get())
+                    .collect(toImmutableList());
+
+            logger.info("Starting components");
+            for (LifecycleComponent component : allComponents) {
+                if (Thread.interrupted()) {
+                    //noinspection ThrowCaughtLocally
+                    throw new InterruptedException(String.format("Interrupted while starting; components attempted to start: %s out of %s",
+                            componentsAttemptedToStart.size(), allComponents.size()));
+                }
+                componentsAttemptedToStart.add(component);
+                start(component);
+            }
+
+            startedAllComponentsSuccessfully.set(true);
+            logger.info("Started");
+
+        } catch (InterruptedException | RuntimeException e) {
             logger.error("Unable to initialize", e);
             shutdownLatch.countDown();
         }
 
         MoreThrowables.asUnchecked(shutdownLatch::await);
+        doStop();
+
+        fullyStoppedLatch.countDown();
+    }
+
+    public void doStop() {
         logger.info("Shutting down");
-        stop(lifecycleComponents);
+        stop(componentsAttemptedToStart);
         logger.info("Shut down");
     }
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    private void initiateStop() {
+        if (startedAllComponentsSuccessfully.get()) {
+            shutdownLatch.countDown();
+        } else {
+            logger.info("Interrupting startup sequence");
+            runThread.interrupt();
+        }
     }
 
     private static void start(LifecycleComponent lifecycleComponent) {

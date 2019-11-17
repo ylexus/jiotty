@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -41,6 +42,7 @@ public final class GmailAppender extends AbstractAppender {
                           Layout<? extends Serializable> layout,
                           boolean ignoreExceptions,
                           String emailAddress,
+                          String authDataStoreRootDir,
                           String applicationName,
                           String credentialsResourcePath,
                           Property[] properties) {
@@ -49,7 +51,15 @@ public final class GmailAppender extends AbstractAppender {
         checkNotNull(credentialsResourcePath);
         URL credentialsUrl = GmailAppender.class.getClassLoader().getResource(credentialsResourcePath);
         checkArgument(credentialsUrl != null, "Credentials resource not found at %s", credentialsResourcePath);
-        googleApiSettings = GoogleApiSettings.of(applicationName, credentialsUrl);
+        googleApiSettings = GoogleApiSettings.builder()
+                .setAuthDataStoreRootDir(authDataStoreRootDir == null ?
+                        Paths.get(System.getProperty("user.home"))
+                                .resolve("." + applicationName)
+                                .resolve("googletokens") :
+                        Paths.get(authDataStoreRootDir))
+                .setApplicationName(applicationName)
+                .setCredentialsUrl(credentialsUrl)
+                .build();
     }
 
     @SuppressWarnings({"BooleanParameter", "MethodWithTooManyParameters"})
@@ -57,6 +67,7 @@ public final class GmailAppender extends AbstractAppender {
     public static GmailAppender createAppender(@PluginAttribute("name") String name,
                                                @PluginAttribute("ignoreExceptions") boolean ignoreExceptions,
                                                @PluginAttribute("emailAddress") String emailAddress,
+                                               @PluginAttribute("authDataStoreRootDir") String authDataStoreRootDir,
                                                @PluginAttribute("applicationName") String applicationName,
                                                @PluginAttribute("credentialsResourcePath") String credentialsResourcePath,
                                                @PluginElement("Layout") Layout<? extends Serializable> layout,
@@ -67,7 +78,7 @@ public final class GmailAppender extends AbstractAppender {
         if (layout == null) {
             layout = PatternLayout.createDefaultLayout();
         }
-        return new GmailAppender(name, filter, layout, ignoreExceptions, emailAddress, applicationName, credentialsResourcePath, null);
+        return new GmailAppender(name, filter, layout, ignoreExceptions, emailAddress, authDataStoreRootDir, applicationName, credentialsResourcePath, null);
     }
 
     @Override
