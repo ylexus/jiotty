@@ -2,13 +2,13 @@ package net.yudichev.jiotty.connector.google.drive;
 
 import com.google.api.services.drive.Drive;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
 import javax.inject.Singleton;
 
 public final class GoogleDriveModule extends BaseGoogleServiceModule implements ExposedKeyModule<GoogleDriveClient> {
-    private GoogleDriveModule(GoogleApiSettings settings) {
+    private GoogleDriveModule(GoogleApiAuthSettings settings) {
         super(settings);
     }
 

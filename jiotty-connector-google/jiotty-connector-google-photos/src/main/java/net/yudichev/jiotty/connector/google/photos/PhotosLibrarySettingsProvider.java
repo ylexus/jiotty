@@ -1,7 +1,7 @@
 package net.yudichev.jiotty.connector.google.photos;
 
 import com.google.photos.library.v1.PhotosLibrarySettings;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization;
 
 import javax.inject.Inject;
@@ -15,10 +15,10 @@ import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings
 
 final class PhotosLibrarySettingsProvider implements Provider<PhotosLibrarySettings> {
     private static final String SCOPE_PHOTOS_LIBRARY = "https://www.googleapis.com/auth/photoslibrary";
-    private final GoogleApiSettings settings;
+    private final ResolvedGoogleApiAuthSettings settings;
 
     @Inject
-    PhotosLibrarySettingsProvider(@Settings GoogleApiSettings settings) {
+    PhotosLibrarySettingsProvider(@Settings ResolvedGoogleApiAuthSettings settings) {
         this.settings = checkNotNull(settings);
     }
 

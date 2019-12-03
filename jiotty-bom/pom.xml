@@ -190,9 +190,14 @@
                 <version>1.30.1</version>
             </dependency>
             <dependency>
-                <groupId>com.google.oauth-client</groupId>
-                <artifactId>google-oauth-client-jetty</artifactId>
-                <version>1.30.1</version>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+                <version>6.1.26</version>
                 <exclusions>
                     <!-- Conflicting with Servlet API 3 that is coming from com.sparkjava:spark-core -->
                     <exclusion>

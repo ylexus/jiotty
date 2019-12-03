@@ -5,8 +5,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.common.collect.ImmutableList;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
-import net.yudichev.jiotty.connector.google.common.impl.Bindings;
+import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization;
 
 import javax.inject.Inject;
@@ -18,14 +17,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.google.api.services.gmail.GmailScopes.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
+import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings;
 
 final class GmailProvider implements Provider<Gmail> {
     private static final List<String> SCOPES = ImmutableList.of(GMAIL_SEND, GMAIL_MODIFY, GMAIL_READONLY, GMAIL_LABELS);
-    private static final Map<GoogleApiSettings, Gmail> serviceBySettings = new ConcurrentHashMap<>();
-    private final GoogleApiSettings settings;
+    private static final Map<ResolvedGoogleApiAuthSettings, Gmail> serviceBySettings = new ConcurrentHashMap<>();
+    private final ResolvedGoogleApiAuthSettings settings;
 
     @Inject
-    GmailProvider(@Bindings.Settings GoogleApiSettings settings) {
+    GmailProvider(@Settings ResolvedGoogleApiAuthSettings settings) {
         this.settings = checkNotNull(settings);
     }
 
@@ -34,7 +34,7 @@ final class GmailProvider implements Provider<Gmail> {
         return getService(settings);
     }
 
-    static Gmail getService(GoogleApiSettings settings) {
+    static Gmail getService(ResolvedGoogleApiAuthSettings settings) {
         return serviceBySettings.computeIfAbsent(settings, googleApiSettings -> getAsUnchecked(() -> {
             // Build a new authorized API client service.
             NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();

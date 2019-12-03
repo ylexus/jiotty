@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.google.common;
 
+import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value.Immutable;
 
@@ -9,12 +10,12 @@ import java.util.Optional;
 
 @Immutable
 @PublicImmutablesStyle
-interface BaseGoogleApiSettings {
+interface BaseGoogleApiAuthSettings {
     Path authDataStoreRootDir();
 
     String applicationName();
 
     URL credentialsUrl();
 
-    Optional<AuthorizationBrowser> authorizationBrowser();
+    Optional<BindingSpec<AuthorizationBrowser>> authorizationBrowser();
 }

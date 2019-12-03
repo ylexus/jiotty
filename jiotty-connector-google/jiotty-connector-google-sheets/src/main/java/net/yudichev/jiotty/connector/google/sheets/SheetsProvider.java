@@ -4,7 +4,7 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.sheets.v4.Sheets;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.Bindings;
 
 import javax.inject.Inject;
@@ -21,7 +21,7 @@ final class SheetsProvider implements Provider<Sheets> {
     @Inject
     SheetsProvider(NetHttpTransport httpTransport,
                    Credential credential,
-                   @Bindings.Settings GoogleApiSettings settings) {
+                   @Bindings.Settings GoogleApiAuthSettings settings) {
         this.httpTransport = checkNotNull(httpTransport);
         this.credential = checkNotNull(credential);
         applicationName = settings.applicationName();

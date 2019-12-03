@@ -5,13 +5,13 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
 import javax.inject.Singleton;
 
 public final class GoogleSheetsModule extends BaseGoogleServiceModule implements ExposedKeyModule<GoogleSheetsClient> {
-    private GoogleSheetsModule(GoogleApiSettings settings) {
+    private GoogleSheetsModule(GoogleApiAuthSettings settings) {
         super(settings);
     }
 

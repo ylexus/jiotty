@@ -2,13 +2,13 @@ package net.yudichev.jiotty.connector.google.photos;
 
 import com.google.photos.library.v1.PhotosLibrarySettings;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
 import javax.inject.Singleton;
 
 public final class GooglePhotosModule extends BaseGoogleServiceModule implements ExposedKeyModule<GooglePhotosClient> {
-    private GooglePhotosModule(GoogleApiSettings settings) {
+    private GooglePhotosModule(GoogleApiAuthSettings settings) {
         super(settings);
     }
 
