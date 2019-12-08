@@ -5,7 +5,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization;
 
 import javax.inject.Inject;
@@ -16,10 +16,10 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings;
 
 public final class GoogleDriveProvider implements Provider<Drive> {
-    private final GoogleApiSettings settings;
+    private final ResolvedGoogleApiAuthSettings settings;
 
     @Inject
-    public GoogleDriveProvider(@Settings GoogleApiSettings settings) {
+    public GoogleDriveProvider(@Settings ResolvedGoogleApiAuthSettings settings) {
         this.settings = checkNotNull(settings);
     }
 

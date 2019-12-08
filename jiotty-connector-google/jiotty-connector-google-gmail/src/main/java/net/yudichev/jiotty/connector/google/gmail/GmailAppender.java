@@ -2,7 +2,7 @@ package net.yudichev.jiotty.connector.google.gmail;
 
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.model.Message;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
@@ -34,7 +34,7 @@ import static net.yudichev.jiotty.connector.google.gmail.Constants.ME;
         elementType = Appender.ELEMENT_TYPE)
 public final class GmailAppender extends AbstractAppender {
     private final String emailAddress;
-    private final GoogleApiSettings googleApiSettings;
+    private final ResolvedGoogleApiAuthSettings googleApiSettings;
 
     @SuppressWarnings("ConstructorWithTooManyParameters")
     private GmailAppender(String name,
@@ -51,7 +51,7 @@ public final class GmailAppender extends AbstractAppender {
         checkNotNull(credentialsResourcePath);
         URL credentialsUrl = GmailAppender.class.getClassLoader().getResource(credentialsResourcePath);
         checkArgument(credentialsUrl != null, "Credentials resource not found at %s", credentialsResourcePath);
-        googleApiSettings = GoogleApiSettings.builder()
+        googleApiSettings = ResolvedGoogleApiAuthSettings.builder()
                 .setAuthDataStoreRootDir(authDataStoreRootDir == null ?
                         Paths.get(System.getProperty("user.home"))
                                 .resolve("." + applicationName)

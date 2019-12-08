@@ -2,7 +2,7 @@ package net.yudichev.jiotty.connector.google.sheets;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.http.javanet.NetHttpTransport;
-import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
+import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization;
 
 import javax.inject.Inject;
@@ -15,11 +15,11 @@ import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings
 
 final class CredentialProvider implements Provider<Credential> {
     private final NetHttpTransport netHttpTransport;
-    private final GoogleApiSettings settings;
+    private final ResolvedGoogleApiAuthSettings settings;
 
     @Inject
     CredentialProvider(NetHttpTransport netHttpTransport,
-                       @Settings GoogleApiSettings settings) {
+                       @Settings ResolvedGoogleApiAuthSettings settings) {
         this.netHttpTransport = checkNotNull(netHttpTransport);
         this.settings = checkNotNull(settings);
     }

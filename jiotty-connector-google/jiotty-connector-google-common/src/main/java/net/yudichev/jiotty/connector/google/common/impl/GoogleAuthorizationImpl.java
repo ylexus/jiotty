@@ -2,7 +2,6 @@ package net.yudichev.jiotty.connector.google.common.impl;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -42,7 +41,9 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
                     .setDataStoreFactory(new FileDataStoreFactory(authDataStoreRootDir.resolve(apiName).toFile()))
                     .setAccessType("offline")
                     .build();
-            LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
+            LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+                    .setPort(8888)
+                    .build();
             credential = new AuthorizationCodeInstalledApp(flow, receiver, browser).authorize("user");
         } catch (IOException e) {
             throw new RuntimeException("Failed to create Google authorization", e);

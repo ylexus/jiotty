@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.annotation.Retention;
@@ -41,13 +42,13 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class GooglePhotosClientImpl extends BaseLifecycleComponent implements GooglePhotosClient {
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosClientImpl.class);
-    private final PhotosLibrarySettings photosLibrarySettings;
+    private final Provider<PhotosLibrarySettings> photosLibrarySettingsProvider;
     private PhotosLibraryClient client;
     private Closeable closeable;
 
     @Inject
-    GooglePhotosClientImpl(@Dependency PhotosLibrarySettings photosLibrarySettings) {
-        this.photosLibrarySettings = checkNotNull(photosLibrarySettings);
+    GooglePhotosClientImpl(@Dependency Provider<PhotosLibrarySettings> photosLibrarySettingsProvider) {
+        this.photosLibrarySettingsProvider = checkNotNull(photosLibrarySettingsProvider);
     }
 
     @Override
@@ -134,7 +135,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     @Override
     protected void doStart() {
         //noinspection resource it's closed
-        client = getAsUnchecked(() -> PhotosLibraryClient.initialize(photosLibrarySettings));
+        client = getAsUnchecked(() -> PhotosLibraryClient.initialize(photosLibrarySettingsProvider.get()));
         closeable = idempotent(() -> client.close());
     }
 
