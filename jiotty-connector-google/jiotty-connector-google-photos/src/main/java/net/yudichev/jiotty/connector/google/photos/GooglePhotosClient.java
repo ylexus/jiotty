@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.IntConsumer;
 
 public interface GooglePhotosClient {
     // TODO document MediaItemCreationFailedException here
@@ -32,10 +33,18 @@ public interface GooglePhotosClient {
         return createAlbum(name, ForkJoinPool.commonPool());
     }
 
-    CompletableFuture<List<GooglePhotosAlbum>> listAlbums(Executor executor);
+    CompletableFuture<List<GooglePhotosAlbum>> listAlbums(IntConsumer loadedAlbumCountProgressCallback, Executor executor);
+
+    default CompletableFuture<List<GooglePhotosAlbum>> listAlbums(Executor executor) {
+        return listAlbums(value -> {}, executor);
+    }
 
     default CompletableFuture<List<GooglePhotosAlbum>> listAlbums() {
         return listAlbums(ForkJoinPool.commonPool());
+    }
+
+    default CompletableFuture<List<GooglePhotosAlbum>> listAlbums(IntConsumer loadedAlbumCountProgressCallback) {
+        return listAlbums(loadedAlbumCountProgressCallback, ForkJoinPool.commonPool());
     }
 
     CompletableFuture<GooglePhotosAlbum> getAlbum(String albumId, Executor executor);

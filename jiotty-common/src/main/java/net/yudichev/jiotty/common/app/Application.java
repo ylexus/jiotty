@@ -59,13 +59,15 @@ public final class Application {
             runThread = Thread.currentThread();
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                logger.info("Shutdown hook fired");
-                initiateStop();
-                MoreThrowables.asUnchecked(() -> {
-                    if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
-                        logger.warn("Timed out waiting for partially initialised application to shut down");
-                    }
-                });
+                if (fullyStoppedLatch.getCount() > 0) {
+                    logger.info("Shutdown hook fired");
+                    initiateStop();
+                    MoreThrowables.asUnchecked(() -> {
+                        if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
+                            logger.warn("Timed out waiting for partially initialised application to shut down");
+                        }
+                    });
+                }
             }));
 
             logger.info("Initialising components");
@@ -100,7 +102,7 @@ public final class Application {
         fullyStoppedLatch.countDown();
     }
 
-    public void doStop() {
+    private void doStop() {
         logger.info("Shutting down");
         stop(componentsAttemptedToStart);
         logger.info("Shut down");

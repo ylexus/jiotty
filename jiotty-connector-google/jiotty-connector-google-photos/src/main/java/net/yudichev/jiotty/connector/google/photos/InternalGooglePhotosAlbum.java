@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.IntConsumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -71,10 +72,10 @@ final class InternalGooglePhotosAlbum implements GooglePhotosAlbum {
     }
 
     @Override
-    public CompletableFuture<List<GoogleMediaItem>> getMediaItems(Executor executor) {
+    public CompletableFuture<List<GoogleMediaItem>> getMediaItems(IntConsumer loadedItemCountProgressCallback, Executor executor) {
         return supplyAsync(() -> {
                     logger.debug("Get all media items in album {}", this);
-                    PagedRequest<MediaItem> request = new PagedRequest<>(logger, pageToken -> {
+                    PagedRequest<MediaItem> request = new PagedRequest<>(logger, loadedItemCountProgressCallback, pageToken -> {
                         SearchMediaItemsRequest.Builder requestBuilder = SearchMediaItemsRequest.newBuilder()
                                 .setAlbumId(getId())
                                 .setPageSize(100);
