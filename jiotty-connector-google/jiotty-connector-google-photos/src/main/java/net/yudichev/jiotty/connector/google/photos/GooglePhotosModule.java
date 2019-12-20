@@ -5,8 +5,6 @@ import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
-import javax.inject.Singleton;
-
 public final class GooglePhotosModule extends BaseGoogleServiceModule implements ExposedKeyModule<GooglePhotosClient> {
     private GooglePhotosModule(GoogleApiAuthSettings settings) {
         super(settings);
@@ -19,8 +17,7 @@ public final class GooglePhotosModule extends BaseGoogleServiceModule implements
     @Override
     protected void doConfigure() {
         bind(PhotosLibrarySettings.class).annotatedWith(GooglePhotosClientImpl.Dependency.class)
-                .toProvider(PhotosLibrarySettingsProvider.class)
-                .in(Singleton.class);
+                .toProvider(PhotosLibrarySettingsProvider.class);
         bind(getExposedKey()).to(boundLifecycleComponent(GooglePhotosClientImpl.class));
         expose(getExposedKey());
     }

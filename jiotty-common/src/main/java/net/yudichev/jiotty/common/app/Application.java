@@ -2,10 +2,7 @@ package net.yudichev.jiotty.common.app;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import net.yudichev.jiotty.common.inject.LifecycleComponent;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
@@ -25,6 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+@SuppressWarnings("ClassWithTooManyFields") // TODO do something about it
 public final class Application {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
@@ -37,79 +35,100 @@ public final class Application {
 
     private final Supplier<Module> moduleSupplier;
     private final List<LifecycleComponent> componentsAttemptedToStart = new CopyOnWriteArrayList<>();
-    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
-    private final CountDownLatch fullyStoppedLatch = new CountDownLatch(1);
+    private final AtomicBoolean restarting = new AtomicBoolean();
+    private final AtomicBoolean jvmShuttingDown = new AtomicBoolean();
     private final ApplicationLifecycleControl applicationLifecycleControl;
     private final AtomicBoolean startedAllComponentsSuccessfully = new AtomicBoolean();
     private final AtomicBoolean runCalled = new AtomicBoolean();
+    private CountDownLatch shutdownLatch;
+    private CountDownLatch fullyStoppedLatch;
     private Thread runThread;
 
     private Application(Supplier<Module> moduleSupplier) {
         this.moduleSupplier = checkNotNull(moduleSupplier);
-        applicationLifecycleControl = () -> {
-            logger.info("Application requested shutdown");
-            initiateStop();
+        applicationLifecycleControl = new ApplicationLifecycleControl() {
+            @Override
+            public void initiateShutdown() {
+                logger.info("Application requested shutdown");
+                initiateStop();
+            }
+
+            @Override
+            public void initiateRestart() {
+                checkState(!jvmShuttingDown.get(), "Cannot initiate restart while JVM is shutting down");
+                checkState(restarting.compareAndSet(false, true), "Already restarting");
+                logger.info("Application requested restart");
+                initiateShutdown();
+            }
         };
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            jvmShuttingDown.set(true);
+            if (fullyStoppedLatch.getCount() > 0) {
+                logger.info("Shutdown hook fired");
+                initiateStop();
+                MoreThrowables.asUnchecked(() -> {
+                    if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
+                        logger.warn("Timed out waiting for partially initialised application to shut down");
+                    }
+                });
+            }
+        }));
     }
 
     public void run() {
-        checkState(!runCalled.getAndSet(true), "Application.run() can only be called once");
-        logger.info("Starting");
-        try {
-            runThread = Thread.currentThread();
+        checkState(runCalled.compareAndSet(false, true), "Application.run() can only be called once");
+        Injector injector = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get());
+        do {
+            logger.info("Starting");
 
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                if (fullyStoppedLatch.getCount() > 0) {
-                    logger.info("Shutdown hook fired");
-                    initiateStop();
-                    MoreThrowables.asUnchecked(() -> {
-                        if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
-                            logger.warn("Timed out waiting for partially initialised application to shut down");
-                        }
-                    });
+            shutdownLatch = new CountDownLatch(1);
+            fullyStoppedLatch = new CountDownLatch(1);
+
+            try {
+                runThread = Thread.currentThread();
+
+                logger.info("Initialising components");
+                List<LifecycleComponent> allComponents = injector
+                        .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})
+                        .stream()
+                        .map(lifecycleComponentBinding -> lifecycleComponentBinding.getProvider().get())
+                        .collect(toImmutableList());
+
+                logger.info("Starting components");
+                for (LifecycleComponent component : allComponents) {
+                    if (Thread.interrupted()) {
+                        //noinspection ThrowCaughtLocally
+                        throw new InterruptedException(String.format("Interrupted while starting; components attempted to start: %s out of %s",
+                                componentsAttemptedToStart.size(), allComponents.size()));
+                    }
+                    componentsAttemptedToStart.add(component);
+                    start(component);
                 }
-            }));
 
-            logger.info("Initialising components");
-            List<LifecycleComponent> allComponents = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get())
-                    .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})
-                    .stream()
-                    .map(lifecycleComponentBinding -> lifecycleComponentBinding.getProvider().get())
-                    .collect(toImmutableList());
+                startedAllComponentsSuccessfully.set(true);
+                logger.info("Started");
 
-            logger.info("Starting components");
-            for (LifecycleComponent component : allComponents) {
-                if (Thread.interrupted()) {
-                    //noinspection ThrowCaughtLocally
-                    throw new InterruptedException(String.format("Interrupted while starting; components attempted to start: %s out of %s",
-                            componentsAttemptedToStart.size(), allComponents.size()));
-                }
-                componentsAttemptedToStart.add(component);
-                start(component);
+            } catch (InterruptedException | RuntimeException e) {
+                logger.error("Unable to initialize", e);
+                shutdownLatch.countDown();
             }
 
-            startedAllComponentsSuccessfully.set(true);
-            logger.info("Started");
+            MoreThrowables.asUnchecked(shutdownLatch::await);
+            stopComponents();
 
-        } catch (InterruptedException | RuntimeException e) {
-            logger.error("Unable to initialize", e);
-            shutdownLatch.countDown();
-        }
-
-        MoreThrowables.asUnchecked(shutdownLatch::await);
-        doStop();
-
-        fullyStoppedLatch.countDown();
-    }
-
-    private void doStop() {
-        logger.info("Shutting down");
-        stop(componentsAttemptedToStart);
-        logger.info("Shut down");
+            fullyStoppedLatch.countDown();
+        } while (restarting.getAndSet(false));
     }
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    private void stopComponents() {
+        logger.info("Shutting down");
+        stop(componentsAttemptedToStart);
+        logger.info("Shut down");
     }
 
     private void initiateStop() {

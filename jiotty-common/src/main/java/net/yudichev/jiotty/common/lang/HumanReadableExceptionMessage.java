@@ -12,14 +12,18 @@ public final class HumanReadableExceptionMessage {
         StringBuilder stringBuilder = new StringBuilder(64);
         Throwable parent = null;
         for (Throwable throwable : causalChain) {
-            if (parent != null && !parent.getMessage().equals(throwable.toString())) {
-                append(stringBuilder, parent.getMessage());
+            if (parent != null && !exceptionMessage(parent).equals(throwable.toString())) {
+                append(stringBuilder, exceptionMessage(parent));
             }
             parent = throwable;
         }
-        append(stringBuilder, checkNotNull(parent).getMessage());
+        append(stringBuilder, exceptionMessage(checkNotNull(parent)));
 
         return stringBuilder.toString();
+    }
+
+    private static String exceptionMessage(Throwable exception) {
+        return exception instanceof InterruptedException ? "Interrupted" : exception.getMessage();
     }
 
     private static void append(StringBuilder stringBuilder, String message) {

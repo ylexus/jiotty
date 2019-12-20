@@ -21,4 +21,10 @@ class HumanReadableExceptionMessageTest {
     void nestedWithParentMessage() {
         assertThat(humanReadableMessage(new RuntimeException("parent", new RuntimeException("msg"))), is("parent: msg"));
     }
+
+    @SuppressWarnings("NewExceptionWithoutArguments")
+    @Test
+    void interruptedException() {
+        assertThat(humanReadableMessage(new RuntimeException("msg", new InterruptedException())), is("msg: Interrupted"));
+    }
 }
