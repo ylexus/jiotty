@@ -58,7 +58,7 @@ public final class Application {
                 checkState(!jvmShuttingDown.get(), "Cannot initiate restart while JVM is shutting down");
                 checkState(restarting.compareAndSet(false, true), "Already restarting");
                 logger.info("Application requested restart");
-                initiateShutdown();
+                initiateStop();
             }
         };
 
@@ -78,16 +78,17 @@ public final class Application {
 
     public void run() {
         checkState(runCalled.compareAndSet(false, true), "Application.run() can only be called once");
+        runThread = Thread.currentThread();
         Injector injector = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get());
         do {
             logger.info("Starting");
 
             shutdownLatch = new CountDownLatch(1);
             fullyStoppedLatch = new CountDownLatch(1);
+            startedAllComponentsSuccessfully.set(false);
+            componentsAttemptedToStart.clear();
 
             try {
-                runThread = Thread.currentThread();
-
                 logger.info("Initialising components");
                 List<LifecycleComponent> allComponents = injector
                         .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})

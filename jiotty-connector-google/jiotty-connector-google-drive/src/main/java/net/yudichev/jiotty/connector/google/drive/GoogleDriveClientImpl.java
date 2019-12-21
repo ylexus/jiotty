@@ -3,7 +3,6 @@ package net.yudichev.jiotty.connector.google.drive;
 import com.google.api.services.drive.Drive;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
-import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
@@ -13,7 +12,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-final class GoogleDriveClientImpl extends BaseLifecycleComponent implements GoogleDriveClient {
+final class GoogleDriveClientImpl implements GoogleDriveClient {
     private static final String ROOT_ID = "root";
     private final Drive drive;
 

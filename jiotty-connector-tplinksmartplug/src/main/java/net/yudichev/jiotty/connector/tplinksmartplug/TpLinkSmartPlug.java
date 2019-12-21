@@ -49,7 +49,8 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private final String password;
     private final String termId;
     private final String deviceId;
-    private final SchedulingExecutor executor;
+    private final ExecutorFactory executorFactory;
+    private SchedulingExecutor executor;
 
     private CompletableFuture<String> tokenFuture;
     private Closeable tokenRefreshSchedule = Closeable.noop();
@@ -64,7 +65,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         this.password = checkNotNull(password);
         this.termId = checkNotNull(termId);
         this.deviceId = checkNotNull(deviceId);
-        executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug");
+        this.executorFactory = checkNotNull(executorFactory);
     }
 
     @Override
@@ -85,6 +86,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
 
     @Override
     protected void doStart() {
+        executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug");
         refreshToken();
         tokenRefreshSchedule = executor.scheduleAtFixedRate(TOKEN_REFRESH_PERIOD, this::refreshToken);
     }

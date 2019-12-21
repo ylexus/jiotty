@@ -24,14 +24,13 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements SunriseSunsetService {
     private static final Logger logger = LoggerFactory.getLogger(SunriseSunsetServiceImpl.class);
 
+    private final ExecutorFactory executorFactory;
     private final SunriseSunsetTimes sunriseSunsetTimes;
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final WorldCoordinates coordinates;
-    private final SchedulingExecutor executor;
-
     private final CompositeRunnable sunsetHandlers = new CompositeRunnable();
     private final CompositeRunnable sunriseHandlers = new CompositeRunnable();
-
+    private SchedulingExecutor executor;
     private SunriseSunsetData currentSsData;
 
     private boolean sunIsUp;
@@ -41,10 +40,10 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
                              SunriseSunsetTimes sunriseSunsetTimes,
                              CurrentDateTimeProvider currentDateTimeProvider,
                              @Assisted WorldCoordinates coordinates) {
+        this.executorFactory = checkNotNull(executorFactory);
         this.sunriseSunsetTimes = checkNotNull(sunriseSunsetTimes);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
         this.coordinates = checkNotNull(coordinates);
-        executor = executorFactory.createSingleThreadedSchedulingExecutor("sunrise-sunset-service");
     }
 
     @Override
@@ -71,6 +70,7 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
 
     @Override
     protected void doStart() {
+        executor = executorFactory.createSingleThreadedSchedulingExecutor("sunrise-sunset-service");
         currentSsData = getAsUnchecked(() -> sunriseSunsetTimes.getCurrentSunriseSunset(coordinates).get(5, SECONDS));
         sunIsUp = calculateSunIsUp();
         executor.scheduleAtFixedRate(Duration.ZERO, Duration.ofDays(1), this::onTimesRefresh);
