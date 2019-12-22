@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -16,23 +17,30 @@ import static com.google.common.base.Strings.emptyToNull;
 final class PagedRequest<T> {
     @SuppressWarnings("NonConstantLogger") // as designed
     private final Logger logger;
+    private final IntConsumer itemCountProgressCallback;
     private final Function<Optional<String>, PagedListResponse<T>> requestInvoker;
 
-    PagedRequest(Logger logger, Function<Optional<String>, PagedListResponse<T>> requestInvoker) {
+    PagedRequest(Logger logger, IntConsumer itemCountProgressCallback, Function<Optional<String>, PagedListResponse<T>> requestInvoker) {
         this.logger = checkNotNull(logger);
+        this.itemCountProgressCallback = checkNotNull(itemCountProgressCallback);
         this.requestInvoker = checkNotNull(requestInvoker);
     }
 
     Stream<T> getAll() {
         String pageToken = null;
         Stream.Builder<T> streamBuilder = Stream.builder();
+        int totalCount = 0;
         do {
             PagedListResponse<T> listResponse = requestInvoker.apply(Optional.ofNullable(pageToken));
             logger.debug("Requesting list, page token [{}]", pageToken);
             Page<T> page = listResponse.getPage();
             logger.debug("Received response to list request, page token [{}], next page token [{}]",
                     pageToken, page.getNextPageToken());
-            page.getValues().forEach(streamBuilder::add);
+            for (T value : page.getValues()) {
+                streamBuilder.add(value);
+                totalCount++;
+            }
+            itemCountProgressCallback.accept(totalCount);
             pageToken = emptyToNull(listResponse.getNextPageToken());
         } while (pageToken != null);
         return streamBuilder.build();

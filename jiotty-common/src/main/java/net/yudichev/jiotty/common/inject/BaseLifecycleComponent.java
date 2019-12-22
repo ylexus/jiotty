@@ -6,12 +6,11 @@ import static com.google.common.base.Preconditions.checkState;
 
 @SuppressWarnings("AbstractClassWithoutAbstractMethods") // designed for extension
 public abstract class BaseLifecycleComponent implements LifecycleComponent {
-    private final AtomicBoolean startAttempted = new AtomicBoolean();
     private final AtomicBoolean started = new AtomicBoolean();
 
     @Override
     public final void start() {
-        checkState(!startAttempted.getAndSet(true), "start already attempted");
+        checkState(!started.get(), "Component %s is already started", this);
         doStart();
         started.set(true);
     }

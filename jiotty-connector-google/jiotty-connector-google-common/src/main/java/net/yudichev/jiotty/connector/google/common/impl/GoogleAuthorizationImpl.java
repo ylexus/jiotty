@@ -21,8 +21,8 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
     private final Credential credential;
     private final GoogleClientSecrets clientSecrets;
 
+    // internal API
     @SuppressWarnings("ConstructorWithTooManyParameters")
-        // internal API
     GoogleAuthorizationImpl(NetHttpTransport httpTransport,
                             Path authDataStoreRootDir,
                             String apiName,
@@ -36,11 +36,11 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
             }
 
             // Build flow and trigger user authorization request.
-            GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                    httpTransport, JacksonFactory.getDefaultInstance(), clientSecrets, scopes)
-                    .setDataStoreFactory(new FileDataStoreFactory(authDataStoreRootDir.resolve(apiName).toFile()))
-                    .setAccessType("offline")
-                    .build();
+            GoogleAuthorizationCodeFlow flow =
+                    new GoogleAuthorizationCodeFlow.Builder(httpTransport, JacksonFactory.getDefaultInstance(), clientSecrets, scopes)
+                            .setDataStoreFactory(new FileDataStoreFactory(authDataStoreRootDir.resolve(apiName).toFile()))
+                            .setAccessType("offline")
+                            .build();
             LocalServerReceiver receiver = new LocalServerReceiver.Builder()
                     .setPort(8888)
                     .build();

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.IntConsumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -104,10 +105,10 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     }
 
     @Override
-    public CompletableFuture<List<GooglePhotosAlbum>> listAlbums(Executor executor) {
+    public CompletableFuture<List<GooglePhotosAlbum>> listAlbums(IntConsumer loadedAlbumCountProgressCallback, Executor executor) {
         return supplyAsync(() -> {
                     logger.debug("List all albums");
-                    PagedRequest<Album> request = new PagedRequest<>(logger, pageToken -> {
+                    PagedRequest<Album> request = new PagedRequest<>(logger, loadedAlbumCountProgressCallback, pageToken -> {
                         ListAlbumsRequest.Builder requestBuilder = ListAlbumsRequest.newBuilder()
                                 .setExcludeNonAppCreatedData(false)
                                 .setPageSize(50);

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.IntConsumer;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -44,9 +45,17 @@ public interface GooglePhotosAlbum {
         return removeMediaItems(mediaItems, ForkJoinPool.commonPool());
     }
 
-    CompletableFuture<List<GoogleMediaItem>> getMediaItems(Executor executor);
+    CompletableFuture<List<GoogleMediaItem>> getMediaItems(IntConsumer loadedItemCountProgressCallback, Executor executor);
+
+    default CompletableFuture<List<GoogleMediaItem>> getMediaItems(Executor executor) {
+        return getMediaItems(command -> { }, executor);
+    }
 
     default CompletableFuture<List<GoogleMediaItem>> getMediaItems() {
         return getMediaItems(ForkJoinPool.commonPool());
+    }
+
+    default CompletableFuture<List<GoogleMediaItem>> getMediaItems(IntConsumer loadedItemCountProgressCallback) {
+        return getMediaItems(loadedItemCountProgressCallback, ForkJoinPool.commonPool());
     }
 }

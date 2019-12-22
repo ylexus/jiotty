@@ -28,7 +28,10 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
 
     @Inject
     SingleThreadedSchedulingExecutor(@Assisted String threadNameBase) {
-        executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat(threadNameBase + "-%s").build());
+        executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+                .setNameFormat(threadNameBase + "-%s")
+                .setDaemon(true)
+                .build());
     }
 
     @Override
