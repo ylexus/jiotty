@@ -1,0 +1,28 @@
+module jiotty.common {
+    requires static com.google.guice;
+    requires static com.google.common;
+    requires static org.slf4j;
+    requires static jul.to.slf4j;
+    requires static java.logging;
+    requires static sysout.over.slf4j;
+    requires static javax.inject;
+    requires static com.google.guice.extensions.assistedinject;
+    requires static jsr305;
+    requires static com.fasterxml.jackson.databind;
+    requires static com.fasterxml.jackson.datatype.guava;
+    requires static com.fasterxml.jackson.datatype.jdk8;
+    requires static com.fasterxml.jackson.datatype.jsr310;
+    requires static org.immutables.value;
+    requires static spark.core;
+    requires static okhttp3;
+    requires static okio;
+
+    exports net.yudichev.jiotty.common.app;
+    exports net.yudichev.jiotty.common.async;
+    exports net.yudichev.jiotty.common.inject;
+    exports net.yudichev.jiotty.common.lang;
+    exports net.yudichev.jiotty.common.lang.throttling;
+    exports net.yudichev.jiotty.common.rest;
+    exports net.yudichev.jiotty.common.time;
+    exports net.yudichev.jiotty.common.varstore;
+}
