@@ -21,7 +21,6 @@
 
 package net.yudichev.jiotty.connector.aws;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +30,7 @@ import java.security.PrivateKey;
 import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
+import java.util.Base64;
 
 /**
  * Class for reading RSA or ECC private key from PEM file.
@@ -73,7 +73,7 @@ public class PrivateKeyReader {
             }
         }
         KeySpec keySpec;
-        byte[] encoded = DatatypeConverter.parseBase64Binary(builder.toString());
+        byte[] encoded = Base64.getDecoder().decode(builder.toString());
         if (isRSAKey) {
             keySpec = getRSAKeySpec(encoded);
         } else {
@@ -87,7 +87,7 @@ public class PrivateKeyReader {
 
     /**
      * Convert PKCS#1 encoded private key into RSAPrivateCrtKeySpec.
-     * <p/>
+     * <p>
      * The ASN.1 syntax for the private key with CRT is
      *
      * <pre>
@@ -142,10 +142,10 @@ public class PrivateKeyReader {
  * A bare-minimum ASN.1 DER decoder, just having enough functions to decode
  * PKCS#1 private keys. Especially, it doesn't handle explicitly tagged types
  * with an outer tag.
- * <p/>
+ * <p>
  * This parser can only handle one layer. To parse nested constructs, get a new
  * parser for each layer using <code>Asn1Object.getParser()</code>.
- * <p/>
+ * <p>
  * There are many DER decoders in JRE but using them will tie this program to a
  * specific JCE/JVM.
  *
@@ -217,7 +217,6 @@ class DerParser {
      * Decode the length of the field. Can only support length encoding up to 4
      * octets.
      * <p>
-     * <p/>
      * In BER/DER encoding, length can be encoded in 2 forms,
      * <ul>
      * <li>Short form. One octet. Bit 8 has value "0" and bits 7-1 give the
@@ -277,7 +276,6 @@ class Asn1Object {
      * Construct a ASN.1 TLV. The TLV could be either a constructed or primitive
      * entity.
      * <p>
-     * <p/>
      * The first byte in DER encoding is made of following fields,
      *
      * <pre>
