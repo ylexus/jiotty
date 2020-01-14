@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 
@@ -16,7 +15,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -25,8 +23,6 @@ import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.file.Files.*;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 final class VarStoreImpl implements VarStore {
@@ -70,7 +66,7 @@ final class VarStoreImpl implements VarStore {
     private ObjectNode readConfig() throws IOException {
         if (!isRegularFile(storeFile)) {
             createDirectories(storeFile.getParent());
-            createFile(storeFile, PosixFilePermissions.asFileAttribute(ImmutableSet.of(OWNER_READ, OWNER_WRITE)));
+            createFile(storeFile);
         }
 
         ObjectNode configNode;
