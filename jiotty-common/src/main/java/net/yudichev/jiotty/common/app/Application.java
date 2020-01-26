@@ -113,6 +113,9 @@ public final class Application {
             } catch (InterruptedException | RuntimeException e) {
                 logger.error("Unable to initialize", e);
                 shutdownLatch.countDown();
+                // intentionally clearing the interrupted flag to guarantee the immediately following latch await not to fail
+                //noinspection ResultOfMethodCallIgnored
+                Thread.interrupted();
             }
 
             MoreThrowables.asUnchecked(shutdownLatch::await);
