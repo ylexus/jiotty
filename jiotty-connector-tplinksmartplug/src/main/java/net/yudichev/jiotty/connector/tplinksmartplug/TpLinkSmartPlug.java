@@ -31,6 +31,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.time.Duration.ZERO;
+import static java.time.Duration.ofDays;
 import static net.yudichev.jiotty.appliance.PowerCommand.OFF;
 import static net.yudichev.jiotty.appliance.PowerCommand.ON;
 import static net.yudichev.jiotty.common.lang.Json.object;
@@ -39,7 +41,7 @@ import static net.yudichev.jiotty.common.rest.RestClients.*;
 
 final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance {
     private static final Logger logger = LoggerFactory.getLogger(TpLinkSmartPlug.class);
-    private static final Duration TOKEN_REFRESH_PERIOD = Duration.ofDays(14);
+    private static final Duration TOKEN_REFRESH_PERIOD = ofDays(14);
     private static final Map<Command, Integer> COMMAND_TO_STATE = ImmutableMap.of(
             ON, 1,
             OFF, 0
@@ -88,8 +90,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     @Override
     protected void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug");
-        refreshToken();
-        tokenRefreshSchedule = executor.scheduleAtFixedRate(TOKEN_REFRESH_PERIOD, this::refreshToken);
+        tokenRefreshSchedule = executor.scheduleAtFixedRate(ZERO, TOKEN_REFRESH_PERIOD, this::refreshToken);
     }
 
     @Override
