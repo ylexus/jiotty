@@ -77,6 +77,7 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
 
     @Override
     public CompletableFuture<Void> publish(String topic, String message) {
+        checkStarted();
         return supplyAsync(() -> {
             synchronized (lock) {
                 logger.debug("OUT topic: {}, msg: {}", topic, message);
@@ -88,9 +89,11 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
 
     @Override
     protected void doStart() {
-        client.setCallback(new ResubscribeOnReconnectCallback());
-        asUnchecked(() -> client.connect(mqttConnectOptions));
-        logger.info("Connected to broker");
+        synchronized (lock) {
+            client.setCallback(new ResubscribeOnReconnectCallback());
+            asUnchecked(() -> client.connect(mqttConnectOptions));
+            logger.info("Connected to broker");
+        }
     }
 
     @Override
@@ -140,6 +143,7 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             delegate.accept(topic, new String(message.getPayload(), UTF_8));
         }
     }
+
 
     private class ResubscribeOnReconnectCallback implements MqttCallbackExtended {
         private final Consumer<Throwable> throttledErrorLogger = throttledLoggerFactory.create(5, Duration.ofMinutes(1), e ->

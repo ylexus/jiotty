@@ -8,7 +8,7 @@ import spark.Service;
 
 final class SparkRestServer extends BaseLifecycleComponent implements RestServer {
     private static final Logger logger = LoggerFactory.getLogger(SparkRestServer.class);
-    private Service http;
+    private volatile Service http;
 
     @Override
     public void doStart() {

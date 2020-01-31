@@ -11,7 +11,7 @@ final class GpioControllerProvider extends BaseLifecycleComponent implements Pro
 
     @Override
     public GpioController get() {
-        return gpio;
+        return whenStartedAndNotLifecycling(() -> gpio);
     }
 
     @Override

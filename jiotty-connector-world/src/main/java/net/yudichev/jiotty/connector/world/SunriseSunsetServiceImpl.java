@@ -14,11 +14,14 @@ import javax.inject.Inject;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.time.ZoneOffset.UTC;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
+import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements SunriseSunsetService {
@@ -30,9 +33,10 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     private final WorldCoordinates coordinates;
     private final CompositeRunnable sunsetHandlers = new CompositeRunnable();
     private final CompositeRunnable sunriseHandlers = new CompositeRunnable();
+    private final Lock lock = new ReentrantLock();
+
     private SchedulingExecutor executor;
     private SunriseSunsetData currentSsData;
-
     private boolean sunIsUp;
 
     @Inject
@@ -49,30 +53,35 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     @Override
     public Closeable onEverySunrise(Runnable action, Executor executor) {
         checkStarted();
-
-        action = executedBy(action, executor);
-        if (sunIsUp) {
-            action.run();
-        }
-        return sunriseHandlers.add(action);
+        Runnable dispatchedAction = executedBy(action, executor);
+        return inLock(lock, () -> {
+            if (sunIsUp) {
+                dispatchedAction.run();
+            }
+            return sunriseHandlers.add(dispatchedAction);
+        });
     }
 
     @Override
     public Closeable onEverySunset(Runnable action, Executor executor) {
         checkStarted();
-
-        action = executedBy(action, executor);
-        if (!sunIsUp) {
-            action.run();
-        }
-        return sunsetHandlers.add(action);
+        Runnable dispatchedAction = executedBy(action, executor);
+        return inLock(lock, () -> {
+            if (!sunIsUp) {
+                dispatchedAction.run();
+            }
+            return sunsetHandlers.add(dispatchedAction);
+        });
     }
 
     @Override
     protected void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("sunrise-sunset-service");
-        currentSsData = getAsUnchecked(() -> sunriseSunsetTimes.getCurrentSunriseSunset(coordinates).get(5, SECONDS));
-        sunIsUp = calculateSunIsUp();
+        SunriseSunsetData ssData = getAsUnchecked(() -> sunriseSunsetTimes.getCurrentSunriseSunset(coordinates).get(5, SECONDS));
+        inLock(lock, () -> {
+            currentSsData = ssData;
+            sunIsUp = calculateSunIsUp();
+        });
         executor.scheduleAtFixedRate(Duration.ZERO, Duration.ofDays(1), this::onTimesRefresh);
         executor.scheduleAtFixedRate(Duration.ofMinutes(7), this::onRefresh);
     }
@@ -87,16 +96,18 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     }
 
     private void onRefresh() {
-        boolean newSunIsUp = calculateSunIsUp();
-        try {
-            if (!sunIsUp && newSunIsUp) {
-                sunriseHandlers.run();
-            } else if (sunIsUp && !newSunIsUp) {
-                sunsetHandlers.run();
+        inLock(lock, () -> {
+            boolean newSunIsUp = calculateSunIsUp();
+            try {
+                if (!sunIsUp && newSunIsUp) {
+                    sunriseHandlers.run();
+                } else if (sunIsUp && !newSunIsUp) {
+                    sunsetHandlers.run();
+                }
+            } finally {
+                sunIsUp = newSunIsUp;
             }
-        } finally {
-            sunIsUp = newSunIsUp;
-        }
+        });
     }
 
     private boolean calculateSunIsUp() {
@@ -108,17 +119,21 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     }
 
     private void onTimesRefresh() {
-        sunriseSunsetTimes.getCurrentSunriseSunset(coordinates)
-                .whenCompleteAsync((sunriseSunsetData, e) -> {
-                    if (e != null) {
-                        logger.error("Unable to get current SS times, will retry in 5 minutes", e);
-                        executor.schedule(Duration.ofMinutes(5), this::onTimesRefresh);
-                    } else {
-                        logger.debug("Refreshed SS data: {}", sunriseSunsetData);
-                        currentSsData = sunriseSunsetData;
-                        onRefresh();
-                    }
-                }, executor);
+        whenStartedAndNotLifecycling(() -> {
+            sunriseSunsetTimes.getCurrentSunriseSunset(coordinates)
+                    .whenCompleteAsync((sunriseSunsetData, e) -> {
+                        if (e != null) {
+                            logger.error("Unable to get current SS times, will retry in 5 minutes", e);
+                            whenStartedAndNotLifecycling(() -> executor.schedule(Duration.ofMinutes(5), this::onTimesRefresh));
+                        } else {
+                            logger.debug("Refreshed SS data: {}", sunriseSunsetData);
+                            inLock(lock, () -> {
+                                currentSsData = sunriseSunsetData;
+                                onRefresh();
+                            });
+                        }
+                    }, executor);
+        });
     }
 
     private static boolean isBetween(LocalTime checkLocalTime, LocalTime startLocalTime, LocalTime endLocalTime) {

@@ -25,6 +25,7 @@ final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implem
     private final Pin pin;
     private final PinPullResistance pinPullResistance;
     private final Set<Consumer<PinState>> listeners = new CopyOnWriteArraySet<>();
+
     private GpioPinDigitalInput input;
     private Closeable closeable;
 
@@ -39,9 +40,11 @@ final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implem
 
     @Override
     public Closeable addListener(Consumer<PinState> listener) {
-        checkArgument(listeners.add(listener), "already added: %s", listener);
-        listener.accept(input.getState());
-        return Closeable.idempotent(() -> listeners.remove(listener));
+        return whenStartedAndNotLifecycling(() -> {
+            checkArgument(listeners.add(listener), "already added: %s", listener);
+            listener.accept(input.getState());
+            return Closeable.idempotent(() -> listeners.remove(listener));
+        });
     }
 
     @Override

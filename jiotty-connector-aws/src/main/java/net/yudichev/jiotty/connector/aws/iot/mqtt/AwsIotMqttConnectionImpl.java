@@ -42,7 +42,6 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
     private final Duration timeout;
     private final AWSIotMqttClient client;
     private final Set<String> subscribedTopics = Sets.newConcurrentHashSet();
-    private final Object subscriptionLock = new Object();
 
     @Inject
     AwsIotMqttConnectionImpl(@ClientEndpoint String clientEndpoint,
@@ -77,8 +76,7 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
 
     @Override
     public <T> CompletableFuture<Closeable> subscribe(String topic, Class<T> payloadType, BiConsumer<? super String, ? super T> callback) {
-        synchronized (subscriptionLock) {
-            checkStarted();
+        return whenStartedAndNotLifecycling(() -> {
             checkState(subscribedTopics.add(topic), "already subscribed to topic %s", topic);
             CompletableFuture<Closeable> result = new CompletableFuture<>();
             try {
@@ -87,13 +85,20 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
                     @Override
                     public void onSuccess() {
                         logger.info("Subscribed to {}", topic);
-                        result.complete(idempotent(() -> asUnchecked(() -> {
+                        result.complete(idempotent(() -> {
                             try {
-                                client.unsubscribe(topic, timeout.toMillis());
+                                whenNotLifecycling(() -> {
+                                    if (isStarted()) {
+                                        asUnchecked(() -> client.unsubscribe(topic, timeout.toMillis()));
+                                    } else {
+                                        logger.warn("Ignored attempt to close a subscription to topic {} via client {} when the component is not running",
+                                                topic, client);
+                                    }
+                                });
                             } finally {
                                 subscribedTopics.remove(topic);
                             }
-                        })));
+                        }));
                     }
 
                     @Override
@@ -134,7 +139,7 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
                 result.completeExceptionally(e);
             }
             return result;
-        }
+        });
     }
 
     @Override
