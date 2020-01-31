@@ -25,7 +25,6 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
     private final String host;
     private final String macAddress;
     private final DeviceSupplier deviceSupplier;
-    private final Object lock = new Object();
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // IDEA inspection failure
     private BLDevice device;
 
@@ -45,38 +44,36 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
     @SuppressWarnings("AssignmentToNull")
     @Override
     public void doStart() {
-        synchronized (lock) {
-            int attempts = INIT_ATTEMPTS;
-            while (device == null) {
-                try {
-                    device = deviceSupplier.create(host, new Mac(macAddress));
-                    if (device.auth()) {
-                        logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
-                    } else {
-                        device.close();
-                        device = null;
-                        attempts--;
-                        if (attempts == 0) {
-                            throw new RuntimeException(
-                                    String.format("Failed to authenticate Broadlink device on host %s, MAC %s after %s attempts",
-                                            host, macAddress, INIT_ATTEMPTS));
-                        } else {
-                            logger.info("Unable to authenticate Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts);
-                        }
-                    }
-                } catch (IOException e) {
-                    if (device != null) {
-                        device.close();
-                        device = null;
-                    }
+        int attempts = INIT_ATTEMPTS;
+        while (device == null) {
+            try {
+                device = deviceSupplier.create(host, new Mac(macAddress));
+                if (device.auth()) {
+                    logger.info("RM2 Device ready at {}: {}", device.getHost(), device.getDeviceDescription());
+                } else {
+                    device.close();
+                    device = null;
                     attempts--;
                     if (attempts == 0) {
                         throw new RuntimeException(
-                                String.format("Failed to initialize Broadlink device on host %s, MAC %s after %s attempts", host, macAddress, INIT_ATTEMPTS),
-                                e);
+                                String.format("Failed to authenticate Broadlink device on host %s, MAC %s after %s attempts",
+                                        host, macAddress, INIT_ATTEMPTS));
                     } else {
-                        logger.info("Unable to initialize Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts, e);
+                        logger.info("Unable to authenticate Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts);
                     }
+                }
+            } catch (IOException e) {
+                if (device != null) {
+                    device.close();
+                    device = null;
+                }
+                attempts--;
+                if (attempts == 0) {
+                    throw new RuntimeException(
+                            String.format("Failed to initialize Broadlink device on host %s, MAC %s after %s attempts", host, macAddress, INIT_ATTEMPTS),
+                            e);
+                } else {
+                    logger.info("Unable to initialize Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts, e);
                 }
             }
         }
@@ -84,17 +81,12 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
 
     @Override
     public void sendCommandPacket(byte[] packetData) {
-        synchronized (lock) {
-            checkStarted();
-            asUnchecked(() -> device.sendCmdPkt(new SendDataCmdPayload(packetData)));
-        }
+        whenStartedAndNotLifecycling(() -> asUnchecked(() -> device.sendCmdPkt(new SendDataCmdPayload(packetData))));
     }
 
     @Override
     protected void doStop() {
-        synchronized (lock) {
-            device.close();
-        }
+        device.close();
     }
 
     interface DeviceSupplier {

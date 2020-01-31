@@ -1,7 +1,6 @@
 package net.yudichev.jiotty.connector.nest;
 
 import com.google.inject.BindingAnnotation;
-import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.rest.ContentTypes;
 import okhttp3.MediaType;
@@ -21,7 +20,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 
-final class NestThermostatImpl extends BaseLifecycleComponent implements NestThermostat {
+final class NestThermostatImpl implements NestThermostat {
     private final String hvacModeUrl;
     private final OkHttpClient client;
     private final String authorization;

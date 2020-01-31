@@ -75,13 +75,14 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
 
     @Override
     public CompletableFuture<?> execute(Command command) {
-        checkStarted();
-        //noinspection RedundantTypeArguments compiler is not coping
-        return tokenFuture
-                .thenComposeAsync(token ->
-                                command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
-                                        post(token, COMMAND_TO_STATE.get(powerCommand))),
-                        executor);
+        return whenStartedAndNotLifecycling(() -> {
+            //noinspection RedundantTypeArguments compiler is not coping
+            return tokenFuture
+                    .thenComposeAsync(token ->
+                                    command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
+                                            post(token, COMMAND_TO_STATE.get(powerCommand))),
+                            executor);
+        });
     }
 
     @Override
@@ -98,27 +99,29 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     }
 
     private void refreshToken() {
-        logger.info("Requesting token");
-        tokenFuture = call(new Request.Builder()
-                        .url(new HttpUrl.Builder()
-                                .scheme("https")
-                                .host("eu-wap.tplinkcloud.com")
-                                .build())
-                        .post(RequestBody.create(MediaType.get(CONTENT_TYPE_JSON), object()
-                                .put("method", "login")
-                                .set("params", object()
-                                        .put("appType", "Kasa_Android")
-                                        .put("cloudUserName", username)
-                                        .put("cloudPassword", password)
-                                        .put("terminalUUID", UUID.randomUUID().toString()))
-                                .toString()))
-                        .build(),
-                JsonNode.class)
-                .thenApply(TpLinkSmartPlug::verifyResponse)
-                .thenApply(resultJsonNode -> {
-                    logger.info("Obtained token");
-                    return getRequiredNodeString(resultJsonNode, "token");
-                });
+        whenStartedAndNotLifecycling(() -> {
+            logger.info("Requesting token");
+            tokenFuture = call(new Request.Builder()
+                            .url(new HttpUrl.Builder()
+                                    .scheme("https")
+                                    .host("eu-wap.tplinkcloud.com")
+                                    .build())
+                            .post(RequestBody.create(MediaType.get(CONTENT_TYPE_JSON), object()
+                                    .put("method", "login")
+                                    .set("params", object()
+                                            .put("appType", "Kasa_Android")
+                                            .put("cloudUserName", username)
+                                            .put("cloudPassword", password)
+                                            .put("terminalUUID", UUID.randomUUID().toString()))
+                                    .toString()))
+                            .build(),
+                    JsonNode.class)
+                    .thenApply(TpLinkSmartPlug::verifyResponse)
+                    .thenApply(resultJsonNode -> {
+                        logger.info("Obtained token");
+                        return getRequiredNodeString(resultJsonNode, "token");
+                    });
+        });
     }
 
     private CompletableFuture<?> post(String token, int state) {

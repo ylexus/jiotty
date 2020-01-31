@@ -60,10 +60,14 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
     @SuppressWarnings("ReturnOfInnerClass") // we are a singleton
     @Override
     public Closeable subscribe(String query, Consumer<GmailMessage> handler) {
-        Subscription subscription = new Subscription(query, handler);
-        subscriptions.add(subscription);
-        executor.execute(subscription::execute);
-        return subscription;
+        return whenStartedAndNotLifecycling(() -> {
+            Subscription subscription = new Subscription(query, handler);
+            whenStartedAndNotLifecycling(() -> {
+                subscriptions.add(subscription);
+                executor.execute(subscription::execute);
+            });
+            return subscription;
+        });
     }
 
     @Override
@@ -106,16 +110,19 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
             this.handler = checkNotNull(handler);
         }
 
-        void execute() {
-            synchronize();
-            schedule = executor.scheduleAtFixedRate(MESSAGE_POLL_PERIOD,
-                    withExceptionLoggedAfterThreshold(logger, "polling Gmail", MAX_ALLOWED_ERRORS_WHEN_POLLING, this::synchronize));
-        }
-
         @Override
         public void close() {
-            schedule.close();
-            subscriptions.remove(this);
+            whenNotLifecycling(() -> {
+                schedule.close();
+                subscriptions.remove(this);
+            });
+        }
+
+        void execute() {
+            synchronize();
+            schedule = whenStartedAndNotLifecycling(() ->
+                    executor.scheduleAtFixedRate(MESSAGE_POLL_PERIOD,
+                            withExceptionLoggedAfterThreshold(logger, "polling Gmail", MAX_ALLOWED_ERRORS_WHEN_POLLING, this::synchronize)));
         }
 
         private void synchronize() {

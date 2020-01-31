@@ -54,7 +54,8 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
 
     @Override
     public CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor) {
-        return supplyAsync(() -> {
+        PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
+        return supplyAsync(() -> whenStartedAndNotLifecycling(() -> {
             logger.debug("Started uploading {}", file);
             String fileName = file.getFileName().toString();
             UploadMediaItemResponse uploadResponse;
@@ -63,7 +64,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                         .setFileName(fileName)
                         .setDataFile(randomAccessFile)
                         .build();
-                uploadResponse = client.uploadMediaItem(uploadRequest);
+                uploadResponse = theClient.uploadMediaItem(uploadRequest);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -77,8 +78,8 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                     .createNewMediaItem(uploadToken, fileName);
             List<NewMediaItem> newItems = of(newMediaItem);
             List<NewMediaItemResult> newMediaItemResultsList = albumId
-                    .map(theAlbumId -> client.batchCreateMediaItems(theAlbumId, newItems))
-                    .orElseGet(() -> client.batchCreateMediaItems(newItems)).getNewMediaItemResultsList();
+                    .map(theAlbumId -> theClient.batchCreateMediaItems(theAlbumId, newItems))
+                    .orElseGet(() -> theClient.batchCreateMediaItems(newItems)).getNewMediaItemResultsList();
             checkState(newMediaItemResultsList.size() == 1,
                     "expected media item creation result list size 1, got: %s", newMediaItemResultsList);
             NewMediaItemResult newMediaItemResult = newMediaItemResultsList.get(0);
@@ -90,46 +91,47 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                 throw new MediaItemCreationFailedException(String.format("Unable to create media item for file %s status %s: %s",
                         file, status.getCode(), status.getMessage()), status);
             }
-
-        }, executor);
+        }), executor);
     }
 
     @Override
     public CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor) {
+        PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
         return supplyAsync(() -> {
             logger.debug("Creating album '{}'", name);
-            Album album = client.createAlbum(name);
+            Album album = theClient.createAlbum(name);
             logger.debug("Created album {}", album);
-            return new InternalGooglePhotosAlbum(client, album);
+            return new InternalGooglePhotosAlbum(theClient, album);
         }, executor);
     }
 
     @Override
     public CompletableFuture<List<GooglePhotosAlbum>> listAlbums(IntConsumer loadedAlbumCountProgressCallback, Executor executor) {
+        PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
         return supplyAsync(() -> {
-                    logger.debug("List all albums");
-                    PagedRequest<Album> request = new PagedRequest<>(logger, loadedAlbumCountProgressCallback, pageToken -> {
-                        ListAlbumsRequest.Builder requestBuilder = ListAlbumsRequest.newBuilder()
-                                .setExcludeNonAppCreatedData(false)
-                                .setPageSize(50);
-                        pageToken.ifPresent(requestBuilder::setPageToken);
-                        return client.listAlbums(requestBuilder.build());
-                    });
-                    List<GooglePhotosAlbum> result = request.getAll().map(album -> new InternalGooglePhotosAlbum(client, album))
-                            .collect(toImmutableList());
-                    logger.debug("Listed {} album(s)", result.size());
-                    return result;
-                },
-                executor);
+            logger.debug("List all albums");
+            PagedRequest<Album> request = new PagedRequest<>(logger, loadedAlbumCountProgressCallback, pageToken -> {
+                ListAlbumsRequest.Builder requestBuilder = ListAlbumsRequest.newBuilder()
+                        .setExcludeNonAppCreatedData(false)
+                        .setPageSize(50);
+                pageToken.ifPresent(requestBuilder::setPageToken);
+                return theClient.listAlbums(requestBuilder.build());
+            });
+            List<GooglePhotosAlbum> result = request.getAll().map(album -> new InternalGooglePhotosAlbum(theClient, album))
+                    .collect(toImmutableList());
+            logger.debug("Listed {} album(s)", result.size());
+            return result;
+        }, executor);
     }
 
     @Override
     public CompletableFuture<GooglePhotosAlbum> getAlbum(String albumId, Executor executor) {
+        PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
         return supplyAsync(() -> {
             logger.debug("Get album info for albumId {}", albumId);
-            Album album = client.getAlbum(albumId);
+            Album album = theClient.getAlbum(albumId);
             logger.debug("Got album info for albumId {}: {}", albumId, album);
-            return new InternalGooglePhotosAlbum(client, album);
+            return new InternalGooglePhotosAlbum(theClient, album);
         }, executor);
     }
 
