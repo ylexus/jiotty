@@ -50,7 +50,7 @@ final class NestThermostatImpl implements NestThermostat {
     public CompletableFuture<Mode> setMode(Mode mode) {
         Request request = new Request.Builder()
                 .url(hvacModeUrl)
-                .put(RequestBody.create(MediaType.get(ContentTypes.CONTENT_TYPE_JSON), Json.stringify(mode.id())))
+                .put(RequestBody.create(Json.stringify(mode.id()), MediaType.get(ContentTypes.CONTENT_TYPE_JSON)))
                 .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
 //                .addHeader(AUTHORIZATION, accessToken)
                 .build();
