@@ -1,23 +1,33 @@
 package net.yudichev.jiotty.common.lang.throttling;
 
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.lang.BaseIdempotentCloseable;
+import net.yudichev.jiotty.common.lang.Closeable;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.noop;
+import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
-public final class ThrottlingConsumer<T> implements Consumer<T> {
+public final class ThrottlingConsumer<T> extends BaseIdempotentCloseable implements Consumer<T> {
     private final SchedulingExecutor executor;
     private final Duration throttlingDuration;
     private final Consumer<T> delegate;
+    private final Lock stateLock = new ReentrantLock();
 
     @Nullable
     private T pendingValue;
-    @SuppressWarnings("BooleanVariableAlwaysNegated") // it reads better this way
     private boolean throttling;
+
+    private Closeable throttlingTimerHandle = noop();
+    private boolean closed;
 
     public ThrottlingConsumer(SchedulingExecutor executor, Duration throttlingDuration, Consumer<T> delegate) {
         this.executor = checkNotNull(executor);
@@ -28,11 +38,23 @@ public final class ThrottlingConsumer<T> implements Consumer<T> {
 
     @Override
     public void accept(T t) {
-        executor.execute(() -> {
-            pendingValue = t;
-            if (!throttling) {
-                deliverValue();
+        inLock(stateLock, () -> {
+            if (!closed) {
+                executor.execute(() -> {
+                    pendingValue = t;
+                    if (!throttling) {
+                        deliverValue();
+                    }
+                });
             }
+        });
+    }
+
+    @Override
+    protected void doClose() {
+        inLock(stateLock, () -> {
+            closed = true;
+            closeIfNotNull(throttlingTimerHandle);
         });
     }
 
@@ -40,8 +62,12 @@ public final class ThrottlingConsumer<T> implements Consumer<T> {
         delegate.accept(pendingValue);
         pendingValue = null;
 
-        executor.schedule(throttlingDuration, this::onTimer);
-        throttling = true;
+        inLock(stateLock, () -> {
+            if (!closed) {
+                throttlingTimerHandle = executor.schedule(throttlingDuration, this::onTimer);
+                throttling = true;
+            }
+        });
     }
 
     private void onTimer() {
