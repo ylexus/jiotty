@@ -68,8 +68,11 @@ final class JobSchedulerImpl extends BaseLifecycleComponent implements JobSchedu
             LocalDate dateNow = dateTimeNow.toLocalDate();
             LocalDateTime nextDateTime = dateNow.plusMonths(1).withDayOfMonth(dayOfMonth).atTime(3, 0, 0);
 
-            scheduleHandle = whenStartedAndNotLifecycling(() -> schedulingExecutor.schedule(Duration.between(dateTimeNow, nextDateTime), this::trigger));
-            logger.info("Next [{}] job scheduled for {}", jobName, nextDateTime);
+            scheduleHandle = whenStartedAndNotLifecycling(() -> {
+                Closeable handle = schedulingExecutor.schedule(Duration.between(dateTimeNow, nextDateTime), this::trigger);
+                logger.info("Next [{}] job scheduled for {}", jobName, nextDateTime);
+                return handle;
+            });
         }
 
         private void trigger() {
