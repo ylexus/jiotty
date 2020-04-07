@@ -68,7 +68,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            uploadResponse.getError().ifPresent(error -> {throw new RuntimeException("Failed uploading data", error.getCause());});
+            uploadResponse.getError().ifPresent(error -> {throw new RuntimeException("Failed uploading " + file, error.getCause());});
             // guaranteed
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             String uploadToken = uploadResponse.getUploadToken().get();
