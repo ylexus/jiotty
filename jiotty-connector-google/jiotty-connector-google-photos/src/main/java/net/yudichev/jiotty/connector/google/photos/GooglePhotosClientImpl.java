@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.google.photos;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
@@ -32,7 +33,6 @@ import java.util.function.IntConsumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -74,12 +74,12 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             String uploadToken = uploadResponse.getUploadToken().get();
             logger.debug("Uploaded file {}, upload token {}", file, uploadToken);
 
-            NewMediaItem newMediaItem = NewMediaItemFactory
-                    .createNewMediaItem(uploadToken, fileName);
-            List<NewMediaItem> newItems = of(newMediaItem);
+            NewMediaItem newMediaItem = NewMediaItemFactory.createNewMediaItem(uploadToken, fileName);
+            List<NewMediaItem> newItems = ImmutableList.<NewMediaItem>of(newMediaItem);
             List<NewMediaItemResult> newMediaItemResultsList = albumId
                     .map(theAlbumId -> theClient.batchCreateMediaItems(theAlbumId, newItems))
-                    .orElseGet(() -> theClient.batchCreateMediaItems(newItems)).getNewMediaItemResultsList();
+                    .orElseGet(() -> theClient.batchCreateMediaItems(newItems))
+                    .getNewMediaItemResultsList();
             checkState(newMediaItemResultsList.size() == 1,
                     "expected media item creation result list size 1, got: %s", newMediaItemResultsList);
             NewMediaItemResult newMediaItemResult = newMediaItemResultsList.get(0);

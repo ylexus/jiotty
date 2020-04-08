@@ -18,6 +18,7 @@
         <module>jiotty-connector-google-photos</module>
         <module>jiotty-connector-google-sheets</module>
         <module>jiotty-connector-google-common</module>
+        <module>jiotty-connector-google-assistant</module>
     </modules>
     <dependencyManagement>
         <dependencies>
