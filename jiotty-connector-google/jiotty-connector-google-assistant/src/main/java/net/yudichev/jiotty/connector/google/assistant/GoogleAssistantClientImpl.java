@@ -59,12 +59,11 @@ final class GoogleAssistantClientImpl extends BaseLifecycleComponent implements 
             @SuppressWarnings("resource") ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             StreamObserver<AssistRequest> requestStreamObserver = stub.assist(new StreamObserver<AssistResponse>() {
                 @Override
-                public void onNext(AssistResponse v) {
-                    logger.debug("assist response onNext: {}", v);
-                    if (v.hasAudioOut()) {
-                        asUnchecked(() -> v.getAudioOut().writeTo(outputStream));
+                public void onNext(AssistResponse assistResponse) {
+                    logger.debug("assist response onNext: {}", assistResponse);
+                    if (assistResponse.hasAudioOut()) {
+                        asUnchecked(() -> assistResponse.getAudioOut().writeTo(outputStream));
                     }
-                    result.complete(null);
                 }
 
                 @Override
