@@ -5,11 +5,9 @@ import com.google.inject.BindingAnnotation;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
 import com.google.photos.library.v1.proto.ListAlbumsRequest;
-import com.google.photos.library.v1.proto.NewMediaItem;
 import com.google.photos.library.v1.proto.NewMediaItemResult;
 import com.google.photos.library.v1.upload.UploadMediaItemRequest;
 import com.google.photos.library.v1.upload.UploadMediaItemResponse;
-import com.google.photos.library.v1.util.NewMediaItemFactory;
 import com.google.photos.types.proto.Album;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
@@ -53,7 +51,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     }
 
     @Override
-    public CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor) {
+    public CompletableFuture<String> uploadMediaData(Path file, Executor executor) {
         PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
         return supplyAsync(() -> whenStartedAndNotLifecycling(() -> {
             logger.debug("Started uploading {}", file);
@@ -73,26 +71,40 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             String uploadToken = uploadResponse.getUploadToken().get();
             logger.debug("Uploaded file {}, upload token {}", file, uploadToken);
+            return uploadToken;
+        }), executor);
+    }
 
-            NewMediaItem newMediaItem = NewMediaItemFactory.createNewMediaItem(uploadToken, fileName);
-            List<NewMediaItem> newItems = ImmutableList.<NewMediaItem>of(newMediaItem);
+    @Override
+    public CompletableFuture<List<MediaItemOrError>> createMediaItems(Optional<String> albumId,
+                                                                      List<NewMediaItem> newMediaItems,
+                                                                      Executor executor) {
+        PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
+        return supplyAsync(() -> whenStartedAndNotLifecycling(() -> {
+            logger.debug("Create media items in album {}, items {}", albumId, newMediaItems);
+            ImmutableList<com.google.photos.library.v1.proto.NewMediaItem> newItems = newMediaItems.stream()
+                    .map(BaseNewMediaItem::asGoogleMediaItem)
+                    .collect(toImmutableList());
             List<NewMediaItemResult> newMediaItemResultsList = albumId
                     .map(theAlbumId -> theClient.batchCreateMediaItems(theAlbumId, newItems))
                     .orElseGet(() -> theClient.batchCreateMediaItems(newItems))
                     .getNewMediaItemResultsList();
-            checkState(newMediaItemResultsList.size() == 1,
-                    "expected media item creation result list size 1, got: %s", newMediaItemResultsList);
-            NewMediaItemResult newMediaItemResult = newMediaItemResultsList.get(0);
-            Status status = newMediaItemResult.getStatus();
-            if (status.getCode() == Code.OK_VALUE) {
-                logger.debug("Finished uploading {}, media item {}", file, newMediaItemResult.getMediaItem());
-                return new InternalGoogleMediaItem(newMediaItemResult.getMediaItem());
-            } else {
-                throw new MediaItemCreationFailedException(String.format("Unable to create media item for file %s status %s: %s",
-                        file, status.getCode(), status.getMessage()), status);
-            }
+            checkState(newMediaItemResultsList.size() == newItems.size(),
+                    "expected media item creation result list size %s, got: %s", newItems.size(), newMediaItemResultsList);
+
+            return newMediaItemResultsList.stream()
+                    .map(newMediaItemResult -> {
+                        Status status = newMediaItemResult.getStatus();
+                        MediaItemOrError mediaItemOrError = status.getCode() == Code.OK_VALUE ?
+                                MediaItemOrError.item(new InternalGoogleMediaItem(newMediaItemResult.getMediaItem())) :
+                                MediaItemOrError.error(status);
+                        logger.debug("Finished uploading token {}, result {}", newMediaItemResult.getUploadToken(), newMediaItemResult);
+                        return mediaItemOrError;
+                    })
+                    .collect(toImmutableList());
         }), executor);
     }
+
 
     @Override
     public CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor) {
