@@ -1,5 +1,7 @@
 package net.yudichev.jiotty.connector.google.photos;
 
+import com.google.common.collect.ImmutableList;
+
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -9,10 +11,42 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.function.IntConsumer;
 
 public interface GooglePhotosClient {
-    // TODO document MediaItemCreationFailedException here
+    CompletableFuture<String> uploadMediaData(Path file, Executor executor);
+
+    default CompletableFuture<String> uploadMediaData(Path file) {
+        return uploadMediaData(file, ForkJoinPool.commonPool());
+    }
+
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    // it's quite useful in this case
-    CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor);
+        // it's quite useful in this case
+    CompletableFuture<List<MediaItemOrError>> createMediaItems(Optional<String> albumId,
+                                                               List<NewMediaItem> newMediaItems,
+                                                               Executor executor);
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType") // it's quite useful in this case
+    default CompletableFuture<List<MediaItemOrError>> createMediaItems(Optional<String> albumId,
+                                                                       List<NewMediaItem> newMediaItems) {
+        return createMediaItems(albumId, newMediaItems, ForkJoinPool.commonPool());
+    }
+
+    default CompletableFuture<List<MediaItemOrError>> createMediaItems(List<NewMediaItem> newMediaItems) {
+        return createMediaItems(Optional.empty(), newMediaItems);
+    }
+
+    // TODO document MediaItemCreationFailedException here
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType") // it's quite useful in this case
+    default CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor) {
+        return uploadMediaData(file, executor)
+                .thenCompose(uploadToken ->
+                        createMediaItems(albumId, ImmutableList.of(NewMediaItem.of(uploadToken, Optional.of(file.getFileName().toString()))), executor))
+                .thenApply(mediaItemOrErrors -> mediaItemOrErrors.get(0).map(
+                        item -> item,
+                        status -> {
+                            throw new MediaItemCreationFailedException(String.format("Unable to create media item for file %s status %s: %s",
+                                    file, status.getCode(), status.getMessage()), status);
+                        }
+                ));
+    }
 
     default CompletableFuture<GoogleMediaItem> uploadMediaItem(Path file, Executor executor) {
         return uploadMediaItem(Optional.empty(), file, executor);
