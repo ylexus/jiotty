@@ -36,8 +36,7 @@ public final class RestClients {
                 .connectTimeout(DEFAULT_HTTP_TIMEOUT)
                 .callTimeout(DEFAULT_HTTP_TIMEOUT)
                 .readTimeout(DEFAULT_HTTP_TIMEOUT)
-                .writeTimeout(DEFAULT_HTTP_TIMEOUT)
-                .addInterceptor(new RedirectSupportInterceptor(clientRef::get));
+                .writeTimeout(DEFAULT_HTTP_TIMEOUT);
         customizer.accept(builder);
         OkHttpClient client = builder.build();
         clientRef.set(client);
