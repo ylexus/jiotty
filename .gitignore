@@ -5,4 +5,5 @@
 .idea/modules.xml
 .idea/encodings.xml
 .idea/workspace.xml
+.idea/jarRepositories.xml
 **/dependency-reduced-pom.xml
