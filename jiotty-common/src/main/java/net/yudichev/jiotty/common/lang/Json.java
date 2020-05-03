@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.common.reflect.TypeToken;
 
 public final class Json {
     private static final ObjectMapper mapper = new ObjectMapper()
@@ -22,6 +23,10 @@ public final class Json {
 
     public static <T> T parse(String json, Class<T> type) {
         return MoreThrowables.getAsUnchecked(() -> mapper.readValue(json, type));
+    }
+
+    public static <T> T parse(String json, TypeToken<T> type) {
+        return MoreThrowables.getAsUnchecked(() -> mapper.readValue(json, mapper.getTypeFactory().constructType(type.getType())));
     }
 
     public static ObjectNode object() {

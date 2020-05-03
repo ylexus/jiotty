@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.common.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.reflect.TypeToken;
 import net.yudichev.jiotty.common.lang.Json;
 import okhttp3.*;
 import org.slf4j.Logger;
@@ -47,11 +48,23 @@ public final class RestClients {
         return call(newClient().newCall(request), responseType);
     }
 
+    public static <T> CompletableFuture<T> call(Request request, TypeToken<? extends T> responseType) {
+        return call(newClient().newCall(request), responseType);
+    }
+
     public static <T> CompletableFuture<T> call(Call theCall, Class<? extends T> responseType) {
         return call(theCall, responseType, DEFAULT_CALL_RETRY_COUNT);
     }
 
+    public static <T> CompletableFuture<T> call(Call theCall, TypeToken<? extends T> responseType) {
+        return call(theCall, responseType, DEFAULT_CALL_RETRY_COUNT);
+    }
+
     public static <T> CompletableFuture<T> call(Call theCall, Class<? extends T> responseType, int retryCount) {
+        return call(theCall, TypeToken.of(responseType), retryCount);
+    }
+
+    public static <T> CompletableFuture<T> call(Call theCall, TypeToken<? extends T> responseType, int retryCount) {
         CompletableFuture<T> future = new CompletableFuture<>();
         theCall.enqueue(new Callback() {
             @Override
