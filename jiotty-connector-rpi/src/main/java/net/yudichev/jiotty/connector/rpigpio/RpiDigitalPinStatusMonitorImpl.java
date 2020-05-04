@@ -51,7 +51,8 @@ final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implem
     protected void doStart() {
         input = gpioControllerProvider.get().provisionDigitalInputPin(pin, pinPullResistance);
         input.setShutdownOptions(true);
-        GpioPinListenerDigital listener = event -> onListenerStateChange(event.getState());
+        // https://github.com/Pi4J/pi4j/issues/489: always query the PIN state and ignore the event value
+        GpioPinListenerDigital listener = event -> onListenerStateChange(input.getState());
         input.addListener(listener);
         closeable = Closeable.idempotent(() -> input.removeListener(listener));
     }
