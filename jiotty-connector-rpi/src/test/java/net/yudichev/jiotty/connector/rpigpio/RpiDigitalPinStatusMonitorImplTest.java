@@ -62,6 +62,7 @@ class RpiDigitalPinStatusMonitorImplTest {
         verify(stateConsumer).accept(PinState.HIGH);
         verify(stateConsumer, never()).accept(PinState.LOW);
 
+        when(input.getState()).thenReturn(PinState.LOW);
         gpioPinListener.handleGpioPinDigitalStateChangeEvent(new GpioPinDigitalStateChangeEvent(new Object(), input, PinState.LOW));
 
         verify(stateConsumer).accept(PinState.LOW);
