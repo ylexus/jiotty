@@ -22,7 +22,7 @@ final class SlideAsAppliance implements Appliance {
     private final long slideId;
 
     @Inject
-    SlideAsAppliance(SlideService slideService,
+    SlideAsAppliance(@Dependency SlideService slideService,
                      @SlideId long slideId) {
         this.slideService = checkNotNull(slideService);
         this.slideId = slideId;

@@ -1,8 +1,7 @@
 package net.yudichev.jiotty.connector.slide;
 
-import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
-import net.yudichev.jiotty.common.inject.BindingSpec;
-import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import com.google.inject.Key;
+import net.yudichev.jiotty.common.inject.*;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -10,10 +9,19 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public final class SlideServiceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<SlideService> {
     private final BindingSpec<String> emailSpec;
     private final BindingSpec<String> passwordSpec;
+    private final Key<SlideService> exposedKey;
 
-    private SlideServiceModule(BindingSpec<String> emailSpec, BindingSpec<String> passwordSpec) {
+    private SlideServiceModule(BindingSpec<String> emailSpec,
+                               BindingSpec<String> passwordSpec,
+                               SpecifiedAnnotation specifiedAnnotation) {
         this.emailSpec = checkNotNull(emailSpec);
         this.passwordSpec = checkNotNull(passwordSpec);
+        exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
+    }
+
+    @Override
+    public Key<SlideService> getExposedKey() {
+        return exposedKey;
     }
 
     public static Builder builder() {
@@ -29,13 +37,14 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
                 .annotatedWith(Bindings.Password.class)
                 .installedBy(this::installLifecycleComponentModule);
 
-        bind(getExposedKey()).to(boundLifecycleComponent(SlideServiceImpl.class));
-        expose(getExposedKey());
+        bind(exposedKey).to(boundLifecycleComponent(SlideServiceImpl.class));
+        expose(exposedKey);
     }
 
-    public static final class Builder implements TypedBuilder<ExposedKeyModule<SlideService>> {
+    public static final class Builder implements TypedBuilder<ExposedKeyModule<SlideService>>, HasWithAnnotation {
         private BindingSpec<String> emailSpec;
         private BindingSpec<String> passwordSpec;
+        private SpecifiedAnnotation specifiedAnnotation;
 
         public Builder setEmail(BindingSpec<String> emailSpec) {
             this.emailSpec = emailSpec;
@@ -48,8 +57,14 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
         }
 
         @Override
+        public Builder withAnnotation(SpecifiedAnnotation specifiedAnnotation) {
+            this.specifiedAnnotation = checkNotNull(specifiedAnnotation);
+            return this;
+        }
+
+        @Override
         public ExposedKeyModule<SlideService> build() {
-            return new SlideServiceModule(emailSpec, passwordSpec);
+            return new SlideServiceModule(emailSpec, passwordSpec, specifiedAnnotation);
         }
     }
 }

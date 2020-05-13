@@ -11,12 +11,17 @@ import net.yudichev.jiotty.common.lang.TypedBuilder;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
+import static net.yudichev.jiotty.connector.slide.Bindings.SlideId;
 
 public final class SlideApplianceModule extends ApplianceModule {
+    private final BindingSpec<Long> slideIdSpec;
     private final BindingSpec<SlideService> slideServiceSpec;
 
-    public SlideApplianceModule(BindingSpec<SlideService> slideServiceSpec, SpecifiedAnnotation specifiedAnnotation) {
+    public SlideApplianceModule(BindingSpec<Long> slideIdSpec,
+                                BindingSpec<SlideService> slideServiceSpec,
+                                SpecifiedAnnotation specifiedAnnotation) {
         super(specifiedAnnotation);
+        this.slideIdSpec = checkNotNull(slideIdSpec);
         this.slideServiceSpec = checkNotNull(slideServiceSpec);
     }
 
@@ -26,6 +31,9 @@ public final class SlideApplianceModule extends ApplianceModule {
 
     @Override
     protected Key<? extends Appliance> configureDependencies() {
+        slideIdSpec.bind(Long.class)
+                .annotatedWith(SlideId.class)
+                .installedBy(this::installLifecycleComponentModule);
         slideServiceSpec.bind(SlideService.class)
                 .annotatedWith(SlideAsAppliance.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule);
@@ -34,7 +42,13 @@ public final class SlideApplianceModule extends ApplianceModule {
 
     public static final class Builder implements TypedBuilder<ExposedKeyModule<Appliance>>, HasWithAnnotation {
         private BindingSpec<SlideService> slideServiceSpec = BindingSpec.boundTo(SlideService.class);
+        private BindingSpec<Long> slideIdSpec;
         private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
+
+        public Builder setSlideIdSpec(BindingSpec<Long> slideIdSpec) {
+            this.slideIdSpec = checkNotNull(slideIdSpec);
+            return this;
+        }
 
         public Builder withSlideService(BindingSpec<SlideService> slideServiceSpec) {
             this.slideServiceSpec = checkNotNull(slideServiceSpec);
@@ -49,7 +63,7 @@ public final class SlideApplianceModule extends ApplianceModule {
 
         @Override
         public ExposedKeyModule<Appliance> build() {
-            return new SlideApplianceModule(slideServiceSpec, specifiedAnnotation);
+            return new SlideApplianceModule(slideIdSpec, slideServiceSpec, specifiedAnnotation);
         }
     }
 }
