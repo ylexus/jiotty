@@ -294,5 +294,6 @@
         <module>jiotty-connector-fieldglass</module>
         <module>jiotty-connector-webclient</module>
         <module>jiotty-parent</module>
+        <module>jiotty-connector-slide</module>
     </modules>
 </project>
