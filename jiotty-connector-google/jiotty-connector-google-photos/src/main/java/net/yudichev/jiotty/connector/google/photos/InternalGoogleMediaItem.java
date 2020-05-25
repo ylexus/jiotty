@@ -2,6 +2,9 @@ package net.yudichev.jiotty.connector.google.photos;
 
 import com.google.common.base.MoreObjects;
 import com.google.photos.types.proto.MediaItem;
+import com.google.protobuf.Timestamp;
+
+import java.time.Instant;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -15,6 +18,12 @@ final class InternalGoogleMediaItem implements GoogleMediaItem {
     @Override
     public String getId() {
         return mediaItem.getId();
+    }
+
+    @Override
+    public Instant getCreationTime() {
+        Timestamp creationTime = mediaItem.getMediaMetadata().getCreationTime();
+        return Instant.ofEpochSecond(creationTime.getSeconds(), creationTime.getNanos());
     }
 
     @Override

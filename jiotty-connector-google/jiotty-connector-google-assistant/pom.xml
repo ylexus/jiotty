@@ -19,33 +19,26 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>${com.google.protobuf.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-api</artifactId>
-            <version>${io.grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
-            <version>${io.grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>${io.grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-auth</artifactId>
-            <version>${io.grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>${io.grpc.version}</version>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.google.auth</groupId>
@@ -84,11 +77,6 @@
             <artifactId>guava</artifactId>
         </dependency>
     </dependencies>
-    <properties>
-        <!-- TODO move -->
-        <io.grpc.version>1.28.0</io.grpc.version>
-        <com.google.protobuf.version>3.11.4</com.google.protobuf.version>
-    </properties>
 
     <build>
         <extensions>
