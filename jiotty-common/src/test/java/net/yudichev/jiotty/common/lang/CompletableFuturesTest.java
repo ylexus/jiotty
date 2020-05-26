@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.common.lang;
 
+import com.google.common.collect.ImmutableList;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,5 +63,14 @@ class CompletableFuturesTest {
         future2.complete("result2");
         assertThat(result.isDone(), is(true));
         assertThat(result.getNow(null), Matchers.contains("result1", "result2"));
+    }
+
+    @Test
+    void toFutureOfListChainingEmptyList(@Mock Function<? super Integer, CompletableFuture<String>> operation) {
+        CompletableFuture<List<String>> result = ImmutableList.<Integer>of().stream()
+                .collect(CompletableFutures.toFutureOfListChaining(operation));
+
+        assertThat(result.isDone(), is(true));
+        assertThat(result.getNow(null), Matchers.empty());
     }
 }

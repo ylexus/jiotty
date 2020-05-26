@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 import static net.yudichev.jiotty.common.lang.DelayedExecutors.delayedExecutor;
@@ -123,9 +124,9 @@ public final class CompletableFutures {
         public void accept(T input) {
             if (future == null) {
                 future = operation.apply(input)
-                        .thenApply(r -> {
+                        .thenApply(result -> {
                             List<R> list = new ArrayList<>();
-                            list.add(r);
+                            list.add(result);
                             return list;
                         });
             } else {
@@ -141,7 +142,7 @@ public final class CompletableFutures {
         }
 
         public CompletableFuture<List<R>> build() {
-            return future;
+            return future == null ? CompletableFuture.completedFuture(emptyList()) : future;
         }
     }
 }
