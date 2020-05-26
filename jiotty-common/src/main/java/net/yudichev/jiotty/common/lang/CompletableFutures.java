@@ -3,13 +3,17 @@ package net.yudichev.jiotty.common.lang;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collector;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 import static net.yudichev.jiotty.common.lang.DelayedExecutors.delayedExecutor;
@@ -72,11 +76,73 @@ public final class CompletableFutures {
         );
     }
 
+    public static <T, R> Collector<T, ?, CompletableFuture<List<R>>> toFutureOfListChaining(Function<T, CompletableFuture<R>> operation) {
+        Object builderMutex = new Object();
+        return Collector.<T, FutureChainBuilder<T, R>, CompletableFuture<List<R>>>of(
+                () -> new FutureChainBuilder<>(operation, builderMutex),
+                FutureChainBuilder::accept,
+                FutureChainBuilder::combinedWith,
+                FutureChainBuilder::build
+        );
+    }
+
     public static <T> BiConsumer<T, Throwable> logErrorOnFailure(Logger logger, String errorMessageTemplate, Object... params) {
         return (aVoid, e) -> {
             if (e != null) {
                 logger.error(String.format(errorMessageTemplate, params), e);
             }
         };
+    }
+
+    private static class FutureChainBuilder<T, R> {
+        private final Function<T, CompletableFuture<R>> operation;
+        private final Object mutex;
+        private CompletableFuture<List<R>> future;
+
+        FutureChainBuilder(Function<T, CompletableFuture<R>> operation, Object mutex) {
+            this.operation = checkNotNull(operation);
+            this.mutex = checkNotNull(mutex);
+        }
+
+        public FutureChainBuilder<T, R> combinedWith(FutureChainBuilder<T, R> another) {
+            if (future == null) {
+                return another;
+            } else if (another.future == null) {
+                return this;
+            } else {
+                FutureChainBuilder<T, R> combinedBuilder = new FutureChainBuilder<>(operation, mutex);
+                combinedBuilder.future = future.thenCompose(list1 -> another.future.thenApply(list2 -> {
+                    synchronized (mutex) {
+                        list1.addAll(list2);
+                        return list1;
+                    }
+                }));
+                return combinedBuilder;
+            }
+        }
+
+        public void accept(T input) {
+            if (future == null) {
+                future = operation.apply(input)
+                        .thenApply(result -> {
+                            List<R> list = new ArrayList<>();
+                            list.add(result);
+                            return list;
+                        });
+            } else {
+                future = future.thenCompose(list ->
+                        operation.apply(input)
+                                .thenApply(result -> {
+                                    synchronized (mutex) {
+                                        list.add(result);
+                                        return list;
+                                    }
+                                }));
+            }
+        }
+
+        public CompletableFuture<List<R>> build() {
+            return future == null ? CompletableFuture.completedFuture(emptyList()) : future;
+        }
     }
 }
