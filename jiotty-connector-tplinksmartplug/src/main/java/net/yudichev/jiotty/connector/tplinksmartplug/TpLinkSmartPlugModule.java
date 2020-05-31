@@ -86,7 +86,7 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
             return this;
         }
 
-        public void withNameSpec(BindingSpec<String> nameSpec) {
+        public void withName(BindingSpec<String> nameSpec) {
             this.nameSpec = checkNotNull(nameSpec);
         }
 
