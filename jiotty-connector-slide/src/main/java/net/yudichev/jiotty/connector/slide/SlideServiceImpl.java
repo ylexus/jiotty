@@ -59,7 +59,7 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
 
     @Override
     public CompletableFuture<Void> setSlidePosition(long slideId, double position) {
-        logger.debug("Set slide position for {} to {}", slideId, position);
+        logger.debug("Set slide {} position to {}", slideId, position);
         return call(client.newCall(new Request.Builder()
                         .url("https://api.goslide.io/api/slide/" + slideId + "/position")
                         .post(RequestBody.create(object()

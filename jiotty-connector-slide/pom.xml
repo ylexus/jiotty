@@ -60,5 +60,15 @@
             <groupId>com.google.errorprone</groupId>
             <artifactId>error_prone_annotations</artifactId>
         </dependency>
+
+        <!-- test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+        </dependency>
     </dependencies>
 </project>

@@ -51,6 +51,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private final String password;
     private final String termId;
     private final String deviceId;
+    private final String name;
     private final ExecutorFactory executorFactory;
     private SchedulingExecutor executor;
 
@@ -62,11 +63,13 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                     @Password String password,
                     @TermId String termId,
                     @DeviceId String deviceId,
+                    @Name String name,
                     ExecutorFactory executorFactory) {
         this.username = checkNotNull(username);
         this.password = checkNotNull(password);
         this.termId = checkNotNull(termId);
         this.deviceId = checkNotNull(deviceId);
+        this.name = checkNotNull(name);
         this.executorFactory = checkNotNull(executorFactory);
     }
 
@@ -83,7 +86,8 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                     .thenComposeAsync(token ->
                                     command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
                                             post(token, COMMAND_TO_STATE.get(powerCommand))),
-                            executor);
+                            executor)
+                    .thenRun(() -> logger.info("Plug {}: executed {}", name, command));
         });
     }
 
@@ -101,7 +105,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
 
     private void refreshToken() {
         whenStartedAndNotLifecycling(() -> {
-            logger.info("Requesting token");
+            logger.info("Plug {}: requesting token", name);
             tokenFuture = call(new Request.Builder()
                             .url(new HttpUrl.Builder()
                                     .scheme("https")
@@ -120,14 +124,14 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                     JsonNode.class)
                     .thenApply(TpLinkSmartPlug::verifyResponse)
                     .thenApply(resultJsonNode -> {
-                        logger.info("Obtained token");
+                        logger.info("Plug {}: obtained token", name);
                         return getRequiredNodeString(resultJsonNode, "token");
                     });
         });
     }
 
     private CompletableFuture<?> post(String token, int state) {
-        logger.info("Setting plug {} state to {}", termId, state);
+        logger.debug("Setting plug {} state to {}", name, state);
         return call(new Request.Builder()
                         .url(new HttpUrl.Builder()
                                 .scheme("https")
@@ -191,5 +195,11 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface DeviceId {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Name {
     }
 }

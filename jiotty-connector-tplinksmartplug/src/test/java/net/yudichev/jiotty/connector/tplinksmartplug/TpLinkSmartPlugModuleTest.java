@@ -10,6 +10,7 @@ import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import org.junit.jupiter.api.Test;
 
+import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -19,10 +20,10 @@ class TpLinkSmartPlugModuleTest {
     void testCreateInjector() {
         Named annotation = Names.named("annotation");
         ExposedKeyModule<Appliance> module = TpLinkSmartPlugModule.builder()
-                .setDeviceId("did")
-                .setTermId("tid")
-                .setUsername("u")
-                .setPassword("p")
+                .setDeviceId(literally("did"))
+                .setTermId(literally("tid"))
+                .setUsername(literally("u"))
+                .setPassword(literally("p"))
                 .withAnnotation(forAnnotation(annotation))
                 .build();
 
