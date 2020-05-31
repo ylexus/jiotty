@@ -63,8 +63,9 @@ public final class SlideApplianceModule extends ApplianceModule {
             return this;
         }
 
-        public void withName(BindingSpec<String> nameSpec) {
+        public Builder withName(BindingSpec<String> nameSpec) {
             this.nameSpec = checkNotNull(nameSpec);
+            return this;
         }
 
         @Override
