@@ -19,7 +19,7 @@ import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotatio
 import static net.yudichev.jiotty.common.inject.TypeLiterals.asTypeLiteral;
 
 /**
- * A reference to a binding of type {@link T} (”source" binding). The reference can be passed around and eventually bound to a different
+ * A reference to a binding of type {@link T} ("source" binding). The reference can be passed around and eventually bound to a different
  * {@link Key}{@code <T>} ("target" binding).
  * Source binding is represented in one of the ways listed below. To create a target binding, use {@link #bind(TypeLiteral)} or its overloads.
  * <p>Source and target bindings should have different annotations, otherwise binding conflict will occur.

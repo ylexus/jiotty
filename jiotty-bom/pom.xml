@@ -6,7 +6,7 @@
     <parent>
         <groupId>net.yudichev.jiotty</groupId>
         <artifactId>jiotty</artifactId>
-        <version>1.4.4-SNAPSHOT</version>
+        <version>1.5.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>jiotty-bom</artifactId>
@@ -313,14 +313,14 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-bom</artifactId>
-                <version>1.29.2</version>
+                <version>1.35.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.oauth-client</groupId>
                 <artifactId>google-oauth-client-bom</artifactId>
-                <version>1.29.2</version>
+                <version>1.30.6</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -341,29 +341,10 @@
             </dependency>
             <dependency>
                 <groupId>io.grpc</groupId>
-                <artifactId>grpc-api</artifactId>
+                <artifactId>grpc-bom</artifactId>
                 <version>${io.grpc.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-stub</artifactId>
-                <version>${io.grpc.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-protobuf</artifactId>
-                <version>${io.grpc.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-auth</artifactId>
-                <version>${io.grpc.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-netty-shaded</artifactId>
-                <version>${io.grpc.version}</version>
-                <scope>runtime</scope>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

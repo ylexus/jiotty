@@ -3,6 +3,7 @@ package net.yudichev.jiotty.connector.tplinksmartplug;
 import com.google.inject.Key;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.appliance.ApplianceModule;
+import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.inject.HasWithAnnotation;
 import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
@@ -12,22 +13,26 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
 public final class TpLinkSmartPlugModule extends ApplianceModule {
-    private final String username;
-    private final String password;
-    private final String termId;
-    private final String deviceId;
+    private final BindingSpec<String> usernameSpec;
+    private final BindingSpec<String> passwordSpec;
+    private final BindingSpec<String> termIdSpec;
+    private final BindingSpec<String> deviceIdSpec;
+    private final BindingSpec<String> nameSpec;
 
-    private TpLinkSmartPlugModule(String username,
-                                  String password,
-                                  String termId,
-                                  String deviceId,
+    private TpLinkSmartPlugModule(BindingSpec<String> usernameSpec,
+                                  BindingSpec<String> passwordSpec,
+                                  BindingSpec<String> termIdSpec,
+                                  BindingSpec<String> deviceIdSpec,
+                                  BindingSpec<String> nameSpec,
                                   SpecifiedAnnotation targetAnnotation) {
         super(targetAnnotation);
-        this.username = checkNotNull(username);
-        this.password = checkNotNull(password);
-        this.termId = checkNotNull(termId);
-        this.deviceId = checkNotNull(deviceId);
+        this.usernameSpec = checkNotNull(usernameSpec);
+        this.passwordSpec = checkNotNull(passwordSpec);
+        this.termIdSpec = checkNotNull(termIdSpec);
+        this.deviceIdSpec = checkNotNull(deviceIdSpec);
+        this.nameSpec = checkNotNull(nameSpec);
     }
+
 
     public static Builder builder() {
         return new Builder();
@@ -35,38 +40,54 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
 
     @Override
     protected Key<? extends Appliance> configureDependencies() {
-        bindConstant().annotatedWith(TpLinkSmartPlug.Username.class).to(username);
-        bindConstant().annotatedWith(TpLinkSmartPlug.Password.class).to(password);
-        bindConstant().annotatedWith(TpLinkSmartPlug.TermId.class).to(termId);
-        bindConstant().annotatedWith(TpLinkSmartPlug.DeviceId.class).to(deviceId);
+        usernameSpec.bind(String.class)
+                .annotatedWith(TpLinkSmartPlug.Username.class)
+                .installedBy(this::installLifecycleComponentModule);
+        passwordSpec.bind(String.class)
+                .annotatedWith(TpLinkSmartPlug.Password.class)
+                .installedBy(this::installLifecycleComponentModule);
+        termIdSpec.bind(String.class)
+                .annotatedWith(TpLinkSmartPlug.TermId.class)
+                .installedBy(this::installLifecycleComponentModule);
+        deviceIdSpec.bind(String.class)
+                .annotatedWith(TpLinkSmartPlug.DeviceId.class)
+                .installedBy(this::installLifecycleComponentModule);
+        nameSpec.bind(String.class)
+                .annotatedWith(TpLinkSmartPlug.Name.class)
+                .installedBy(this::installLifecycleComponentModule);
         return boundLifecycleComponent(TpLinkSmartPlug.class);
     }
 
     public static class Builder implements TypedBuilder<ExposedKeyModule<Appliance>>, HasWithAnnotation {
-        private String username;
-        private String password;
-        private String termId;
-        private String deviceId;
+        private BindingSpec<String> usernameSpec;
+        private BindingSpec<String> passwordSpec;
+        private BindingSpec<String> termIdSpec;
+        private BindingSpec<String> deviceIdSpec;
+        private BindingSpec<String> nameSpec;
         private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
 
-        public Builder setUsername(String username) {
-            this.username = username;
+        public Builder setUsername(BindingSpec<String> usernameSpec) {
+            this.usernameSpec = checkNotNull(usernameSpec);
             return this;
         }
 
-        public Builder setPassword(String password) {
-            this.password = password;
+        public Builder setPassword(BindingSpec<String> passwordSpec) {
+            this.passwordSpec = passwordSpec;
             return this;
         }
 
-        public Builder setTermId(String termId) {
-            this.termId = termId;
+        public Builder setTermId(BindingSpec<String> termIdSpec) {
+            this.termIdSpec = termIdSpec;
             return this;
         }
 
-        public Builder setDeviceId(String deviceId) {
-            this.deviceId = checkNotNull(deviceId);
+        public Builder setDeviceId(BindingSpec<String> deviceIdSpec) {
+            this.deviceIdSpec = checkNotNull(deviceIdSpec);
             return this;
+        }
+
+        public void withNameSpec(BindingSpec<String> nameSpec) {
+            this.nameSpec = checkNotNull(nameSpec);
         }
 
         @Override
@@ -77,7 +98,10 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
 
         @Override
         public ExposedKeyModule<Appliance> build() {
-            return new TpLinkSmartPlugModule(username, password, termId, deviceId, specifiedAnnotation);
+            if (nameSpec == null) {
+                nameSpec = deviceIdSpec;
+            }
+            return new TpLinkSmartPlugModule(usernameSpec, passwordSpec, termIdSpec, deviceIdSpec, nameSpec, specifiedAnnotation);
         }
     }
 }

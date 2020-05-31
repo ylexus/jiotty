@@ -5,6 +5,7 @@ import net.yudichev.jiotty.common.inject.*;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
 public final class SlideServiceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<SlideService> {
     private final BindingSpec<String> emailSpec;
@@ -44,7 +45,7 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
     public static final class Builder implements TypedBuilder<ExposedKeyModule<SlideService>>, HasWithAnnotation {
         private BindingSpec<String> emailSpec;
         private BindingSpec<String> passwordSpec;
-        private SpecifiedAnnotation specifiedAnnotation;
+        private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
 
         public Builder setEmail(BindingSpec<String> emailSpec) {
             this.emailSpec = emailSpec;
