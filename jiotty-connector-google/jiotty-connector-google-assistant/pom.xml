@@ -5,7 +5,7 @@
     <parent>
         <artifactId>jiotty-connector-google</artifactId>
         <groupId>net.yudichev.jiotty</groupId>
-        <version>1.4.4-SNAPSHOT</version>
+        <version>1.5.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -37,8 +37,14 @@
             <artifactId>grpc-auth</artifactId>
         </dependency>
         <dependency>
+            <!--
+                Required by GRPC:
+                io.grpc.ManagedChannelProvider$ProviderNotFoundException: No functional channel service provider found.
+                Try adding a dependency on the grpc-okhttp, grpc-netty, or grpc-netty-shaded artifact
+             -->
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.google.auth</groupId>
