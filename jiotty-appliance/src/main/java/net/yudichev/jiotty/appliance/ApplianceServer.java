@@ -23,7 +23,7 @@ final class ApplianceServer extends BaseLifecycleComponent {
     private final Appliance appliance;
 
     @Inject
-    ApplianceServer(RestServer restServer,
+    ApplianceServer(@Dependency RestServer restServer,
                     @ApplianceId String applianceId,
                     @Dependency Appliance appliance) {
         this.restServer = checkNotNull(restServer);
