@@ -72,6 +72,11 @@ final class InternalGooglePhotosAlbum implements GooglePhotosAlbum {
     }
 
     @Override
+    public boolean isWriteable() {
+        return album.getIsWriteable();
+    }
+
+    @Override
     public CompletableFuture<List<GoogleMediaItem>> getMediaItems(IntConsumer loadedItemCountProgressCallback, Executor executor) {
         return supplyAsync(() -> {
                     logger.debug("Get all media items in album {}", this);

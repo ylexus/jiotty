@@ -17,6 +17,8 @@ public interface GooglePhotosAlbum {
 
     String getAlbumUrl();
 
+    boolean isWriteable();
+
     CompletableFuture<Void> addMediaItemsByIds(List<String> mediaItemsIds, Executor executor);
 
     default CompletableFuture<Void> addMediaItemsByIds(List<String> mediaItemsIds) {
