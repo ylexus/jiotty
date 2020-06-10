@@ -1,7 +1,9 @@
 package net.yudichev.jiotty.connector.mqtt;
 
+import com.google.inject.Key;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import net.yudichev.jiotty.common.inject.HasWithAnnotation;
 import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.lang.throttling.ThresholdThrottlingConsumerModule;
@@ -12,16 +14,28 @@ import javax.inject.Singleton;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
+import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
 public final class MqttModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Mqtt> {
     private final String serverUri;
     private final String clientId;
     private final Consumer<MqttConnectOptions> connectionOptionsCustomiser;
+    private final Key<Mqtt> exposedKey;
 
-    private MqttModule(String serverUri, String clientId, Consumer<MqttConnectOptions> connectionOptionsCustomiser) {
+    private MqttModule(String serverUri,
+                       String clientId,
+                       Consumer<MqttConnectOptions> connectionOptionsCustomiser,
+                       SpecifiedAnnotation specifiedAnnotation) {
         this.serverUri = checkNotNull(serverUri);
         this.clientId = checkNotNull(clientId);
         this.connectionOptionsCustomiser = checkNotNull(connectionOptionsCustomiser);
+        exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
+    }
+
+    @Override
+    public Key<Mqtt> getExposedKey() {
+        return exposedKey;
     }
 
     public static Builder builder() {
@@ -40,17 +54,18 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
 
         installLifecycleComponentModule(ThresholdThrottlingConsumerModule.builder()
                 .setValueType(Throwable.class)
-                .withAnnotation(SpecifiedAnnotation.forAnnotation(MqttImpl.Dependency.class))
+                .withAnnotation(forAnnotation(MqttImpl.Dependency.class))
                 .build());
 
-        bind(getExposedKey()).to(boundLifecycleComponent(MqttImpl.class));
-        expose(getExposedKey());
+        bind(exposedKey).to(boundLifecycleComponent(MqttImpl.class));
+        expose(exposedKey);
     }
 
-    public static final class Builder implements TypedBuilder<ExposedKeyModule<Mqtt>> {
+    public static final class Builder implements TypedBuilder<ExposedKeyModule<Mqtt>>, HasWithAnnotation {
         private String serverUri;
         private String clientId;
         private Consumer<MqttConnectOptions> connectionOptionsCustomiser = ignored -> {};
+        private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
 
         public Builder setServerUri(String serverUri) {
             this.serverUri = checkNotNull(serverUri);
@@ -68,8 +83,14 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
         }
 
         @Override
+        public Builder withAnnotation(SpecifiedAnnotation specifiedAnnotation) {
+            this.specifiedAnnotation = checkNotNull(specifiedAnnotation);
+            return this;
+        }
+
+        @Override
         public ExposedKeyModule<Mqtt> build() {
-            return new MqttModule(serverUri, clientId, connectionOptionsCustomiser);
+            return new MqttModule(serverUri, clientId, connectionOptionsCustomiser, specifiedAnnotation);
         }
     }
 }
