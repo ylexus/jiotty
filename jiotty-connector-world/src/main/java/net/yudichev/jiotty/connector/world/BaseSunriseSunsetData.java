@@ -2,15 +2,15 @@ package net.yudichev.jiotty.connector.world;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
+import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;
 
 import java.time.Instant;
 
 @Value.Immutable
-@PackagePrivateImmutablesStyle
+@PublicImmutablesStyle
 @JsonDeserialize
-public interface BaseSunriseSunsetData {
+interface BaseSunriseSunsetData {
     Instant sunrise();
 
     Instant sunset();
