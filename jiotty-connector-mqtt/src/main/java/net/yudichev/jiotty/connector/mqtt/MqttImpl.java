@@ -27,6 +27,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
+import static net.yudichev.jiotty.common.lang.CompositeException.runForAll;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.Runnables.guarded;
 
@@ -56,23 +57,25 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         synchronized (lock) {
             deliverLastMessages(topicFilter, callback);
 
-            doSubscribe(topicFilter, callback);
-            subscriptionsByFilter.computeIfAbsent(topicFilter, ignored -> new HashSet<>()).add(callback);
+            subscriptionsByFilter.computeIfAbsent(topicFilter, filter -> {
+                doSubscribe(filter, (topic, message) -> runForAll(subscriptionsByFilter.get(filter), consumer -> consumer.accept(topic, message)));
+                return new HashSet<>();
+            }).add(callback);
         }
-        return idempotent(() -> asUnchecked(() -> {
+        return idempotent(() -> {
             synchronized (lock) {
-                if (client.isConnected()) {
-                    client.unsubscribe(topicFilter);
-                }
                 subscriptionsByFilter.compute(topicFilter, (filter, callbacks) -> {
                     checkNotNull(callbacks).remove(callback);
                     if (callbacks.isEmpty()) {
+                        if (client.isConnected()) {
+                            asUnchecked(() -> client.unsubscribe(topicFilter));
+                        }
                         return null;
                     }
                     return callbacks;
                 });
             }
-        }));
+        });
     }
 
     @Override
@@ -104,8 +107,14 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         }
     }
 
-    private static <T, U> BiConsumer<T, U> exceptionLogging(BiConsumer<T, U> messageToStringDataCallback) {
-        return (t, u) -> guarded(logger, "handling message", () -> messageToStringDataCallback.accept(t, u)).run();
+    private static <T, U> BiConsumer<T, U> exceptionLogging(BiConsumer<T, U> delegate) {
+        return (t, u) -> {
+            try {
+                delegate.accept(t, u);
+            } catch (RuntimeException e) {
+                logger.error("Error handling message", e);
+            }
+        };
     }
 
     private void doSubscribe(String topicFilter, BiConsumer<String, MqttMessage> callback) {
