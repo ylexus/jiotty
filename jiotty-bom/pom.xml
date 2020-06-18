@@ -266,9 +266,9 @@
                 <version>${version.org.apache.logging.log4j}</version>
             </dependency>
             <dependency>
-                <groupId>com.sun.mail</groupId>
-                <artifactId>javax.mail</artifactId>
-                <version>1.6.2</version>
+                <groupId>jakarta.mail</groupId>
+                <artifactId>jakarta.mail-api</artifactId>
+                <version>1.6.5</version>
             </dependency>
             <dependency>
                 <groupId>com.lmax</groupId>
