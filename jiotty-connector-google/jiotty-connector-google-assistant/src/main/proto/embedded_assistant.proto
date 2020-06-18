@@ -16,8 +16,8 @@ syntax = "proto3";
 
 package google.assistant.embedded.v1alpha2;
 
-import "annotations.proto";
-import "latlng.proto";
+import "google/api/annotations.proto";
+import "google/type/latlng.proto";
 
 option go_package = "google.golang.org/genproto/googleapis/assistant/embedded/v1alpha2;embedded";
 option java_multiple_files = true;
