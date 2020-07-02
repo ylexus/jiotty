@@ -1,9 +1,13 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.BindingAnnotation;
+import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.DeduplicatingBiConsumer;
+import net.yudichev.jiotty.common.lang.backoff.BackOff;
+import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
 import net.yudichev.jiotty.common.lang.throttling.ThresholdThrottlingConsumerFactory;
 import org.eclipse.paho.client.mqttv3.*;
 import org.slf4j.Logger;
@@ -26,7 +30,7 @@ import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
+import static net.yudichev.jiotty.common.lang.Closeable.*;
 import static net.yudichev.jiotty.common.lang.CompositeException.runForAll;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.Runnables.guarded;
@@ -39,11 +43,15 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     private final Map<String, MqttMessage> lastReceivedMessageByTopic = new HashMap<>();
     private final Map<String, Set<BiConsumer<String, MqttMessage>>> subscriptionsByFilter = new HashMap<>();
     private final IMqttClient client;
+    private final ExecutorFactory executorFactory;
+    private SchedulingExecutor executor;
 
     @Inject
     MqttImpl(IMqttClient client,
+             ExecutorFactory executorFactory,
              @Dependency ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory,
              @Dependency MqttConnectOptions mqttConnectOptions) {
+        this.executorFactory = checkNotNull(executorFactory);
         this.throttledLoggerFactory = checkNotNull(throttledLoggerFactory);
         this.mqttConnectOptions = checkNotNull(mqttConnectOptions);
         this.client = checkNotNull(client);
@@ -93,6 +101,7 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     @Override
     protected void doStart() {
         synchronized (lock) {
+            executor = executorFactory.createSingleThreadedSchedulingExecutor("sub-retry");
             client.setCallback(new ResubscribeOnReconnectCallback());
             asUnchecked(() -> client.connect(mqttConnectOptions));
             logger.info("Connected to broker");
@@ -104,6 +113,7 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         synchronized (lock) {
             asUnchecked(client::disconnect);
             asUnchecked(client::close); // I have a right as both this component and the client provider are singletons
+            closeIfNotNull(executor);
         }
     }
 
@@ -157,24 +167,43 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     private class ResubscribeOnReconnectCallback implements MqttCallbackExtended {
         private final Consumer<Throwable> throttledErrorLogger = throttledLoggerFactory.create(5, Duration.ofMinutes(1), e ->
                 logger.error("{} lost connection to {} too often (suppressing this error for 1 minute)", client.getClientId(), client.getServerURI(), e));
+        private final BackOff backOff = new ExponentialBackOff.Builder()
+                .setInitialIntervalMillis(10)
+                .setMaxIntervalMillis(10_000)
+                .setMultiplier(2)
+                .build();
+        private Closeable subRetryTimerHandle = noop();
 
         @Override
         public void connectComplete(boolean reconnect, String serverURI) {
             synchronized (lock) {
-                logger.debug("connectComplete: reconnect={}", reconnect);
+                logger.info("{} completed connection to {}, reconnected={}", client.getClientId(), serverURI, reconnect);
                 if (reconnect) {
-                    logger.info("Re-connected, restoring subscriptions: {}", subscriptionsByFilter);
-                    guarded(logger, "re-subscribing to mqtt",
-                            () -> subscriptionsByFilter.forEach((topicFilter, callbacks) ->
-                                    callbacks.forEach(callback -> doSubscribe(topicFilter, callback))))
-                            .run();
+                    restoreSubscriptions();
                 }
             }
         }
 
         @Override
         public void connectionLost(Throwable cause) {
+            logger.info("{} lost connection to {}", client.getClientId(), client.getServerURI(), cause);
+            synchronized (lock) {
+                subRetryTimerHandle.close();
+            }
             throttledErrorLogger.accept(cause);
+        }
+
+        private void restoreSubscriptions() {
+            logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
+            try {
+                subscriptionsByFilter.forEach((topicFilter, callbacks) ->
+                        callbacks.forEach(callback -> doSubscribe(topicFilter, callback)));
+                backOff.reset();
+            } catch (RuntimeException e) {
+                long nextRetryInMs = backOff.nextBackOffMillis();
+                logger.info("Re-subscription failed, will re-try in {}ms", nextRetryInMs, e);
+                subRetryTimerHandle = executor.schedule(Duration.ofMillis(nextRetryInMs), this::restoreSubscriptions);
+            }
         }
 
         @Override

@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.mqtt;
 
+import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.lang.Closeable;
 import org.eclipse.paho.client.mqttv3.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,8 @@ class MqttImplTest {
     private IMqttClient client;
     @Mock
     private BiConsumer<String, String> dataCallback;
+    @Mock
+    private SchedulingExecutor executor;
     @Captor
     private ArgumentCaptor<IMqttMessageListener> messageListenerArgumentCaptor;
     private MqttImpl mqtt;
@@ -32,7 +35,7 @@ class MqttImplTest {
     @BeforeEach
     void setUp() throws MqttException {
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqtt = new MqttImpl(client, (threshold, throttlingDuration, delegate) -> e -> {}, mqttConnectOptions);
+        mqtt = new MqttImpl(client, threadNameBase -> executor, (threshold, throttlingDuration, delegate) -> e -> {}, mqttConnectOptions);
         mqtt.start();
 
         ArgumentCaptor<MqttCallbackExtended> callbackCaptor = ArgumentCaptor.forClass(MqttCallbackExtended.class);
