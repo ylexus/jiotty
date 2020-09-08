@@ -4,6 +4,7 @@ import com.google.inject.Guice;
 import com.google.inject.Key;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.time.TimeModule;
 import org.hamcrest.Matchers;
@@ -25,6 +26,6 @@ class MqttModuleTest {
 
         assertThat(module.getExposedKey(), Matchers.is(Key.get(Mqtt.class, annotation)));
 
-        Guice.createInjector(new TimeModule(), module).getBinding(module.getExposedKey());
+        Guice.createInjector(new TimeModule(), new ExecutorModule(), module).getBinding(module.getExposedKey());
     }
 }
