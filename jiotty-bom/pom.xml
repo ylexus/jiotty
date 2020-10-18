@@ -80,6 +80,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-google-sdm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-ir</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -259,6 +264,11 @@
                 <groupId>com.google.apis</groupId>
                 <artifactId>google-api-services-sheets</artifactId>
                 <version>v4-rev20200211-1.30.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.apis</groupId>
+                <artifactId>google-api-services-smartdevicemanagement</artifactId>
+                <version>v1-rev20201003-1.30.10</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>

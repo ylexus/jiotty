@@ -19,6 +19,7 @@
         <module>jiotty-connector-google-sheets</module>
         <module>jiotty-connector-google-common</module>
         <module>jiotty-connector-google-assistant</module>
+        <module>jiotty-connector-google-sdm</module>
     </modules>
     <dependencyManagement>
         <dependencies>
