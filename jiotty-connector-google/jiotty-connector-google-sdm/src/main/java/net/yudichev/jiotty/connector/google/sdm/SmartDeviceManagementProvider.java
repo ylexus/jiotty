@@ -39,6 +39,7 @@ final class SmartDeviceManagementProvider implements Provider<SmartDeviceManagem
                             .withBrowser(settings.authorizationBrowser())
                             .build()
                             .getCredential())
+                    .setApplicationName(settings.applicationName())
                     .build();
         });
     }
