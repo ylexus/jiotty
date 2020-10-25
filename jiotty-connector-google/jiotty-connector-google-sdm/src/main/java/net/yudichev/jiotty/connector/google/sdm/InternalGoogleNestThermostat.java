@@ -4,6 +4,8 @@ import com.google.api.services.smartdevicemanagement.v1.SmartDeviceManagement;
 import com.google.api.services.smartdevicemanagement.v1.model.GoogleHomeEnterpriseSdmV1Device;
 import com.google.api.services.smartdevicemanagement.v1.model.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest;
 import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -13,6 +15,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class InternalGoogleNestThermostat implements GoogleNestThermostat {
+    private static final Logger logger = LoggerFactory.getLogger(InternalGoogleNestThermostat.class);
+
     private final SmartDeviceManagement smartDeviceManagement;
     private final String deviceName;
 
@@ -25,7 +29,9 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
     @Override
     public CompletableFuture<Mode> getCurrentMode() {
         return CompletableFuture.supplyAsync(() -> getAsUnchecked(() -> {
+            logger.debug("devices.get({})...", deviceName);
             GoogleHomeEnterpriseSdmV1Device device = smartDeviceManagement.enterprises().devices().get(deviceName).execute();
+            logger.debug("... {}", device);
             @SuppressWarnings("unchecked")
             Map<String, String> modeTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatMode");
             checkState(modeTrait != null, "Thermostat does not support modes");
@@ -51,6 +57,7 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
                 request.setCommand("sdm.devices.commands.ThermostatMode.SetMode");
                 request.setParams(ImmutableMap.of("mode", mode.name()));
             }
+            logger.debug("devices.executeCommand({}, {})", deviceName, request);
             smartDeviceManagement.enterprises().devices().executeCommand(deviceName, request).execute();
             return null;
         }));
