@@ -6,6 +6,7 @@ import com.google.inject.BindingAnnotation;
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
@@ -23,8 +24,8 @@ final class GoogleSmartDeviceManagementClientImpl implements GoogleSmartDeviceMa
     }
 
     @Override
-    public GoogleNestThermostat getThermostat(String deviceId) {
-        return new InternalGoogleNestThermostat(smartDeviceManagement, projectId, deviceId);
+    public GoogleNestThermostat getThermostat(String deviceId, Executor executor) {
+        return new InternalGoogleNestThermostat(smartDeviceManagement, projectId, deviceId, executor);
     }
 
     @BindingAnnotation

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -18,10 +19,12 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
     private static final Logger logger = LoggerFactory.getLogger(InternalGoogleNestThermostat.class);
 
     private final SmartDeviceManagement smartDeviceManagement;
+    private final Executor executor;
     private final String deviceName;
 
-    InternalGoogleNestThermostat(SmartDeviceManagement smartDeviceManagement, String projectId, String deviceId) {
+    InternalGoogleNestThermostat(SmartDeviceManagement smartDeviceManagement, String projectId, String deviceId, Executor executor) {
         this.smartDeviceManagement = checkNotNull(smartDeviceManagement);
+        this.executor = checkNotNull(executor);
         deviceName = "enterprises/" + projectId + "/devices/" + deviceId;
     }
 
@@ -43,7 +46,7 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
                 }
             }
             return Mode.valueOf(modeTrait.get("mode"));
-        }));
+        }), executor);
     }
 
     @Override
@@ -60,6 +63,6 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
             logger.debug("devices.executeCommand({}, {})", deviceName, request);
             smartDeviceManagement.enterprises().devices().executeCommand(deviceName, request).execute();
             return null;
-        }));
+        }), executor);
     }
 }
