@@ -31,11 +31,13 @@ final class PagedRequest<T> {
         Stream.Builder<T> streamBuilder = Stream.builder();
         int totalCount = 0;
         do {
-            PagedListResponse<T> listResponse = requestInvoker.apply(Optional.ofNullable(pageToken));
+            if (Thread.currentThread().isInterrupted()) {
+                throw new RuntimeException("Thread has been interrupted");
+            }
             logger.debug("Requesting list, page token [{}]", pageToken);
+            PagedListResponse<T> listResponse = requestInvoker.apply(Optional.ofNullable(pageToken));
             Page<T> page = listResponse.getPage();
-            logger.debug("Received response to list request, page token [{}], next page token [{}]",
-                    pageToken, page.getNextPageToken());
+            logger.debug("Received response to list request, page token [{}], next page token [{}]", pageToken, page.getNextPageToken());
             for (T value : page.getValues()) {
                 streamBuilder.add(value);
                 totalCount++;
