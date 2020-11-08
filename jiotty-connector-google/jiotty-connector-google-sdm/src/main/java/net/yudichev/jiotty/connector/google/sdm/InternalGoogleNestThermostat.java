@@ -52,17 +52,29 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
     @Override
     public CompletableFuture<Void> setMode(Mode mode) {
         return CompletableFuture.supplyAsync(() -> getAsUnchecked(() -> {
-            GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request = new GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest();
             if (mode == Mode.ECO) {
-                request.setCommand("sdm.devices.commands.ThermostatEco.SetMode");
-                request.setParams(ImmutableMap.of("mode", "MANUAL_ECO"));
+                setEcoMode("MANUAL_ECO");
             } else {
+                // must first switch off ECO, otherwise thermostat remains on ECO and the main trait is ignored
+                setEcoMode("OFF");
+                GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request = new GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest();
                 request.setCommand("sdm.devices.commands.ThermostatMode.SetMode");
                 request.setParams(ImmutableMap.of("mode", mode.name()));
+                executeRequest(request);
             }
-            logger.debug("devices.executeCommand({}, {})", deviceName, request);
-            smartDeviceManagement.enterprises().devices().executeCommand(deviceName, request).execute();
             return null;
         }), executor);
+    }
+
+    private void setEcoMode(String ecoMode) throws java.io.IOException {
+        GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request = new GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest();
+        request.setCommand("sdm.devices.commands.ThermostatEco.SetMode");
+        request.setParams(ImmutableMap.of("mode", ecoMode));
+        executeRequest(request);
+    }
+
+    private void executeRequest(GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request) throws java.io.IOException {
+        logger.debug("devices.executeCommand({}, {})", deviceName, request);
+        smartDeviceManagement.enterprises().devices().executeCommand(deviceName, request).execute();
     }
 }
