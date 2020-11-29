@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.ir;
+package net.yudichev.jiotty.connector.ir.binary;
 
 import com.github.mob41.blapi.BLDevice;
 import com.github.mob41.blapi.pkt.cmd.rm2.SendDataCmdPayload;
@@ -10,7 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 
-import static net.yudichev.jiotty.connector.ir.AssertionArgumentMatcher.assertArg;
+import static net.yudichev.jiotty.common.testutil.AssertionArgumentMatcher.assertArg;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;

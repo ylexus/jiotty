@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.ir;
+package net.yudichev.jiotty.common.testutil;
 
 import org.mockito.ArgumentMatcher;
 
@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.mockito.ArgumentMatchers.argThat;
 
-final class AssertionArgumentMatcher<T> implements ArgumentMatcher<T> {
+public final class AssertionArgumentMatcher<T> implements ArgumentMatcher<T> {
     private final ArgumentAssert<T> argumentAssert;
     @Nullable
     private String assertionErrorMessage;

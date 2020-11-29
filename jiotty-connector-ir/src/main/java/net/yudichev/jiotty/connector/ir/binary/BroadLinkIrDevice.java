@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.ir;
+package net.yudichev.jiotty.connector.ir.binary;
 
 import com.github.mob41.blapi.BLDevice;
 import com.github.mob41.blapi.RM2Device;

@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.ir;
+package net.yudichev.jiotty.connector.ir.binary;
 
 public interface IrDevice {
     /**

@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.ir;
+package net.yudichev.jiotty.connector.ir.binary;
 
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
