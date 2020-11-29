@@ -18,23 +18,27 @@ this program. If not, see http://www.gnu.org/licenses/.
 package net.yudichev.jiotty.connector.ir.lirc;
 
 import com.google.common.collect.ImmutableList;
+import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static org.immutables.value.Value.Immutable;
@@ -49,197 +53,197 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
     private static final Pattern COMMAND_LIST_CLEANUP_PATTERN = Pattern.compile("\\S*\\s+");
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
+    private final ExecutorFactory executorFactory;
 
-    @Nullable
-    private String lastRemote;
-    @Nullable
-    private String lastCommand;
     private Streams streams;
+    private SchedulingExecutor executor;
 
-    protected BaseLircClient() {
+    protected BaseLircClient(ExecutorFactory executorFactory) {
+        this.executorFactory = checkNotNull(executorFactory);
     }
 
     @Override
     protected final void doStart() {
+        executor = executorFactory.createSingleThreadedSchedulingExecutor("lirc-client");
         streams = connect();
     }
 
     protected abstract Streams connect();
 
+    @SuppressWarnings("AssignmentToNull") // convention
     @Override
     protected void doStop() {
-        streams.close();
+        closeSafelyIfNotNull(streams, logger);
+        streams = null;
+        closeSafelyIfNotNull(executor, logger);
+        executor = null;
     }
 
     @Override
-    public void sendIrCommand(String remote, String command, int count) {
-        lastRemote = remote;
-        lastCommand = command;
-        sendCommand("SEND_ONCE " + remote + " " + command + " " + (count - 1));
+    public CompletableFuture<Void> sendIrCommand(String remote, String command, int count) {
+        return sendCommand("SEND_ONCE " + remote + " " + command + " " + (count - 1)).thenApply(strings -> null);
     }
 
     @Override
-    public void sendIrCommandRepeat(String remote, String command) {
-        lastRemote = remote;
-        lastCommand = command;
-        sendCommand("SEND_START " + remote + " " + command);
+    public CompletableFuture<Void> sendIrCommandRepeat(String remote, String command) {
+        return sendCommand("SEND_START " + remote + " " + command).thenApply(strings -> null);
     }
 
     @Override
-    public void stopIr(String remote, String command) {
-        sendCommand("SEND_STOP " + remote + " " + command);
+    public CompletableFuture<Void> stopIr(String remote, String command) {
+        return sendCommand("SEND_STOP " + remote + " " + command).thenApply(strings -> null);
     }
 
     @Override
-    public void stopIr() {
-        sendCommand("SEND_STOP " + lastRemote + " " + lastCommand);
-    }
-
-    @Override
-    public List<String> getRemotes() {
+    public CompletableFuture<List<String>> getRemotes() {
         return sendCommand("LIST");
     }
 
     @Override
-    public List<String> getCommands(String remote) {
-        return sendCommand("LIST " + checkNotNull(remote)).stream()
-                .map(s -> COMMAND_LIST_CLEANUP_PATTERN.matcher(s).replaceAll(""))
-                .collect(toImmutableList());
+    public CompletableFuture<List<String>> getCommands(String remote) {
+        return sendCommand("LIST " + checkNotNull(remote))
+                .thenApply(commands -> commands.stream()
+                        .map(s -> COMMAND_LIST_CLEANUP_PATTERN.matcher(s).replaceAll(""))
+                        .collect(toImmutableList()));
     }
 
     @Override
-    public void setTransmitters(Iterable<Integer> transmitters) {
+    public CompletableFuture<Void> setTransmitters(Iterable<Integer> transmitters) {
         long mask = 0L;
         for (int transmitter : transmitters) {
             mask |= (1L << (transmitter - 1));
         }
 
-        setTransmitters(mask);
+        return setTransmitters(mask);
     }
 
     @Override
-    public void setTransmitters(long mask) {
-        sendCommand("SET_TRANSMITTERS " + mask);
+    public CompletableFuture<Void> setTransmitters(long mask) {
+        return sendCommand("SET_TRANSMITTERS " + mask).thenApply(strings -> null);
     }
 
     @Override
-    public String getVersion() {
-        List<String> result = sendCommand("VERSION");
-        if (result.isEmpty()) {
-            throw new LircServerException("VERSION command returned no lines");
-        }
-        return result.get(0);
+    public CompletableFuture<String> getVersion() {
+        return sendCommand("VERSION")
+                .thenApply(result -> {
+                    if (result.isEmpty()) {
+                        throw new LircServerException("VERSION command returned no lines");
+                    }
+                    return result.get(0);
+                });
     }
 
     @Override
-    public void setInputLog() {
-        setInputLog("null");
+    public CompletableFuture<Void> setInputLog() {
+        return setInputLog("null");
     }
 
     @Override
-    public void setInputLog(String logPath) {
-        sendCommand("SET_INPUTLOG " + checkNotNull(logPath));
+    public CompletableFuture<Void> setInputLog(String logPath) {
+        return sendCommand("SET_INPUTLOG " + checkNotNull(logPath)).thenApply(strings -> null);
     }
 
     @Override
-    public void setDriverOption(String key, String value) {
-        sendCommand("DRV_OPTION " + key + " " + value);
+    public CompletableFuture<Void> setDriverOption(String key, String value) {
+        return sendCommand("DRV_OPTION " + key + " " + value).thenApply(strings -> null);
     }
 
     @Override
-    public void simulate(String eventString) {
-        sendCommand("SIMULATE " + eventString);
+    public CompletableFuture<Void> simulate(String eventString) {
+        return sendCommand("SIMULATE " + eventString).thenApply(strings -> null);
     }
 
-    protected abstract String socketName();
+    protected abstract String connectionName();
 
     @SuppressWarnings({"OverlyComplexMethod", "OverlyLongMethod", "NestedSwitchStatement"}) // reads well
-    private List<String> sendCommand(String command) {
-        logger.debug("Sending command `{}' to Lirc@{}", command, socketName());
+    private CompletableFuture<List<String>> sendCommand(String command) {
+        checkStarted();
+        return supplyAsync(() -> {
+            logger.debug("Sending command `{}' to Lirc@{}", command, connectionName());
+            streams.write(command + '\n');
 
-        streams.write(command + '\n');
+            ImmutableList.Builder<String> resultBuilder = null;
+            State state = State.BEGIN;
+            int linesReceived = 0;
+            int linesExpected = -1;
 
-        ImmutableList.Builder<String> resultBuilder = null;
-        State state = State.BEGIN;
-        int linesReceived = 0;
-        int linesExpected = -1;
+            while (state != State.DONE) {
+                String line = streams.read();
+                logger.debug("Received \"{}\"", line);
 
-        while (state != State.DONE) {
-            String line = streams.read();
-            logger.debug("Received \"{}\"", line);
-
-            if (line == null) {
-                state = State.DONE;
-                continue;
-            }
-            switch (state) {
-                case BEGIN:
-                    if ("BEGIN".equals(line)) {
-                        state = State.MESSAGE;
-                    }
-                    break;
-                case MESSAGE:
-                    state = line.trim().equalsIgnoreCase(command) ? State.STATUS : State.BEGIN;
-                    break;
-                case STATUS:
-                    switch (line) {
-                        case "SUCCESS":
-                            state = State.DATA;
-                            break;
-                        case "END":
+                if (line == null) {
+                    state = State.DONE;
+                    continue;
+                }
+                switch (state) {
+                    case BEGIN:
+                        if ("BEGIN".equals(line)) {
+                            state = State.MESSAGE;
+                        }
+                        break;
+                    case MESSAGE:
+                        state = line.trim().equalsIgnoreCase(command) ? State.STATUS : State.BEGIN;
+                        break;
+                    case STATUS:
+                        switch (line) {
+                            case "SUCCESS":
+                                state = State.DATA;
+                                break;
+                            case "END":
+                                state = State.DONE;
+                                break;
+                            case "ERROR":
+                                throw new LircServerException("command failed: " + command);
+                            default:
+                                throw new BadPacketException("unknown response: " + command);
+                        }
+                        break;
+                    case DATA:
+                        switch (line) {
+                            case "END":
+                                state = State.DONE;
+                                break;
+                            case "DATA":
+                                state = State.N;
+                                break;
+                            default:
+                                throw new BadPacketException("unknown response: " + command);
+                        }
+                        break;
+                    case N:
+                        try {
+                            linesExpected = Integer.parseInt(line);
+                        } catch (NumberFormatException ignored) {
+                            throw new BadPacketException("integer expected; got: " + command);
+                        }
+                        state = linesExpected == 0 ? State.END : State.DATA_N;
+                        break;
+                    case DATA_N:
+                        if (resultBuilder == null) {
+                            resultBuilder = ImmutableList.builderWithExpectedSize(8);
+                        }
+                        resultBuilder.add(line);
+                        linesReceived++;
+                        if (linesReceived == linesExpected) {
+                            state = State.END;
+                        }
+                        break;
+                    case END:
+                        if ("END".equals(line)) {
                             state = State.DONE;
-                            break;
-                        case "ERROR":
-                            throw new LircServerException("command failed: " + command);
-                        default:
-                            throw new BadPacketException("unknown response: " + command);
-                    }
-                    break;
-                case DATA:
-                    switch (line) {
-                        case "END":
-                            state = State.DONE;
-                            break;
-                        case "DATA":
-                            state = State.N;
-                            break;
-                        default:
-                            throw new BadPacketException("unknown response: " + command);
-                    }
-                    break;
-                case N:
-                    try {
-                        linesExpected = Integer.parseInt(line);
-                    } catch (NumberFormatException ignored) {
-                        throw new BadPacketException("integer expected; got: " + command);
-                    }
-                    state = linesExpected == 0 ? State.END : State.DATA_N;
-                    break;
-                case DATA_N:
-                    if (resultBuilder == null) {
-                        resultBuilder = ImmutableList.builderWithExpectedSize(8);
-                    }
-                    resultBuilder.add(line);
-                    linesReceived++;
-                    if (linesReceived == linesExpected) {
-                        state = State.END;
-                    }
-                    break;
-                case END:
-                    if ("END".equals(line)) {
-                        state = State.DONE;
-                    } else {
-                        throw new BadPacketException("\"END\" expected but \"" + line + "\" received");
-                    }
-                    break;
-                case DONE:
-                    break;
-                default:
-                    throw new RuntimeException("Unhandled case (programming error)");
+                        } else {
+                            throw new BadPacketException("\"END\" expected but \"" + line + "\" received");
+                        }
+                        break;
+                    case DONE:
+                        break;
+                    default:
+                        throw new RuntimeException("Unhandled case (programming error)");
+                }
             }
-        }
-        logger.debug("Lirc command succeeded.");
-        return resultBuilder == null ? emptyList() : resultBuilder.build();
+            logger.debug("Lirc command succeeded.");
+            return resultBuilder == null ? emptyList() : resultBuilder.build();
+        }, executor);
     }
 
     private enum State {

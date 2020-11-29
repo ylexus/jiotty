@@ -1,35 +1,34 @@
 package net.yudichev.jiotty.connector.ir.lirc;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface LircClient {
-    default void sendIrCommand(String remote, String command) {
-        sendIrCommand(remote, command, 1);
+    default CompletableFuture<Void> sendIrCommand(String remote, String command) {
+        return sendIrCommand(remote, command, 1);
     }
 
-    void sendIrCommand(String remote, String command, int count);
+    CompletableFuture<Void> sendIrCommand(String remote, String command, int count);
 
-    void sendIrCommandRepeat(String remote, String command);
+    CompletableFuture<Void> sendIrCommandRepeat(String remote, String command);
 
-    void stopIr(String remote, String command);
+    CompletableFuture<Void> stopIr(String remote, String command);
 
-    void stopIr();
+    CompletableFuture<List<String>> getRemotes();
 
-    List<String> getRemotes();
+    CompletableFuture<List<String>> getCommands(String remote);
 
-    List<String> getCommands(String remote);
+    CompletableFuture<Void> setTransmitters(Iterable<Integer> transmitters);
 
-    void setTransmitters(Iterable<Integer> transmitters);
+    CompletableFuture<Void> setTransmitters(long mask);
 
-    void setTransmitters(long mask);
+    CompletableFuture<String> getVersion();
 
-    String getVersion();
+    CompletableFuture<Void> setInputLog();
 
-    void setInputLog();
+    CompletableFuture<Void> setInputLog(String logPath);
 
-    void setInputLog(String logPath);
+    CompletableFuture<Void> setDriverOption(String key, String value);
 
-    void setDriverOption(String key, String value);
-
-    void simulate(String eventString);
+    CompletableFuture<Void> simulate(String eventString);
 }

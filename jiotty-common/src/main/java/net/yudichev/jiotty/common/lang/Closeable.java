@@ -1,5 +1,7 @@
 package net.yudichev.jiotty.common.lang;
 
+import org.slf4j.Logger;
+
 import java.util.Collection;
 import java.util.stream.Stream;
 
@@ -11,13 +13,12 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 @SuppressWarnings("OverloadedVarargsMethod")
 public interface Closeable extends AutoCloseable {
-    @Override
-    void close();
-
+    @SuppressWarnings("OverloadedMethodsWithSameNumberOfParameters")
     static Closeable forCloseables(Closeable... closeables) {
         return forCloseables(asList(closeables));
     }
 
+    @SuppressWarnings("OverloadedMethodsWithSameNumberOfParameters")
     static Closeable forCloseables(AutoCloseable... closeables) {
         return forCloseables(asList(closeables));
     }
@@ -61,5 +62,26 @@ public interface Closeable extends AutoCloseable {
 
     static void closeIfNotNull(AutoCloseable... closeable) {
         Stream.of(closeable).forEach(Closeable::closeIfNotNull);
+    }
+
+    static void closeSafely(AutoCloseable closeable, Logger logger) {
+        try {
+            asUnchecked(closeable::close);
+        } catch (RuntimeException e) {
+            logger.warn("Failed to close {}", closeable, e);
+        }
+    }
+
+    static void closeSafelyIfNotNull(AutoCloseable closeable, Logger logger) {
+        if (closeable != null) {
+            closeSafely(closeable, logger);
+        }
+    }
+
+    @Override
+    void close();
+
+    default void closeSafely(Logger logger) {
+        closeSafely(this, logger);
     }
 }

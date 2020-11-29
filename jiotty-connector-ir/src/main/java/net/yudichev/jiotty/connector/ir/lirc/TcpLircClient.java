@@ -17,6 +17,7 @@ this program. If not, see http://www.gnu.org/licenses/.
 package net.yudichev.jiotty.connector.ir.lirc;
 
 import com.google.inject.BindingAnnotation;
+import net.yudichev.jiotty.common.async.ExecutorFactory;
 
 import javax.inject.Inject;
 import java.io.BufferedReader;
@@ -30,10 +31,11 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Duration;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.Math.toIntExact;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 /**
@@ -45,19 +47,22 @@ final class TcpLircClient extends BaseLircClient {
     private final Socket socket;
     private final InetAddress inetAddress;
     private final Duration timeout;
+    private final String connectionName;
 
     @Inject
-    TcpLircClient(@Address String address, @Port int port, @Timeout Duration timeout) {
+    TcpLircClient(ExecutorFactory executorFactory, @Address String address, @Port int port, @Timeout Duration timeout) {
+        super(executorFactory);
         String lircServerIp = (address != null) ? address : DEFAULTLIRCIP;
         this.port = port;
         inetAddress = getAsUnchecked(() -> InetAddress.getByName(lircServerIp));
-        this.timeout = timeout;
+        this.timeout = checkNotNull(timeout);
         socket = new Socket();
+        connectionName = inetAddress.getCanonicalHostName() + ':' + port;
     }
 
     @Override
     protected Streams connect() {
-        logger.debug("Connecting socket to {}", socketName());
+        logger.debug("Connecting socket to {}", connectionName());
 
         return getAsUnchecked(() -> {
             int timeoutMillis = toIntExact(timeout.toMillis());
@@ -71,14 +76,14 @@ final class TcpLircClient extends BaseLircClient {
     }
 
     @Override
-    protected String socketName() {
-        return inetAddress.getCanonicalHostName() + ":" + port;
+    protected String connectionName() {
+        return connectionName;
     }
 
     @Override
     protected void doStop() {
         super.doStop();
-        closeIfNotNull(socket);
+        closeSafelyIfNotNull(socket, logger);
     }
 
     @BindingAnnotation
