@@ -20,6 +20,7 @@ package net.yudichev.jiotty.connector.ir.lirc;
 import com.google.common.collect.ImmutableList;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
@@ -30,6 +31,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
@@ -39,6 +41,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.forCloseables;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static org.immutables.value.Value.Immutable;
@@ -54,18 +57,43 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     private final ExecutorFactory executorFactory;
+    private final RetryableOperationExecutor retryableOperationExecutor;
 
     private Streams streams;
     private SchedulingExecutor executor;
 
-    protected BaseLircClient(ExecutorFactory executorFactory) {
+    protected BaseLircClient(ExecutorFactory executorFactory, RetryableOperationExecutor retryableOperationExecutor) {
         this.executorFactory = checkNotNull(executorFactory);
+        this.retryableOperationExecutor = checkNotNull(retryableOperationExecutor);
     }
 
     @Override
     protected final void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("lirc-client");
         streams = connect();
+        scheduleNextHeartbeat();
+    }
+
+    private void scheduleNextHeartbeat() {
+        // serves as a heartbeat to detect connection problems
+        executor.schedule(Duration.ofSeconds(30), this::heartbeat);
+    }
+
+    private void heartbeat() {
+        retryableOperationExecutor.withBackOffAndRetry("heartbeat: getVersion",
+                () -> getVersion()
+                        .exceptionally(e -> {
+                            logger.info("heartbeat processing failed", e);
+                            closeSafelyIfNotNull(logger, streams);
+                            streams = connect();
+                            //noinspection ReturnOfNull
+                            return null;
+                        })
+                        .thenRun(this::scheduleNextHeartbeat))
+                .exceptionally(e -> {
+                    logger.error("Heartbeat failed", e);
+                    return null;
+                });
     }
 
     protected abstract Streams connect();
@@ -73,9 +101,11 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
     @SuppressWarnings("AssignmentToNull") // convention
     @Override
     protected void doStop() {
-        closeSafelyIfNotNull(streams, logger);
-        streams = null;
-        closeSafelyIfNotNull(executor, logger);
+        executor.execute(() -> {
+            closeSafelyIfNotNull(logger, streams);
+            streams = null;
+        });
+        closeSafelyIfNotNull(logger, executor);
         executor = null;
     }
 
@@ -155,7 +185,7 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
 
     protected abstract String connectionName();
 
-    @SuppressWarnings({"OverlyComplexMethod", "OverlyLongMethod", "NestedSwitchStatement"}) // reads well
+    @SuppressWarnings({"OverlyComplexMethod", "OverlyLongMethod", "NestedSwitchStatement"}) // reads OK
     private CompletableFuture<List<String>> sendCommand(String command) {
         checkStarted();
         return supplyAsync(() -> {
@@ -279,7 +309,7 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
 
         @Override
         public final void close() {
-            Closeable.forCloseables(out(), in()).close();
+            forCloseables(out(), in()).close();
         }
     }
 

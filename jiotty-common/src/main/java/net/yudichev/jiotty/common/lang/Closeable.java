@@ -3,7 +3,6 @@ package net.yudichev.jiotty.common.lang;
 import org.slf4j.Logger;
 
 import java.util.Collection;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -28,8 +27,9 @@ public interface Closeable extends AutoCloseable {
     }
 
     static Closeable forCloseables(Collection<? extends AutoCloseable> closeables) {
+        //noinspection Convert2MethodRef getting weird compiler error
         return forActions(closeables.stream()
-                .<Runnable>map(closeable -> ((Closeable) closeable)::close)
+                .<Runnable>map(closeable -> () -> asUnchecked(() -> closeable.close()))
                 .collect(toImmutableList()));
     }
 
@@ -56,25 +56,37 @@ public interface Closeable extends AutoCloseable {
         }
     }
 
-    static void closeIfNotNull(Closeable... closeable) {
-        Stream.of(closeable).forEach(Closeable::closeIfNotNull);
-    }
-
-    static void closeIfNotNull(AutoCloseable... closeable) {
-        Stream.of(closeable).forEach(Closeable::closeIfNotNull);
-    }
-
-    static void closeSafely(AutoCloseable closeable, Logger logger) {
-        try {
-            asUnchecked(closeable::close);
-        } catch (RuntimeException e) {
-            logger.warn("Failed to close {}", closeable, e);
+    static void closeIfNotNull(Closeable... closeables) {
+        for (Closeable closeable : closeables) {
+            closeIfNotNull(closeable);
         }
     }
 
-    static void closeSafelyIfNotNull(AutoCloseable closeable, Logger logger) {
+    static void closeIfNotNull(AutoCloseable... closeable) {
+        for (AutoCloseable autoCloseable : closeable) {
+            closeIfNotNull(autoCloseable);
+        }
+    }
+
+    static void closeSafelyIfNotNull(Logger logger, Closeable... closeables) {
+        for (Closeable closeable : closeables) {
+            closeSafelyIfNotNull(logger, closeable);
+        }
+    }
+
+    static void closeSafelyIfNotNull(Logger logger, AutoCloseable closeable) {
         if (closeable != null) {
-            closeSafely(closeable, logger);
+            try {
+                asUnchecked(closeable::close);
+            } catch (RuntimeException e) {
+                logger.warn("Failed to close {}", closeable, e);
+            }
+        }
+    }
+
+    static void closeSafelyIfNotNull(Logger logger, AutoCloseable... closeables) {
+        for (AutoCloseable closeable : closeables) {
+            closeSafelyIfNotNull(logger, closeable);
         }
     }
 
@@ -82,6 +94,6 @@ public interface Closeable extends AutoCloseable {
     void close();
 
     default void closeSafely(Logger logger) {
-        closeSafely(this, logger);
+        closeSafelyIfNotNull(logger, this);
     }
 }

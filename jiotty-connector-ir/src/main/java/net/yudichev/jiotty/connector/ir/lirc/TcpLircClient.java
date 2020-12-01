@@ -18,6 +18,8 @@ package net.yudichev.jiotty.connector.ir.lirc;
 
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
+import net.yudichev.jiotty.common.lang.Closeable;
 
 import javax.inject.Inject;
 import java.io.BufferedReader;
@@ -35,7 +37,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.Math.toIntExact;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 /**
@@ -44,27 +45,34 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class TcpLircClient extends BaseLircClient {
     public static final String DEFAULTLIRCIP = "127.0.0.1"; // localhost
     private final int port;
-    private final Socket socket;
+    private Socket socket;
     private final InetAddress inetAddress;
     private final Duration timeout;
     private final String connectionName;
 
     @Inject
-    TcpLircClient(ExecutorFactory executorFactory, @Address String address, @Port int port, @Timeout Duration timeout) {
-        super(executorFactory);
+    TcpLircClient(ExecutorFactory executorFactory,
+                  @Address String address,
+                  @Port int port,
+                  @Timeout Duration timeout,
+                  @Dependency RetryableOperationExecutor retryableOperationExecutor) {
+        super(executorFactory, retryableOperationExecutor);
         String lircServerIp = (address != null) ? address : DEFAULTLIRCIP;
         this.port = port;
         inetAddress = getAsUnchecked(() -> InetAddress.getByName(lircServerIp));
         this.timeout = checkNotNull(timeout);
-        socket = new Socket();
         connectionName = inetAddress.getCanonicalHostName() + ':' + port;
     }
 
     @Override
     protected Streams connect() {
-        logger.debug("Connecting socket to {}", connectionName());
+        logger.debug("Connecting socket to {} with timeout {}", connectionName(), timeout);
 
         return getAsUnchecked(() -> {
+            if (socket != null) {
+                socket.close();
+            }
+            socket = new Socket();
             int timeoutMillis = toIntExact(timeout.toMillis());
             socket.connect(new InetSocketAddress(inetAddress, port), timeoutMillis);
             socket.setSoTimeout(timeoutMillis);
@@ -83,7 +91,7 @@ final class TcpLircClient extends BaseLircClient {
     @Override
     protected void doStop() {
         super.doStop();
-        closeSafelyIfNotNull(socket, logger);
+        Closeable.closeSafelyIfNotNull(logger, socket);
     }
 
     @BindingAnnotation
@@ -102,5 +110,11 @@ final class TcpLircClient extends BaseLircClient {
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface Timeout {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Dependency {
     }
 }

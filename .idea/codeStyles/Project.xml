@@ -3,6 +3,7 @@
     <option name="RIGHT_MARGIN" value="160" />
     <codeStyleSettings language="JAVA">
       <option name="KEEP_SIMPLE_LAMBDAS_IN_ONE_LINE" value="true" />
+      <option name="KEEP_SIMPLE_CLASSES_IN_ONE_LINE" value="true" />
       <option name="IF_BRACE_FORCE" value="3" />
     </codeStyleSettings>
   </code_scheme>
