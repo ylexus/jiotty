@@ -7,7 +7,7 @@
     <groupId>net.yudichev.jiotty</groupId>
     <artifactId>jiotty</artifactId>
     <packaging>pom</packaging>
-    <version>1.6.1</version>
+    <version>1.6.2-SNAPSHOT</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Java components for low level home automation coding</description>
@@ -21,7 +21,7 @@
     <developers>
         <developer>
             <name>Alexey Yudichev</name>
-            <email>alexey@yudichev.net</email>
+            <email>opensource@yudichev.net</email>
             <organization>GitHub</organization>
             <organizationUrl>http://www.github.com</organizationUrl>
         </developer>
