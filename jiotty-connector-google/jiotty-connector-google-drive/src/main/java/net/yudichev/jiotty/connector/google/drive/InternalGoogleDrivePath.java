@@ -3,6 +3,7 @@ package net.yudichev.jiotty.connector.google.drive;
 import com.google.api.client.http.ByteArrayContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,5 +90,13 @@ final class InternalGoogleDrivePath implements GoogleDrivePath {
                     .addAll(path)
                     .build()));
         }));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("id", id)
+                .add("path", path)
+                .toString();
     }
 }
