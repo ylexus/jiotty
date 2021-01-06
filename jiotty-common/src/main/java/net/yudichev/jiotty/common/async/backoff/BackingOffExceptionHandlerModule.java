@@ -1,9 +1,8 @@
 package net.yudichev.jiotty.common.async.backoff;
 
+import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
-import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
-import net.yudichev.jiotty.common.inject.BindingSpec;
-import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import net.yudichev.jiotty.common.inject.*;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 
@@ -15,15 +14,23 @@ import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 public final class BackingOffExceptionHandlerModule extends BaseLifecycleComponentModule implements ExposedKeyModule<BackingOffExceptionHandler> {
     private final BindingSpec<BackOffConfig> configSpec;
     private final BindingSpec<Predicate<? super Throwable>> retryableExceptionPredicateSpec;
+    private final Key<BackingOffExceptionHandler> exposedKey;
 
     private BackingOffExceptionHandlerModule(BindingSpec<Predicate<? super Throwable>> retryableExceptionPredicateSpec,
-                                             BindingSpec<BackOffConfig> configSpec) {
+                                             BindingSpec<BackOffConfig> configSpec,
+                                             SpecifiedAnnotation specifiedAnnotation) {
         this.retryableExceptionPredicateSpec = checkNotNull(retryableExceptionPredicateSpec);
         this.configSpec = checkNotNull(configSpec);
+        exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
     }
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    @Override
+    public Key<BackingOffExceptionHandler> getExposedKey() {
+        return exposedKey;
     }
 
     @Override
@@ -35,13 +42,14 @@ public final class BackingOffExceptionHandlerModule extends BaseLifecycleCompone
         retryableExceptionPredicateSpec.bind(new TypeLiteral<Predicate<? super Throwable>>() {})
                 .annotatedWith(BackingOffExceptionHandlerImpl.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule);
-        bind(getExposedKey()).to(BackingOffExceptionHandlerImpl.class);
-        expose(getExposedKey());
+        bind(exposedKey).to(BackingOffExceptionHandlerImpl.class);
+        expose(exposedKey);
     }
 
-    public static final class Builder implements TypedBuilder<ExposedKeyModule<BackingOffExceptionHandler>> {
+    public static final class Builder implements TypedBuilder<ExposedKeyModule<BackingOffExceptionHandler>>, HasWithAnnotation {
         private BindingSpec<Predicate<? super Throwable>> retryableExceptionPredicateSpec;
         private BindingSpec<BackOffConfig> configSpec = literally(BackOffConfig.builder().build());
+        private SpecifiedAnnotation specifiedAnnotation = SpecifiedAnnotation.forNoAnnotation();
 
         public Builder setRetryableExceptionPredicate(BindingSpec<Predicate<? super Throwable>> retryableExceptionPredicateSpec) {
             this.retryableExceptionPredicateSpec = checkNotNull(retryableExceptionPredicateSpec);
@@ -54,8 +62,14 @@ public final class BackingOffExceptionHandlerModule extends BaseLifecycleCompone
         }
 
         @Override
+        public Builder withAnnotation(SpecifiedAnnotation specifiedAnnotation) {
+            this.specifiedAnnotation = checkNotNull(specifiedAnnotation);
+            return this;
+        }
+
+        @Override
         public ExposedKeyModule<BackingOffExceptionHandler> build() {
-            return new BackingOffExceptionHandlerModule(retryableExceptionPredicateSpec, configSpec);
+            return new BackingOffExceptionHandlerModule(retryableExceptionPredicateSpec, configSpec, specifiedAnnotation);
         }
     }
 }

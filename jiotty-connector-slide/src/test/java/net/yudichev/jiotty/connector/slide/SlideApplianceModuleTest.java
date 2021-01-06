@@ -5,6 +5,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.backoff.BackOffConfig;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,7 @@ class SlideApplianceModuleTest {
     void test() {
         ExposedKeyModule<Appliance> applianceModule = SlideApplianceModule.builder()
                 .setSlideIdSpec(literally(1L))
+                .withRetries(literally(BackOffConfig.builder().build()))
                 .build();
         Injector injector = Guice.createInjector(
                 binder -> binder.bind(ExecutorFactory.class).toInstance(executorFactory),
