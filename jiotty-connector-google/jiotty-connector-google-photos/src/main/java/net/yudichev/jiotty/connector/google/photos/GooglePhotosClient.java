@@ -37,8 +37,13 @@ public interface GooglePhotosClient {
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType") // it's quite useful in this case
     default CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path file, Executor executor) {
         return uploadMediaData(file, executor)
-                .thenCompose(uploadToken ->
-                        createMediaItems(albumId, ImmutableList.of(NewMediaItem.of(uploadToken, Optional.of(file.getFileName().toString()))), executor))
+                .thenCompose(uploadToken -> createMediaItems(
+                        albumId,
+                        ImmutableList.of(NewMediaItem.builder()
+                                .setUploadToken(uploadToken)
+                                .setFileName(file.getFileName().toString())
+                                .build()),
+                        executor))
                 .thenApply(mediaItemOrErrors -> mediaItemOrErrors.get(0).map(
                         item -> item,
                         status -> {

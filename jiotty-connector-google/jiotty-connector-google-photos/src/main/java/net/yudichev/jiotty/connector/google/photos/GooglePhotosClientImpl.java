@@ -55,12 +55,12 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
         PhotosLibraryClient theClient = whenStartedAndNotLifecycling(() -> client);
         return supplyAsync(() -> whenStartedAndNotLifecycling(() -> {
             logger.debug("Started uploading {}", file);
-            String fileName = file.getFileName().toString();
             UploadMediaItemResponse uploadResponse;
             try (RandomAccessFile randomAccessFile = new RandomAccessFile(file.toFile(), "r")) {
                 UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder()
-                        .setFileName(fileName)
                         .setDataFile(randomAccessFile)
+                        //TODO: remove this call to a deprecated method once https://github.com/google/java-photoslibrary/issues/42 is fixed
+                        .setFileName(file.getFileName().toString())
                         .build();
                 uploadResponse = theClient.uploadMediaItem(uploadRequest);
             } catch (IOException e) {
@@ -104,7 +104,6 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                     .collect(toImmutableList());
         }), executor);
     }
-
 
     @Override
     public CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor) {
