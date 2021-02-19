@@ -1,10 +1,9 @@
 package net.yudichev.jiotty.connector.slide;
 
 import com.google.common.reflect.TypeToken;
-import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.common.lang.CompletableFutures;
+import net.yudichev.jiotty.common.lang.Closeable;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -13,34 +12,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 import static net.yudichev.jiotty.common.lang.Json.object;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.common.rest.ContentTypes.CONTENT_TYPE_JSON;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
-import static net.yudichev.jiotty.connector.slide.Bindings.Email;
-import static net.yudichev.jiotty.connector.slide.Bindings.Password;
+import static net.yudichev.jiotty.connector.slide.Bindings.*;
 
 final class SlideServiceImpl extends BaseLifecycleComponent implements SlideService {
     private static final Logger logger = LoggerFactory.getLogger(SlideServiceImpl.class);
 
     private final OkHttpClient client = newClient();
-    private final ExecutorFactory executorFactory;
     private final String email;
     private final String password;
+    private final Provider<SchedulingExecutor> executorProvider;
     private String accessToken;
-    private SchedulingExecutor executor;
+    private Closeable tokenRefreshSchedule = Closeable.noop();
 
-    @Inject
-    SlideServiceImpl(ExecutorFactory executorFactory,
-                     @Email String email,
-                     @Password String password) {
-        this.executorFactory = checkNotNull(executorFactory);
+    @Inject SlideServiceImpl(@ServiceExecutor Provider<SchedulingExecutor> executorProvider,
+                             @Email String email,
+                             @Password String password) {
+        this.executorProvider = checkNotNull(executorProvider);
         this.email = checkNotNull(email);
         this.password = checkNotNull(password);
     }
@@ -74,17 +73,16 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
 
     @Override
     protected void doStart() {
-        executor = executorFactory.createSingleThreadedSchedulingExecutor("slide-service");
         AuthenticationResponse authenticationResponse = getAsUnchecked(() -> issueRefreshAccessTokenRequest().get(10, TimeUnit.SECONDS));
         accessToken = authenticationResponse.accessToken();
         Duration accessTokenRefreshPeriod = Duration.ofSeconds(authenticationResponse.expiresInSeconds()).minus(Duration.ofDays(1));
         logger.debug("Access token refresh period {}", accessTokenRefreshPeriod);
-        executor.scheduleAtFixedRate(accessTokenRefreshPeriod, this::refreshAccessToken);
+        tokenRefreshSchedule = executorProvider.get().scheduleAtFixedRate(accessTokenRefreshPeriod, this::refreshAccessToken);
     }
 
     @Override
     protected void doStop() {
-        executor.close();
+        tokenRefreshSchedule.close();
     }
 
     private CompletableFuture<AuthenticationResponse> issueRefreshAccessTokenRequest() {
@@ -103,6 +101,6 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
     private void refreshAccessToken() {
         issueRefreshAccessTokenRequest()
                 .thenAccept(authenticationResponse -> whenStartedAndNotLifecycling(() -> {accessToken = authenticationResponse.accessToken();}))
-                .whenComplete(CompletableFutures.logErrorOnFailure(logger, "failed to refresh slide access token"));
+                .whenComplete(logErrorOnFailure(logger, "failed to refresh slide access token"));
     }
 }

@@ -5,8 +5,10 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.async.backoff.BackOffConfig;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import net.yudichev.jiotty.common.time.TimeModule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -28,10 +30,12 @@ class SlideApplianceModuleTest {
                 .withRetries(literally(BackOffConfig.builder().build()))
                 .build();
         Injector injector = Guice.createInjector(
-                binder -> binder.bind(ExecutorFactory.class).toInstance(executorFactory),
+                new TimeModule(),
+                new ExecutorModule(),
                 SlideServiceModule.builder()
                         .setEmail(literally("email"))
                         .setPassword(literally("password"))
+                        .withPositionVerification()
                         .build(),
                 applianceModule);
 

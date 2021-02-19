@@ -20,14 +20,16 @@ final class Bindings {
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Password {
+    @Retention(RUNTIME) @interface Password {
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface SlideId {
+    @Retention(RUNTIME) @interface SlideId {
     }
 
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME) @interface ServiceExecutor {
+    }
 }

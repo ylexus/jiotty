@@ -17,6 +17,8 @@ import java.util.concurrent.CompletableFuture;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.appliance.PowerCommand.ON;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
 import static net.yudichev.jiotty.connector.slide.Bindings.SlideId;
 
 final class SlideAsAppliance implements Appliance {
@@ -37,9 +39,21 @@ final class SlideAsAppliance implements Appliance {
 
     @Override
     public CompletableFuture<?> execute(Command command) {
-        return command.acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
-                powerCommand == PowerCommand.ON ? slideService.closeSlide(slideId) : slideService.openSlide(slideId))
+        return command
+                .acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) this::doExecuteCommand)
                 .thenRun(() -> logger.info("Slide {}: executed {}", name, command));
+    }
+
+    private CompletableFuture<Void> doExecuteCommand(PowerCommand powerCommand) {
+        return slideService.getSlideInfo(slideId)
+                .thenCompose(slideInfo -> {
+                    double currentPosition = slideInfo.position();
+                    double targetPosition = powerCommand == ON ? 1.0 : 0.0;
+                    logger.debug("Slide {}: current pos {}, target pos {}", name, currentPosition, targetPosition);
+                    return Math.abs(currentPosition - targetPosition) > Constants.POSITION_TOLERANCE ?
+                            slideService.setSlidePosition(slideId, targetPosition) :
+                            completedFuture();
+                });
     }
 
     @Override
@@ -49,8 +63,7 @@ final class SlideAsAppliance implements Appliance {
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Dependency {
+    @Retention(RUNTIME) @interface Dependency {
     }
 
     @BindingAnnotation
