@@ -59,8 +59,7 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             try (RandomAccessFile randomAccessFile = new RandomAccessFile(file.toFile(), "r")) {
                 UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder()
                         .setDataFile(randomAccessFile)
-                        //TODO: remove this call to a deprecated method once https://github.com/google/java-photoslibrary/issues/42 is fixed
-                        .setFileName(file.getFileName().toString())
+                        .setMimeType("application/octet-stream")
                         .build();
                 uploadResponse = theClient.uploadMediaItem(uploadRequest);
             } catch (IOException e) {

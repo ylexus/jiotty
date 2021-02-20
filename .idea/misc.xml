@@ -7,17 +7,6 @@
         <option value="$PROJECT_DIR$/pom.xml" />
       </list>
     </option>
-    <option name="ignoredFiles">
-      <set>
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-assistant/pom.xml" />
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-common/pom.xml" />
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-drive/pom.xml" />
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-gmail/pom.xml" />
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-photos/pom.xml" />
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-sdm/pom.xml" />
-        <option value="$PROJECT_DIR$/jiotty-connector-google/jiotty-connector-google-sheets/pom.xml" />
-      </set>
-    </option>
   </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="javax.annotation.Nullable" />
