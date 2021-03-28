@@ -33,13 +33,13 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
         exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     @Override
     public Key<Mqtt> getExposedKey() {
         return exposedKey;
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     @Override
@@ -57,7 +57,8 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
                 .withAnnotation(forAnnotation(MqttImpl.Dependency.class))
                 .build());
 
-        bind(exposedKey).to(boundLifecycleComponent(MqttImpl.class));
+        // IMqttClient is singleton, so we must be singleton too, otherwise we'll be closing same IMqttClient twice
+        bind(exposedKey).to(boundLifecycleComponent(MqttImpl.class)).in(Singleton.class);
         expose(exposedKey);
     }
 
