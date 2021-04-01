@@ -44,6 +44,7 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     private final Map<String, Set<BiConsumer<String, MqttMessage>>> subscriptionsByFilter = new HashMap<>();
     private final IMqttClient client;
     private final ExecutorFactory executorFactory;
+    private final String name;
     private SchedulingExecutor executor;
 
     @Inject
@@ -54,7 +55,13 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         this.executorFactory = checkNotNull(executorFactory);
         this.throttledLoggerFactory = checkNotNull(throttledLoggerFactory);
         this.mqttConnectOptions = checkNotNull(mqttConnectOptions);
-        this.client = checkNotNull(client);
+        this.client = client;
+        name = super.name() + " " + client.getClientId() + " " + client.getServerURI();
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override
@@ -72,8 +79,8 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         }
         return idempotent(() -> {
             synchronized (lock) {
-                subscriptionsByFilter.compute(topicFilter, (filter, callbacks) -> {
-                    checkNotNull(callbacks).remove(callback);
+                subscriptionsByFilter.computeIfPresent(topicFilter, (filter, callbacks) -> {
+                    callbacks.remove(callback);
                     if (callbacks.isEmpty()) {
                         if (client.isConnected()) {
                             asUnchecked(() -> client.unsubscribe(topicFilter));
@@ -111,7 +118,6 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     @Override
     protected void doStop() {
         synchronized (lock) {
-            asUnchecked(client::disconnect);
             asUnchecked(client::close); // I have a right as both this component and the client provider are singletons
             closeIfNotNull(executor);
         }
@@ -176,12 +182,11 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
 
         @Override
         public void connectComplete(boolean reconnect, String serverURI) {
-            synchronized (lock) {
-                logger.info("{} completed connection to {}, reconnected={}", client.getClientId(), serverURI, reconnect);
-                if (reconnect) {
-                    restoreSubscriptions();
-                }
+            logger.info("{} completed connection to {}, reconnected={}", client.getClientId(), serverURI, reconnect);
+            if (reconnect) {
+                restoreSubscriptions();
             }
+
         }
 
         @Override
@@ -194,15 +199,17 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         }
 
         private void restoreSubscriptions() {
-            logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
-            try {
-                subscriptionsByFilter.forEach((topicFilter, callbacks) ->
-                        callbacks.forEach(callback -> doSubscribe(topicFilter, callback)));
-                backOff.reset();
-            } catch (RuntimeException e) {
-                long nextRetryInMs = backOff.nextBackOffMillis();
-                logger.info("Re-subscription failed, will re-try in {}ms", nextRetryInMs, e);
-                subRetryTimerHandle = executor.schedule(Duration.ofMillis(nextRetryInMs), this::restoreSubscriptions);
+            synchronized (lock) {
+                logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
+                try {
+                    subscriptionsByFilter.forEach((topicFilter, callbacks) ->
+                            callbacks.forEach(callback -> doSubscribe(topicFilter, callback)));
+                    backOff.reset();
+                } catch (RuntimeException e) {
+                    long nextRetryInMs = backOff.nextBackOffMillis();
+                    logger.info("Re-subscription failed, will re-try in {}ms", nextRetryInMs, e);
+                    subRetryTimerHandle = executor.schedule(Duration.ofMillis(nextRetryInMs), this::restoreSubscriptions);
+                }
             }
         }
 

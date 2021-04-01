@@ -57,8 +57,7 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
                 .withAnnotation(forAnnotation(MqttImpl.Dependency.class))
                 .build());
 
-        // IMqttClient is singleton, so we must be singleton too, otherwise we'll be closing same IMqttClient twice
-        bind(exposedKey).to(boundLifecycleComponent(MqttImpl.class)).in(Singleton.class);
+        bind(exposedKey).to(boundLifecycleComponent(MqttImpl.class));
         expose(exposedKey);
     }
 
