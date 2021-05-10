@@ -9,6 +9,7 @@ import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 
+import java.net.URL;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -32,6 +33,9 @@ public abstract class BaseGoogleServiceModule extends BaseLifecycleComponentModu
                 .orElse(() -> bind(new TypeLiteral<Optional<AuthorizationBrowser>>() {})
                         .annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class)
                         .toInstance(Optional.empty()));
+        settings.credentialsUrl().bind(URL.class)
+                .annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class)
+                .installedBy(this::installLifecycleComponentModule);
         bind(GoogleApiAuthSettings.class).annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class).toInstance(settings);
         bind(ResolvedGoogleApiAuthSettings.class).annotatedWith(Settings.class).toProvider(GoogleApiAuthSettingsResolver.class);
 
@@ -48,7 +52,7 @@ public abstract class BaseGoogleServiceModule extends BaseLifecycleComponentModu
         }
 
         public B setSettings(GoogleApiAuthSettings settings) {
-            this.settings = settings;
+            this.settings = checkNotNull(settings);
             return thisBuilder();
         }
 

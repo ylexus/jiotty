@@ -30,7 +30,7 @@ class GoogleSheetsModuleTest {
                 .setSettings(GoogleApiAuthSettings.builder()
                         .setAuthorizationBrowser(literally(authBrowser))
                         .setApplicationName("an")
-                        .setCredentialsUrl(new URL("file:/url"))
+                        .setCredentialsUrl(literally(new URL("file:/url")))
                         .setAuthDataStoreRootDir(Paths.get("adsrd"))
                         .build())
                 .build();

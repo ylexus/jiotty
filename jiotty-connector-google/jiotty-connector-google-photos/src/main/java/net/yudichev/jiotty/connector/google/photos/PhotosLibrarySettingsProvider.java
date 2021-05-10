@@ -15,15 +15,16 @@ import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings
 
 final class PhotosLibrarySettingsProvider implements Provider<PhotosLibrarySettings> {
     private static final String SCOPE_PHOTOS_LIBRARY = "https://www.googleapis.com/auth/photoslibrary";
-    private final ResolvedGoogleApiAuthSettings settings;
+    private final Provider<ResolvedGoogleApiAuthSettings> settingsProvider;
 
     @Inject
-    PhotosLibrarySettingsProvider(@Settings ResolvedGoogleApiAuthSettings settings) {
-        this.settings = checkNotNull(settings);
+    PhotosLibrarySettingsProvider(@Settings Provider<ResolvedGoogleApiAuthSettings> settingsProvider) {
+        this.settingsProvider = checkNotNull(settingsProvider);
     }
 
     @Override
     public PhotosLibrarySettings get() {
+        ResolvedGoogleApiAuthSettings settings = settingsProvider.get();
         return getAsUnchecked(() -> PhotosLibrarySettings.newBuilder()
                 .setCredentialsProvider(create(
                         GoogleAuthorization.builder()

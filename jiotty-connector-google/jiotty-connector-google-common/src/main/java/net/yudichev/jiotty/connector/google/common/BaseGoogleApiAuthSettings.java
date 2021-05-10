@@ -15,7 +15,7 @@ interface BaseGoogleApiAuthSettings {
 
     String applicationName();
 
-    URL credentialsUrl();
+    BindingSpec<URL> credentialsUrl();
 
     Optional<BindingSpec<AuthorizationBrowser>> authorizationBrowser();
 }
