@@ -14,11 +14,11 @@ import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.file.Files.*;
@@ -37,9 +37,9 @@ final class VarStoreImpl implements VarStore {
     private final Path storeFileTmp;
 
     @Inject
-    VarStoreImpl(@AppName String applicationName) {
-        storeFile = Paths.get(System.getProperty("user.home"), "." + applicationName, "data.json");
-        storeFileTmp = storeFile.resolveSibling("data.json.tmp");
+    VarStoreImpl(@StoreFile Path storeFile) {
+        this.storeFile = checkNotNull(storeFile);
+        storeFileTmp = this.storeFile.resolveSibling("data.tmp");
     }
 
     @Override
@@ -83,6 +83,6 @@ final class VarStoreImpl implements VarStore {
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    @interface AppName {
+    @interface StoreFile {
     }
 }

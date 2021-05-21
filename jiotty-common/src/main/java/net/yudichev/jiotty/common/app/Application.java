@@ -18,11 +18,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-@SuppressWarnings("ClassWithTooManyFields") // TODO do something about it
 public final class Application {
     private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
@@ -33,20 +31,19 @@ public final class Application {
         SysOutOverSLF4J.sendSystemOutAndErrToSLF4J();
     }
 
-    private final Supplier<Module> moduleSupplier;
     private final List<LifecycleComponent> componentsAttemptedToStart = new CopyOnWriteArrayList<>();
     private final AtomicBoolean restarting = new AtomicBoolean();
     private final AtomicBoolean jvmShuttingDown = new AtomicBoolean();
-    private final ApplicationLifecycleControl applicationLifecycleControl;
     private final AtomicBoolean startedAllComponentsSuccessfully = new AtomicBoolean();
     private final AtomicBoolean runCalled = new AtomicBoolean();
+    private final Injector injector;
+
     private CountDownLatch shutdownLatch;
     private CountDownLatch fullyStoppedLatch;
     private Thread runThread;
 
     private Application(Supplier<Module> moduleSupplier) {
-        this.moduleSupplier = checkNotNull(moduleSupplier);
-        applicationLifecycleControl = new ApplicationLifecycleControl() {
+        ApplicationLifecycleControl applicationLifecycleControl = new ApplicationLifecycleControl() {
             @Override
             public void initiateShutdown() {
                 logger.info("Application requested shutdown");
@@ -74,42 +71,68 @@ public final class Application {
                 });
             }
         }));
+        injector = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get());
     }
 
+    /**
+     * Start all {@link LifecycleComponent}s.
+     *
+     * @throws InterruptedException if the thread was interrupted while starting
+     * @throws RuntimeException     if one of the components failed to start; note components that are already started won't be stopped, use
+     *                              {@link #stop()} for that.
+     */
+    public void start() throws InterruptedException {
+        startedAllComponentsSuccessfully.set(false);
+        componentsAttemptedToStart.clear();
+        logger.info("Initialising components");
+        List<LifecycleComponent> allComponents = injector
+                .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})
+                .stream()
+                .map(lifecycleComponentBinding -> lifecycleComponentBinding.getProvider().get())
+                .collect(toImmutableList());
+
+        logger.info("Starting components");
+        for (LifecycleComponent component : allComponents) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException(String.format("Interrupted while starting; components attempted to start: %s out of %s",
+                        componentsAttemptedToStart.size(), allComponents.size()));
+            }
+            componentsAttemptedToStart.add(component);
+            start(component);
+        }
+
+        startedAllComponentsSuccessfully.set(true);
+        logger.info("Started");
+    }
+
+    public Injector getInjector() {
+        return injector;
+    }
+
+    /**
+     * Stop all components that have been started - must be called on same thread that called {@link #start()}.
+     */
+    public void stop() {
+        logger.info("Shutting down");
+        stop(componentsAttemptedToStart);
+        componentsAttemptedToStart.clear();
+        logger.info("Shut down");
+    }
+
+    /**
+     * Run as a daemon: start and blocks until application initiates shutdown (or JVM is requested to shut down) and all components are stopped.
+     */
     public void run() {
         checkState(runCalled.compareAndSet(false, true), "Application.run() can only be called once");
         runThread = Thread.currentThread();
-        Injector injector = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get());
         do {
             logger.info("Starting");
 
             shutdownLatch = new CountDownLatch(1);
             fullyStoppedLatch = new CountDownLatch(1);
-            startedAllComponentsSuccessfully.set(false);
-            componentsAttemptedToStart.clear();
 
             try {
-                logger.info("Initialising components");
-                List<LifecycleComponent> allComponents = injector
-                        .findBindingsByType(new TypeLiteral<LifecycleComponent>() {})
-                        .stream()
-                        .map(lifecycleComponentBinding -> lifecycleComponentBinding.getProvider().get())
-                        .collect(toImmutableList());
-
-                logger.info("Starting components");
-                for (LifecycleComponent component : allComponents) {
-                    if (Thread.interrupted()) {
-                        //noinspection ThrowCaughtLocally
-                        throw new InterruptedException(String.format("Interrupted while starting; components attempted to start: %s out of %s",
-                                componentsAttemptedToStart.size(), allComponents.size()));
-                    }
-                    componentsAttemptedToStart.add(component);
-                    start(component);
-                }
-
-                startedAllComponentsSuccessfully.set(true);
-                logger.info("Started");
-
+                start();
             } catch (InterruptedException | RuntimeException e) {
                 logger.error("Unable to initialize", e);
                 shutdownLatch.countDown();
@@ -119,7 +142,7 @@ public final class Application {
             }
 
             MoreThrowables.asUnchecked(shutdownLatch::await);
-            stopComponents();
+            stop();
 
             fullyStoppedLatch.countDown();
         } while (restarting.getAndSet(false));
@@ -127,12 +150,6 @@ public final class Application {
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    private void stopComponents() {
-        logger.info("Shutting down");
-        stop(componentsAttemptedToStart);
-        logger.info("Shut down");
     }
 
     private void initiateStop() {
