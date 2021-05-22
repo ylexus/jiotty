@@ -16,6 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -39,7 +40,6 @@ public final class Application {
     private final Injector injector;
 
     private CountDownLatch shutdownLatch;
-    private CountDownLatch fullyStoppedLatch;
     private Thread runThread;
 
     private Application(Supplier<Module> moduleSupplier) {
@@ -59,18 +59,6 @@ public final class Application {
             }
         };
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            jvmShuttingDown.set(true);
-            if (fullyStoppedLatch.getCount() > 0) {
-                logger.info("Shutdown hook fired");
-                initiateStop();
-                MoreThrowables.asUnchecked(() -> {
-                    if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
-                        logger.warn("Timed out waiting for partially initialised application to shut down");
-                    }
-                });
-            }
-        }));
         injector = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get());
     }
 
@@ -125,11 +113,28 @@ public final class Application {
     public void run() {
         checkState(runCalled.compareAndSet(false, true), "Application.run() can only be called once");
         runThread = Thread.currentThread();
+
+        AtomicReference<CountDownLatch> fullyStoppedLatchRef = new AtomicReference<>();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            jvmShuttingDown.set(true);
+            CountDownLatch fullyStoppedLatch = fullyStoppedLatchRef.get();
+            if (fullyStoppedLatch != null && fullyStoppedLatch.getCount() > 0) {
+                logger.info("Shutdown hook fired");
+                initiateStop();
+                MoreThrowables.asUnchecked(() -> {
+                    if (!fullyStoppedLatch.await(1, TimeUnit.MINUTES)) {
+                        logger.warn("Timed out waiting for partially initialised application to shut down");
+                    }
+                });
+            }
+        }));
+
         do {
             logger.info("Starting");
 
             shutdownLatch = new CountDownLatch(1);
-            fullyStoppedLatch = new CountDownLatch(1);
+            CountDownLatch fullyStoppedLatch = new CountDownLatch(1);
+            fullyStoppedLatchRef.set(fullyStoppedLatch);
 
             try {
                 start();
