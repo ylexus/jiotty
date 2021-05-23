@@ -1,6 +1,9 @@
 package net.yudichev.jiotty.connector.rpigpio;
 
-import com.pi4j.io.gpio.*;
+import com.pi4j.io.gpio.GpioController;
+import com.pi4j.io.gpio.GpioPinDigitalInput;
+import com.pi4j.io.gpio.PinPullResistance;
+import com.pi4j.io.gpio.PinState;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.function.Consumer;
 
+import static com.pi4j.io.gpio.RaspiPin.GPIO_13;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,7 +30,7 @@ class RpiDigitalPinStatusMonitorImplTest {
 
     @BeforeEach
     void setUp() {
-        monitor = new RpiDigitalPinStatusMonitorImpl(() -> gpioController, PiFacePin.GPIO_13, PinPullResistance.PULL_DOWN);
+        monitor = new RpiDigitalPinStatusMonitorImpl(() -> gpioController, GPIO_13, PinPullResistance.PULL_DOWN);
     }
 
     @Test
@@ -98,7 +102,7 @@ class RpiDigitalPinStatusMonitorImplTest {
     }
 
     private void doStart() {
-        when(gpioController.provisionDigitalInputPin(PiFacePin.GPIO_13, PinPullResistance.PULL_DOWN)).thenReturn(input);
+        when(gpioController.provisionDigitalInputPin(GPIO_13, PinPullResistance.PULL_DOWN)).thenReturn(input);
         monitor.start();
     }
 }

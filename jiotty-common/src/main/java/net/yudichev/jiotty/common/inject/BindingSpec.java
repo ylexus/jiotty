@@ -2,6 +2,7 @@ package net.yudichev.jiotty.common.inject;
 
 import com.google.common.reflect.TypeParameter;
 import com.google.common.reflect.TypeToken;
+import com.google.inject.Module;
 import com.google.inject.*;
 import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.binder.ScopedBindingBuilder;
@@ -304,7 +305,7 @@ public abstract class BindingSpec<T> {
         @Override
         protected TargetBindingServiceModule<T> createTargetBindingServiceModule(Key<T> targetKey,
                                                                                  Consumer<ScopedBindingBuilder> scopeSpecifier) {
-            return new TargetBindingServiceModule<T>(targetKey, scopeSpecifier) {
+            return new TargetBindingServiceModule<>(targetKey, scopeSpecifier) {
                 @Override
                 protected ScopedBindingBuilder doBind(LinkedBindingBuilder<? super T> linkedBindingBuilder) {
                     return linkedBindingBuilder.toProvider(valueProvider);
@@ -322,7 +323,7 @@ public abstract class BindingSpec<T> {
 
         @Override
         protected TargetBindingServiceModule<T> createTargetBindingServiceModule(Key<T> targetKey, Consumer<ScopedBindingBuilder> scopeSpecifier) {
-            return new TargetBindingServiceModule<T>(targetKey, scopeSpecifier) {
+            return new TargetBindingServiceModule<>(targetKey, scopeSpecifier) {
                 @Override
                 protected ScopedBindingBuilder doBind(LinkedBindingBuilder<? super T> linkedBindingBuilder) {
                     return linkedBindingBuilder.toProvider(valueProviderKey);
@@ -341,7 +342,7 @@ public abstract class BindingSpec<T> {
         @Override
         protected TargetBindingServiceModule<T> createTargetBindingServiceModule(Key<T> targetKey,
                                                                                  Consumer<ScopedBindingBuilder> scopeSpecifier) {
-            return new TargetBindingServiceModule<T>(targetKey, scopeSpecifier) {
+            return new TargetBindingServiceModule<>(targetKey, scopeSpecifier) {
                 @Override
                 protected ScopedBindingBuilder doBind(LinkedBindingBuilder<? super T> linkedBindingBuilder) {
                     return linkedBindingBuilder.to(specifiedAnnotation.specify(targetKey.getTypeLiteral()));
@@ -360,7 +361,7 @@ public abstract class BindingSpec<T> {
         @Override
         protected TargetBindingServiceModule<T> createTargetBindingServiceModule(Key<T> targetKey,
                                                                                  Consumer<ScopedBindingBuilder> scopeSpecifier) {
-            return new TargetBindingServiceModule<T>(targetKey, scopeSpecifier) {
+            return new TargetBindingServiceModule<>(targetKey, scopeSpecifier) {
                 @Override
                 protected ScopedBindingBuilder doBind(LinkedBindingBuilder<? super T> linkedBindingBuilder) {
                     return linkedBindingBuilder.to(key);
@@ -378,7 +379,7 @@ public abstract class BindingSpec<T> {
 
         @Override
         protected TargetBindingServiceModule<T> createTargetBindingServiceModule(Key<T> targetKey, Consumer<ScopedBindingBuilder> scopeSpecifier) {
-            return new TargetBindingServiceModule<T>(targetKey, scopeSpecifier) {
+            return new TargetBindingServiceModule<>(targetKey, scopeSpecifier) {
                 @Override
                 protected ScopedBindingBuilder doBind(LinkedBindingBuilder<? super T> linkedBindingBuilder) {
                     installLifecycleComponentModule(exposedKeyModule);
@@ -490,21 +491,21 @@ public abstract class BindingSpec<T> {
             }
 
             TypeLiteral<Types<T, U>> getTypesType() {
-                return asResolvedTypeLiteral(new TypeToken<Types<T, U>>() {});
+                return asResolvedTypeLiteral(new TypeToken<>() {});
             }
 
             TypeLiteral<Function<? super T, ? extends U>> getMapperType() {
-                return asResolvedTypeLiteral(new TypeToken<Function<? super T, ? extends U>>() {});
+                return asResolvedTypeLiteral(new TypeToken<>() {});
             }
 
             TypeLiteral<SourceToTargetAdapter<T, U>> getSourceToTargetAdapterType() {
-                return asResolvedTypeLiteral(new TypeToken<SourceToTargetAdapter<T, U>>() {});
+                return asResolvedTypeLiteral(new TypeToken<>() {});
             }
 
             private <V> TypeLiteral<V> asResolvedTypeLiteral(TypeToken<V> typeToken) {
                 return asTypeLiteral(typeToken
-                        .where(new TypeParameter<T>() {}, fromType)
-                        .where(new TypeParameter<U>() {}, toType));
+                        .where(new TypeParameter<>() {}, fromType)
+                        .where(new TypeParameter<>() {}, toType));
             }
         }
 

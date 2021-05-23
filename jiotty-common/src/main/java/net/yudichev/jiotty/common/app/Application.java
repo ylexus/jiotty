@@ -2,6 +2,7 @@ package net.yudichev.jiotty.common.app;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.Module;
 import com.google.inject.*;
 import net.yudichev.jiotty.common.inject.LifecycleComponent;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
