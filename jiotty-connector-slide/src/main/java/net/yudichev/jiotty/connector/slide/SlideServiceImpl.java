@@ -15,6 +15,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -36,16 +37,17 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
     private String accessToken;
     private Closeable tokenRefreshSchedule = Closeable.noop();
 
-    @Inject SlideServiceImpl(@ServiceExecutor Provider<SchedulingExecutor> executorProvider,
-                             @Email String email,
-                             @Password String password) {
+    @Inject
+    SlideServiceImpl(@ServiceExecutor Provider<SchedulingExecutor> executorProvider,
+                     @Email String email,
+                     @Password String password) {
         this.executorProvider = checkNotNull(executorProvider);
         this.email = checkNotNull(email);
         this.password = checkNotNull(password);
     }
 
     @Override
-    public CompletableFuture<SlideInfo> getSlideInfo(long slideId) {
+    public CompletableFuture<SlideInfo> getSlideInfo(long slideId, Executor executor) {
         logger.debug("Getting slide info ({})", slideId);
         return call(client.newCall(new Request.Builder()
                         .url("https://api.goslide.io/api/slide/" + slideId + "/info")
@@ -53,11 +55,11 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
                         .header("authorization", "Bearer " + accessToken)
                         .build()),
                 new TypeToken<SlideResponse<SlideInfo>>() {})
-                .thenApply(response -> response.dataOrThrow("Failed to obtain slide info for id " + slideId));
+                .thenApplyAsync(response -> response.dataOrThrow("Failed to obtain slide info for id " + slideId), executor);
     }
 
     @Override
-    public CompletableFuture<Void> setSlidePosition(long slideId, double position) {
+    public CompletableFuture<Void> setSlidePosition(long slideId, double position, Executor executor) {
         logger.debug("Set slide {} position to {}", slideId, position);
         return call(client.newCall(new Request.Builder()
                         .url("https://api.goslide.io/api/slide/" + slideId + "/position")
@@ -68,7 +70,7 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
                         .header("authorization", "Bearer " + accessToken)
                         .build()),
                 new TypeToken<SlideResponse<Object>>() {})
-                .thenAccept(response -> response.dataOrThrow("Failed to set slide position for id " + slideId));
+                .thenAcceptAsync(response -> response.dataOrThrow("Failed to set slide position for id " + slideId), executor);
     }
 
     @Override

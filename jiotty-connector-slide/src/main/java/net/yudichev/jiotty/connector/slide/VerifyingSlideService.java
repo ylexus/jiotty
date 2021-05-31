@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.slide;
 
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
@@ -28,33 +32,38 @@ final class VerifyingSlideService implements SlideService {
     private final SlideService delegate;
     private final Provider<SchedulingExecutor> executorProvider;
     private final CurrentDateTimeProvider currentDateTimeProvider;
+    private final Map<Long, TargetPosition> targetPositionBySlideId = new ConcurrentHashMap<>();
 
-    @Inject VerifyingSlideService(@Delegate SlideService delegate,
-                                  @ServiceExecutor Provider<SchedulingExecutor> executorProvider,
-                                  CurrentDateTimeProvider currentDateTimeProvider) {
+    @Inject
+    VerifyingSlideService(@Delegate SlideService delegate,
+                          @ServiceExecutor Provider<SchedulingExecutor> executorProvider,
+                          CurrentDateTimeProvider currentDateTimeProvider) {
         this.delegate = checkNotNull(delegate);
         this.executorProvider = checkNotNull(executorProvider);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
     }
 
     @Override
-    public CompletableFuture<SlideInfo> getSlideInfo(long slideId) {
-        return delegate.getSlideInfo(slideId);
+    public CompletableFuture<SlideInfo> getSlideInfo(long slideId, Executor executor) {
+        return delegate.getSlideInfo(slideId, executor);
     }
 
     @Override
-    public CompletableFuture<Void> setSlidePosition(long slideId, double position) {
-        return delegate.setSlidePosition(slideId, position)
-                .thenCompose(unused -> waitForPosition(slideId, position));
-    }
-
-    private CompletableFuture<Void> waitForPosition(long slideId, double targetPosition) {
-        return new TargetPosition(slideId, targetPosition).result;
+    public CompletableFuture<Void> setSlidePosition(long slideId, double position, Executor executor) {
+        var targetPosition = targetPositionBySlideId.compute(slideId, (theSlideId, existingPosition) -> {
+            if (existingPosition != null) {
+                existingPosition.cancel();
+            }
+            return new TargetPosition(theSlideId, position);
+        });
+        return delegate.setSlidePosition(slideId, position, executor)
+                .thenCompose(unused -> targetPosition.await());
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME) @interface Delegate {
+    @Retention(RUNTIME)
+    @interface Delegate {
     }
 
     private final class TargetPosition {
@@ -62,6 +71,7 @@ final class VerifyingSlideService implements SlideService {
         private final double targetPosition;
         private final Instant deadline;
         private final CompletableFuture<Void> result;
+        private Closeable schedule;
 
         private TargetPosition(long slideId, double targetPosition) {
             this.slideId = slideId;
@@ -69,12 +79,12 @@ final class VerifyingSlideService implements SlideService {
             result = new CompletableFuture<>();
             deadline = currentDateTimeProvider.currentInstant().plus(POSITION_VERIFY_TIMEOUT);
             logger.debug("Slide {}: deadline to reach position {} is {}", slideId, targetPosition, deadline);
-            await();
         }
 
-        private void await() {
+        public CompletableFuture<Void> await() {
             logger.debug("Side {}: will poll for position in {}", slideId, POSITION_POLL_PERIOD);
-            executorProvider.get().schedule(POSITION_POLL_PERIOD, this::pollPosition);
+            schedule = executorProvider.get().schedule(POSITION_POLL_PERIOD, this::pollPosition);
+            return result;
         }
 
         private void pollPosition() {
@@ -97,6 +107,11 @@ final class VerifyingSlideService implements SlideService {
                             result.completeExceptionally(new RuntimeException("Failed to verify position of slide " + slideInfo + ": status poll failed", e));
                         }
                     });
+        }
+
+        public void cancel() {
+            schedule.close();
+            result.complete(null);
         }
     }
 }
