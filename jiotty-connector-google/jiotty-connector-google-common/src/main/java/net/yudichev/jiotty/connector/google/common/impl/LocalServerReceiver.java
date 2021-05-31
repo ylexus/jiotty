@@ -23,6 +23,7 @@ import org.mortbay.jetty.Request;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.handler.AbstractHandler;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -70,6 +71,7 @@ public final class LocalServerReceiver implements VerificationCodeReceiver {
     /**
      * Server or {@code null} before {@link #getRedirectUri()}.
      */
+    @Nullable
     private Server server;
     /**
      * Verification code or {@code null} for none.

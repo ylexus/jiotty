@@ -39,7 +39,7 @@ public final class BackingOffExceptionHandlerModule extends BaseLifecycleCompone
                 .annotatedWith(BackOffProvider.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule);
         bind(BackOff.class).annotatedWith(BackingOffExceptionHandlerImpl.Dependency.class).toProvider(BackOffProvider.class);
-        retryableExceptionPredicateSpec.bind(new TypeLiteral<Predicate<? super Throwable>>() {})
+        retryableExceptionPredicateSpec.bind(new TypeLiteral<>() {})
                 .annotatedWith(BackingOffExceptionHandlerImpl.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule);
         bind(exposedKey).to(BackingOffExceptionHandlerImpl.class);

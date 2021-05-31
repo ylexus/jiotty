@@ -1,7 +1,11 @@
 package net.yudichev.jiotty.connector.google.gmail;
 
-import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.model.Message;
+import jakarta.mail.Message.RecipientType;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
@@ -12,11 +16,6 @@ import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
-import javax.mail.Message.RecipientType;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -26,6 +25,7 @@ import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.io.BaseEncoding.base64;
 import static net.yudichev.jiotty.connector.google.gmail.Constants.ME;
 
 // TODO ensure it queues emails for a significant amount of time if unable to send, think internet connection interrupted
@@ -97,7 +97,7 @@ public final class GmailAppender extends AbstractAppender {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             email.writeTo(buffer);
             byte[] bytes = buffer.toByteArray();
-            String encodedEmail = Base64.encodeBase64URLSafeString(bytes);
+            String encodedEmail = base64().encode(bytes);
             Message message = new Message();
             message.setRaw(encodedEmail);
             GmailProvider.getService(googleApiSettings).users().messages().send(ME, message).execute();

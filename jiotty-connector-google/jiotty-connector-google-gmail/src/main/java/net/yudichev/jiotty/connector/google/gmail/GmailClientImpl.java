@@ -4,11 +4,12 @@ import com.google.api.client.googleapis.batch.BatchRequest;
 import com.google.api.client.googleapis.batch.json.JsonBatchCallback;
 import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.common.collect.Sets;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -18,8 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.mail.Session;
-import javax.mail.internet.MimeMessage;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.time.Duration;
@@ -31,6 +30,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.io.BaseEncoding.base64;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
@@ -80,7 +80,7 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
         return supplyAsync(() -> getAsUnchecked(() -> {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             email.writeTo(buffer);
-            String encodedEmail = Base64.encodeBase64URLSafeString(buffer.toByteArray());
+            String encodedEmail = base64().encode(buffer.toByteArray());
             Message message = new Message();
             message.setRaw(encodedEmail);
             gmail.users().messages().send(Constants.ME, message).execute();
@@ -141,8 +141,7 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
                         break;
                     }
                     BatchRequest batch = gmail.batch();
-                    JsonBatchCallback<Message> callback = new JsonBatchCallback<Message>() {
-                        @SuppressWarnings("ParameterNameDiffersFromOverriddenParameter")
+                    JsonBatchCallback<Message> callback = new JsonBatchCallback<>() {
                         @Override
                         public void onSuccess(Message message, HttpHeaders responseHeaders) {
                             newHistoryIdRef.set(onMessage(message, newHistoryIdRef.get()));

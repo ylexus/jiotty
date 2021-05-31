@@ -13,13 +13,14 @@ import java.util.function.Consumer;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
-public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleComponentModule implements ExposedKeyModule<ThresholdThrottlingConsumerFactory<T>> {
+public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleComponentModule
+        implements ExposedKeyModule<ThresholdThrottlingConsumerFactory<T>> {
     private final Key<ThresholdThrottlingConsumerFactory<T>> exposedKey;
     private final TypeToken<T> valueType;
 
     private ThresholdThrottlingConsumerModule(TypeToken<T> valueType, SpecifiedAnnotation specifiedAnnotation) {
         this.valueType = checkNotNull(valueType);
-        exposedKey = specifiedAnnotation.specify(asReifiedTypeLiteral(new TypeToken<ThresholdThrottlingConsumerFactory<T>>() {}));
+        exposedKey = specifiedAnnotation.specify(asReifiedTypeLiteral(new TypeToken<>() {}));
     }
 
     @Override
@@ -41,7 +42,7 @@ public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleCom
     }
 
     private <U> TypeLiteral<U> asReifiedTypeLiteral(TypeToken<U> typeToken) {
-        return TypeLiterals.asTypeLiteral(typeToken.where(new TypeParameter<T>() {}, valueType));
+        return TypeLiterals.asTypeLiteral(typeToken.where(new TypeParameter<>() {}, valueType));
     }
 
     public static final class ValueChoiceBuilder {

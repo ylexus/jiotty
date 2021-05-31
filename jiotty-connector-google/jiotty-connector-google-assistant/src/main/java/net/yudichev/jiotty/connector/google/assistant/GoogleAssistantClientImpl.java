@@ -56,8 +56,8 @@ final class GoogleAssistantClientImpl extends BaseLifecycleComponent implements 
     public CompletableFuture<byte[]> assist(String phrase) {
         return whenStartedAndNotLifecycling(() -> {
             CompletableFuture<byte[]> result = new CompletableFuture<>();
-            @SuppressWarnings("resource") ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            StreamObserver<AssistRequest> requestStreamObserver = stub.assist(new StreamObserver<AssistResponse>() {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            StreamObserver<AssistRequest> requestStreamObserver = stub.assist(new StreamObserver<>() {
                 @Override
                 public void onNext(AssistResponse assistResponse) {
                     logger.debug("assist response onNext: {}", assistResponse);

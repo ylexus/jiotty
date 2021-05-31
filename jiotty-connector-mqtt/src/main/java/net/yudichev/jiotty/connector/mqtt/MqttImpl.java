@@ -162,7 +162,6 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             this.delegate = checkNotNull(delegate);
         }
 
-        @SuppressWarnings("ParameterNameDiffersFromOverriddenParameter")
         @Override
         public void accept(String topic, MqttMessage message) {
             delegate.accept(topic, new String(message.getPayload(), UTF_8));

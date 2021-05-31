@@ -46,10 +46,10 @@ public final class Web {
                 element = elementRetriever.get();
             } catch (ElementNotFoundException ignored) {
             }
-            if (!element.isPresent()) {
+            if (element.isEmpty()) {
                 webClient.waitForBackgroundJavaScript(100);
             }
-        } while (!element.isPresent() && Instant.now().isBefore(end));
+        } while (element.isEmpty() && Instant.now().isBefore(end));
         return element.orElseThrow(() -> new IllegalStateException("Timed out waiting for javascript: cannot find " + searchSubjectDescription));
     }
 

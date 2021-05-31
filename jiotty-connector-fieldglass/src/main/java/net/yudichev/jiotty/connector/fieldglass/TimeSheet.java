@@ -67,8 +67,12 @@ public final class TimeSheet {
     @SuppressWarnings({"OverlyComplexBooleanExpression", "FloatingPointEquality", "NonFinalFieldReferenceInEquals"}) // acceptable in equals
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
         TimeSheet timeSheet = (TimeSheet) obj;
         return standardDays == timeSheet.standardDays &&
                 otherDays == timeSheet.otherDays &&

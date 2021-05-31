@@ -25,10 +25,8 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
     private final String host;
     private final String macAddress;
     private final DeviceSupplier deviceSupplier;
-    @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // IDEA inspection failure
     private BLDevice device;
 
-    @SuppressWarnings("resource") // guaranteed to be closed
     @Inject
     BroadLinkIrDevice(@Host String host, @MacAddress String macAddress) {
         this(host, macAddress, RM2Device::new);

@@ -26,8 +26,8 @@ public abstract class BaseGoogleServiceModule extends BaseLifecycleComponentModu
     @Override
     protected final void configure() {
         ifPresent(settings.authorizationBrowser(), authorizationBrowserBindingSpec -> authorizationBrowserBindingSpec
-                .map(TypeToken.of(AuthorizationBrowser.class), new TypeToken<Optional<AuthorizationBrowser>>() {}, Optional::of)
-                .bind(new TypeLiteral<Optional<AuthorizationBrowser>>() {})
+                .map(TypeToken.of(AuthorizationBrowser.class), new TypeToken<>() {}, Optional::of)
+                .bind(new TypeLiteral<>() {})
                 .annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule))
                 .orElse(() -> bind(new TypeLiteral<Optional<AuthorizationBrowser>>() {})

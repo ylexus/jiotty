@@ -191,11 +191,6 @@
                 <version>1</version>
             </dependency>
             <dependency>
-                <groupId>javax.mail</groupId>
-                <artifactId>javax.mail-api</artifactId>
-                <version>1.6.2</version>
-            </dependency>
-            <dependency>
                 <groupId>org.immutables</groupId>
                 <artifactId>value</artifactId>
                 <version>${org.immutables.version}</version>
@@ -328,7 +323,8 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-bom</artifactId>
-                <version>1.35.0</version>
+                <!-- this must be kept the same as referenced via the used google-api-client (via google-api-client-parent) -->
+                <version>1.39.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
