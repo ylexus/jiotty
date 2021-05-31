@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.google.gmail;
 
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import net.yudichev.jiotty.common.lang.Closeable;
 
@@ -13,6 +14,6 @@ public interface GmailClient {
     CompletableFuture<Void> send(MessageComposer messageComposer);
 
     interface MessageComposer {
-        void accept(MimeMessage message);
+        void accept(MimeMessage message) throws MessagingException;
     }
 }
