@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.google.drive;
 
+import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
@@ -15,6 +16,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
+    @Nullable
+    private final InMemoryGoogleDrivePath parent;
     private final String name;
     @Nullable
     private final FileData fileData;
@@ -26,6 +29,7 @@ public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
     }
 
     private InMemoryGoogleDrivePath(@Nullable InMemoryGoogleDrivePath parent, String name, @Nullable FileData fileData) {
+        this.parent = parent;
         this.name = checkNotNull(name);
         this.fileData = fileData;
         if (parent != null) {
@@ -42,6 +46,15 @@ public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
     @Override
     public CompletableFuture<GoogleDrivePath> createFile(String filename, String mimeType, byte[] fileData) {
         return completedFuture(new InMemoryGoogleDrivePath(this, filename, FileData.of(mimeType, fileData)));
+    }
+
+    @Override
+    public CompletableFuture<Void> delete() {
+        if (parent == null) {
+            return CompletableFutures.failure("cannot delete root");
+        }
+        parent.childrenByName.remove(name);
+        return CompletableFutures.completedFuture();
     }
 
     @Override

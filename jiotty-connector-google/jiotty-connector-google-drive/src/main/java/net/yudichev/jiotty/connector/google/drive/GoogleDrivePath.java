@@ -13,6 +13,8 @@ public interface GoogleDrivePath {
 
     CompletableFuture<GoogleDrivePath> createFile(String filename, String mimeType, byte[] fileData);
 
+    CompletableFuture<Void> delete();
+
     CompletableFuture<Optional<GoogleDrivePath>> findFolderByPath(List<String> path);
 
     default CompletableFuture<GoogleDrivePath> findOrCreateSubFolder(String folderName) {
