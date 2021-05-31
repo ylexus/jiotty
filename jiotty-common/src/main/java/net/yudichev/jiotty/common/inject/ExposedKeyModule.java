@@ -8,6 +8,6 @@ import static net.yudichev.jiotty.common.inject.TypeLiterals.asTypeLiteral;
 
 public interface ExposedKeyModule<T> extends Module {
     default Key<T> getExposedKey() {
-        return Key.get(asTypeLiteral(new TypeToken<>(getClass()) {}));
+        return Key.get(asTypeLiteral(new TypeToken<T>(getClass()) {}));
     }
 }

@@ -20,7 +20,7 @@ public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleCom
 
     private ThresholdThrottlingConsumerModule(TypeToken<T> valueType, SpecifiedAnnotation specifiedAnnotation) {
         this.valueType = checkNotNull(valueType);
-        exposedKey = specifiedAnnotation.specify(asReifiedTypeLiteral(new TypeToken<>() {}));
+        exposedKey = specifiedAnnotation.specify(asReifiedTypeLiteral(new TypeToken<ThresholdThrottlingConsumerFactory<T>>() {}));
     }
 
     @Override
@@ -42,7 +42,7 @@ public final class ThresholdThrottlingConsumerModule<T> extends BaseLifecycleCom
     }
 
     private <U> TypeLiteral<U> asReifiedTypeLiteral(TypeToken<U> typeToken) {
-        return TypeLiterals.asTypeLiteral(typeToken.where(new TypeParameter<>() {}, valueType));
+        return TypeLiterals.asTypeLiteral(typeToken.where(new TypeParameter<T>() {}, valueType));
     }
 
     public static final class ValueChoiceBuilder {
