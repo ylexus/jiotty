@@ -6,6 +6,7 @@ import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,6 +77,10 @@ public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
 
     public String getName() {
         return name;
+    }
+
+    Collection<InMemoryGoogleDrivePath> getChildren() {
+        return childrenByName.values();
     }
 
     @Immutable
