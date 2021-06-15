@@ -5,7 +5,7 @@ import com.google.assistant.embedded.v1alpha2.DeviceConfig;
 import com.google.assistant.embedded.v1alpha2.DialogStateIn;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -16,11 +16,11 @@ public final class GoogleAssistantClientModule extends BaseGoogleServiceModule i
     private final BindingSpec<DialogStateIn> dialogStateIn;
     private final BindingSpec<DeviceConfig> deviceConfig;
 
-    private GoogleAssistantClientModule(GoogleApiAuthSettings settings,
+    private GoogleAssistantClientModule(BindingSpec<GoogleAuthorization> authorizationSpec,
                                         BindingSpec<AudioOutConfig> audioOutConfig,
                                         BindingSpec<DialogStateIn> dialogStateIn,
                                         BindingSpec<DeviceConfig> deviceConfig) {
-        super(settings);
+        super(authorizationSpec);
         this.audioOutConfig = checkNotNull(audioOutConfig);
         this.dialogStateIn = checkNotNull(dialogStateIn);
         this.deviceConfig = checkNotNull(deviceConfig);
@@ -46,7 +46,7 @@ public final class GoogleAssistantClientModule extends BaseGoogleServiceModule i
         expose(getExposedKey());
     }
 
-    public static final class Builder extends BaseBuilder<ExposedKeyModule<GoogleAssistantClient>, Builder> {
+    public static final class Builder extends BaseBuilder<GoogleAssistantClient, Builder> {
         private BindingSpec<AudioOutConfig> audioOutConfigSpec = literally(AudioOutConfig.newBuilder()
                 .setEncoding(AudioOutConfig.Encoding.MP3)
                 .setSampleRateHertz(16000)
@@ -77,7 +77,7 @@ public final class GoogleAssistantClientModule extends BaseGoogleServiceModule i
 
         @Override
         public ExposedKeyModule<GoogleAssistantClient> build() {
-            return new GoogleAssistantClientModule(getSettings(), audioOutConfigSpec, dialogStateInSpec, deviceConfigSpec);
+            return new GoogleAssistantClientModule(getAuthorizationSpec(), audioOutConfigSpec, dialogStateInSpec, deviceConfigSpec);
         }
 
         @Override

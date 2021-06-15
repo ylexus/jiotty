@@ -1,7 +1,7 @@
 package net.yudichev.jiotty.connector.google.photos;
 
+import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.BindingAnnotation;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
 import com.google.photos.library.v1.proto.ListAlbumsRequest;
@@ -13,6 +13,7 @@ import com.google.rpc.Code;
 import com.google.rpc.Status;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +21,6 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -32,22 +31,21 @@ import java.util.function.IntConsumer;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.lang.annotation.ElementType.*;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
+import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;
 
 final class GooglePhotosClientImpl extends BaseLifecycleComponent implements GooglePhotosClient {
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosClientImpl.class);
-    private final Provider<PhotosLibrarySettings> photosLibrarySettingsProvider;
+    private final Provider<GoogleAuthorization> googleAuthorizationProvider;
     private PhotosLibraryClient client;
     private Closeable closeable;
 
     @Inject
-    GooglePhotosClientImpl(@Dependency Provider<PhotosLibrarySettings> photosLibrarySettingsProvider) {
-        this.photosLibrarySettingsProvider = checkNotNull(photosLibrarySettingsProvider);
+    GooglePhotosClientImpl(@Authorization Provider<GoogleAuthorization> googleAuthorizationProvider) {
+        this.googleAuthorizationProvider = checkNotNull(googleAuthorizationProvider);
     }
 
     @Override
@@ -148,18 +146,14 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     @Override
     protected void doStart() {
         //noinspection resource it's closed
-        client = getAsUnchecked(() -> PhotosLibraryClient.initialize(photosLibrarySettingsProvider.get()));
+        client = getAsUnchecked(() -> PhotosLibraryClient.initialize(PhotosLibrarySettings.newBuilder()
+                .setCredentialsProvider(FixedCredentialsProvider.create(googleAuthorizationProvider.get().getCredentials()))
+                .build()));
         closeable = idempotent(() -> client.close());
     }
 
     @Override
     protected void doStop() {
         closeIfNotNull(closeable);
-    }
-
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Dependency {
     }
 }

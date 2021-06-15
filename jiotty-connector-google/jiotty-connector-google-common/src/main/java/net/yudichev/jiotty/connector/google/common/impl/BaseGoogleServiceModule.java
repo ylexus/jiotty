@@ -1,58 +1,42 @@
 package net.yudichev.jiotty.connector.google.common.impl;
 
-import com.google.common.reflect.TypeToken;
-import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
+import net.yudichev.jiotty.common.inject.BindingSpec;
+import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
-import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
-import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
-import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
-
-import java.net.URL;
-import java.util.Optional;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.jiotty.common.lang.Optionals.ifPresent;
-import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings;
+import static net.yudichev.jiotty.common.inject.BindingSpec.boundTo;
+import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;
 
 public abstract class BaseGoogleServiceModule extends BaseLifecycleComponentModule {
-    private final GoogleApiAuthSettings settings;
 
-    protected BaseGoogleServiceModule(GoogleApiAuthSettings settings) {
-        this.settings = checkNotNull(settings);
+    private final BindingSpec<GoogleAuthorization> googleAuthorizationSpec;
+
+    protected BaseGoogleServiceModule(BindingSpec<GoogleAuthorization> googleAuthorizationSpec) {
+        this.googleAuthorizationSpec = checkNotNull(googleAuthorizationSpec);
     }
 
     @Override
     protected final void configure() {
-        ifPresent(settings.authorizationBrowser(), authorizationBrowserBindingSpec -> authorizationBrowserBindingSpec
-                .map(TypeToken.of(AuthorizationBrowser.class), new TypeToken<>() {}, Optional::of)
-                .bind(new TypeLiteral<>() {})
-                .annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class)
-                .installedBy(this::installLifecycleComponentModule))
-                .orElse(() -> bind(new TypeLiteral<Optional<AuthorizationBrowser>>() {})
-                        .annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class)
-                        .toInstance(Optional.empty()));
-        settings.credentialsUrl().bind(URL.class)
-                .annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class)
+        googleAuthorizationSpec.bind(GoogleAuthorization.class)
+                .annotatedWith(Authorization.class)
                 .installedBy(this::installLifecycleComponentModule);
-        bind(GoogleApiAuthSettings.class).annotatedWith(GoogleApiAuthSettingsResolver.Dependency.class).toInstance(settings);
-        bind(ResolvedGoogleApiAuthSettings.class).annotatedWith(Settings.class).toProvider(GoogleApiAuthSettingsResolver.class);
-
         doConfigure();
     }
 
     protected abstract void doConfigure();
 
-    public abstract static class BaseBuilder<T extends Module, B extends BaseBuilder<T, B>> implements TypedBuilder<T> {
-        private GoogleApiAuthSettings settings;
+    public abstract static class BaseBuilder<T, B extends BaseBuilder<T, B>> implements TypedBuilder<ExposedKeyModule<T>> {
+        private BindingSpec<GoogleAuthorization> authorizationSpec = boundTo(GoogleAuthorization.class);
 
-        protected GoogleApiAuthSettings getSettings() {
-            return settings;
+        protected BindingSpec<GoogleAuthorization> getAuthorizationSpec() {
+            return authorizationSpec;
         }
 
-        public B setSettings(GoogleApiAuthSettings settings) {
-            this.settings = checkNotNull(settings);
+        public B withAuthorization(BindingSpec<GoogleAuthorization> authorizationSpec) {
+            this.authorizationSpec = checkNotNull(authorizationSpec);
             return thisBuilder();
         }
 

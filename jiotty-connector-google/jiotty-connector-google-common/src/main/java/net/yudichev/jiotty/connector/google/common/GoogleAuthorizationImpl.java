@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.google.common.impl;
+package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -25,7 +25,6 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
     @SuppressWarnings("ConstructorWithTooManyParameters")
     GoogleAuthorizationImpl(NetHttpTransport httpTransport,
                             Path authDataStoreRootDir,
-                            String apiName,
                             URL credentialsUrl,
                             List<String> scopes,
                             AuthorizationCodeInstalledApp.Browser browser) {
@@ -38,7 +37,7 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
             // Build flow and trigger user authorization request.
             GoogleAuthorizationCodeFlow flow =
                     new GoogleAuthorizationCodeFlow.Builder(httpTransport, JacksonFactory.getDefaultInstance(), clientSecrets, scopes)
-                            .setDataStoreFactory(new FileDataStoreFactory(authDataStoreRootDir.resolve(apiName).toFile()))
+                            .setDataStoreFactory(new FileDataStoreFactory(authDataStoreRootDir.toFile()))
                             .setAccessType("offline")
                             .build();
             LocalServerReceiver receiver = new LocalServerReceiver.Builder()

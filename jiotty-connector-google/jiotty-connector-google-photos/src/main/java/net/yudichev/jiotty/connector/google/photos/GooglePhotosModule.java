@@ -1,13 +1,13 @@
 package net.yudichev.jiotty.connector.google.photos;
 
-import com.google.photos.library.v1.PhotosLibrarySettings;
+import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
 public final class GooglePhotosModule extends BaseGoogleServiceModule implements ExposedKeyModule<GooglePhotosClient> {
-    private GooglePhotosModule(GoogleApiAuthSettings settings) {
-        super(settings);
+    private GooglePhotosModule(BindingSpec<GoogleAuthorization> googleAuthorizationSpec) {
+        super(googleAuthorizationSpec);
     }
 
     public static Builder builder() {
@@ -16,16 +16,14 @@ public final class GooglePhotosModule extends BaseGoogleServiceModule implements
 
     @Override
     protected void doConfigure() {
-        bind(PhotosLibrarySettings.class).annotatedWith(GooglePhotosClientImpl.Dependency.class)
-                .toProvider(PhotosLibrarySettingsProvider.class);
         bind(getExposedKey()).to(boundLifecycleComponent(GooglePhotosClientImpl.class));
         expose(getExposedKey());
     }
 
-    public static final class Builder extends BaseBuilder<ExposedKeyModule<GooglePhotosClient>, Builder> {
+    public static final class Builder extends BaseBuilder<GooglePhotosClient, Builder> {
         @Override
         public ExposedKeyModule<GooglePhotosClient> build() {
-            return new GooglePhotosModule(getSettings());
+            return new GooglePhotosModule(getAuthorizationSpec());
         }
 
         @Override

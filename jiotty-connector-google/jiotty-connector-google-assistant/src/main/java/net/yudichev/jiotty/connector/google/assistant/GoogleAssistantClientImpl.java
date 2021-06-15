@@ -1,6 +1,5 @@
 package net.yudichev.jiotty.connector.google.assistant;
 
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.assistant.embedded.v1alpha2.*;
 import com.google.auth.Credentials;
 import com.google.inject.BindingAnnotation;
@@ -9,12 +8,12 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.auth.MoreCallCredentials;
 import io.grpc.stub.StreamObserver;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
-import net.yudichev.jiotty.connector.google.common.impl.GoogleAuthorization;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.io.ByteArrayOutputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -26,30 +25,29 @@ import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
-import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings;
+import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;
 
 final class GoogleAssistantClientImpl extends BaseLifecycleComponent implements GoogleAssistantClient {
     private static final Logger logger = LoggerFactory.getLogger(GoogleAssistantClientImpl.class);
 
-    private static final String SCOPE_ASSISTANT = "https://www.googleapis.com/auth/assistant-sdk-prototype";
     private static final String HOSTNAME = "embeddedassistant.googleapis.com";
-    private final ResolvedGoogleApiAuthSettings settings;
     private final AudioOutConfig audioOutConfig;
     private final DialogStateIn dialogStateIn;
     private final DeviceConfig deviceConfig;
+    private final Provider<GoogleAuthorization> googleAuthorizationProvider;
 
     private EmbeddedAssistantGrpc.EmbeddedAssistantStub stub;
     private ManagedChannel channel;
 
     @Inject
-    GoogleAssistantClientImpl(@Settings ResolvedGoogleApiAuthSettings settings,
-                              @Dependency AudioOutConfig audioOutConfig,
+    GoogleAssistantClientImpl(@Dependency AudioOutConfig audioOutConfig,
                               @Dependency DialogStateIn dialogStateIn,
-                              @Dependency DeviceConfig deviceConfig) {
-        this.settings = checkNotNull(settings);
+                              @Dependency DeviceConfig deviceConfig,
+                              @Authorization Provider<GoogleAuthorization> googleAuthorizationProvider) {
         this.audioOutConfig = checkNotNull(audioOutConfig);
         this.dialogStateIn = checkNotNull(dialogStateIn);
         this.deviceConfig = checkNotNull(deviceConfig);
+        this.googleAuthorizationProvider = checkNotNull(googleAuthorizationProvider);
     }
 
     @Override
@@ -97,15 +95,7 @@ final class GoogleAssistantClientImpl extends BaseLifecycleComponent implements 
 
     @Override
     protected void doStart() {
-        Credentials credentials = GoogleAuthorization.builder()
-                .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
-                .setAuthDataStoreRootDir(settings.authDataStoreRootDir())
-                .setApiName("assistant")
-                .setCredentialsUrl(settings.credentialsUrl())
-                .addRequiredScope(SCOPE_ASSISTANT)
-                .withBrowser(settings.authorizationBrowser())
-                .build()
-                .getCredentials();
+        Credentials credentials = googleAuthorizationProvider.get().getCredentials();
 
         channel = ManagedChannelBuilder.forTarget(HOSTNAME).build();
         stub = EmbeddedAssistantGrpc.newStub(channel)

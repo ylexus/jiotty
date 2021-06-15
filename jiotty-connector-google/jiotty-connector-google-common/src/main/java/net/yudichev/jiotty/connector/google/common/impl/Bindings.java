@@ -15,6 +15,6 @@ public final class Bindings {
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    public @interface Settings {
+    public @interface Authorization {
     }
 }

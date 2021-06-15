@@ -3,7 +3,7 @@ package net.yudichev.jiotty.connector.google.sdm;
 import com.google.api.services.smartdevicemanagement.v1.SmartDeviceManagement;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
 
 import javax.inject.Singleton;
@@ -13,8 +13,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public final class GoogleSmartDeviceManagementClientModule extends BaseGoogleServiceModule implements ExposedKeyModule<GoogleSmartDeviceManagementClient> {
     private final BindingSpec<String> projectId;
 
-    private GoogleSmartDeviceManagementClientModule(GoogleApiAuthSettings settings, BindingSpec<String> projectId) {
-        super(settings);
+    private GoogleSmartDeviceManagementClientModule(BindingSpec<GoogleAuthorization> googleAuthorizationSpec, BindingSpec<String> projectId) {
+        super(googleAuthorizationSpec);
         this.projectId = checkNotNull(projectId, "projectId is required");
     }
 
@@ -33,17 +33,17 @@ public final class GoogleSmartDeviceManagementClientModule extends BaseGoogleSer
         expose(getExposedKey());
     }
 
-    public static final class Builder extends BaseBuilder<ExposedKeyModule<GoogleSmartDeviceManagementClient>, Builder> {
-        private BindingSpec<String> projectId;
+    public static final class Builder extends BaseBuilder<GoogleSmartDeviceManagementClient, Builder> {
+        private BindingSpec<String> projectIdSpec;
 
-        public Builder setProjectId(BindingSpec<String> projectId) {
-            this.projectId = checkNotNull(projectId);
+        public Builder setProjectId(BindingSpec<String> projectIdSpec) {
+            this.projectIdSpec = checkNotNull(projectIdSpec);
             return this;
         }
 
         @Override
         public ExposedKeyModule<GoogleSmartDeviceManagementClient> build() {
-            return new GoogleSmartDeviceManagementClientModule(getSettings(), projectId);
+            return new GoogleSmartDeviceManagementClientModule(getAuthorizationSpec(), projectIdSpec);
         }
 
         @Override

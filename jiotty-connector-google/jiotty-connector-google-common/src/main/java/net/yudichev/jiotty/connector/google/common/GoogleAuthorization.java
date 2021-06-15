@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.google.common.impl;
+package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.auth.Credentials;

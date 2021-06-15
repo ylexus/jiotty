@@ -1,10 +1,9 @@
-package net.yudichev.jiotty.connector.google.common.impl;
+package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.common.collect.ImmutableList;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
-import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -16,7 +15,6 @@ public final class GoogleAuthorizationBuilder implements TypedBuilder<GoogleAuth
     private final ImmutableList.Builder<String> requiredScopesBuilder = ImmutableList.builder();
     private NetHttpTransport httpTransport;
     private Path authDataStoreRootDir;
-    private String apiName;
     private URL credentialsUrl;
     private AuthorizationCodeInstalledApp.Browser browser = new AuthorizationCodeInstalledApp.DefaultBrowser();
 
@@ -27,11 +25,6 @@ public final class GoogleAuthorizationBuilder implements TypedBuilder<GoogleAuth
 
     public GoogleAuthorizationBuilder setAuthDataStoreRootDir(Path authDataStoreRootDir) {
         this.authDataStoreRootDir = checkNotNull(authDataStoreRootDir);
-        return this;
-    }
-
-    public GoogleAuthorizationBuilder setApiName(String apiName) {
-        this.apiName = checkNotNull(apiName);
         return this;
     }
 
@@ -64,6 +57,6 @@ public final class GoogleAuthorizationBuilder implements TypedBuilder<GoogleAuth
 
     @Override
     public GoogleAuthorization build() {
-        return new GoogleAuthorizationImpl(httpTransport, authDataStoreRootDir, apiName, credentialsUrl, requiredScopesBuilder.build(), browser);
+        return new GoogleAuthorizationImpl(httpTransport, authDataStoreRootDir, credentialsUrl, requiredScopesBuilder.build(), browser);
     }
 }

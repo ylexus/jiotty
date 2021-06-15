@@ -14,7 +14,7 @@
  * compatible with the concept of interrupting Application startup.
  */
 
-package net.yudichev.jiotty.connector.google.common.impl;
+package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.extensions.java6.auth.oauth2.VerificationCodeReceiver;
 import com.google.api.client.util.Throwables;

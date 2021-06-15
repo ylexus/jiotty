@@ -1,36 +1,26 @@
 package net.yudichev.jiotty.connector.google.sheets;
 
-import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.sheets.v4.Sheets;
-import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
+import net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
-import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Settings;
 
 final class SheetsProvider implements Provider<Sheets> {
-    private final NetHttpTransport httpTransport;
-    private final Credential credential;
-    private final String applicationName;
+    private final Provider<GoogleAuthorization> googleAuthorizationProvider;
 
     @Inject
-    SheetsProvider(NetHttpTransport httpTransport,
-                   Credential credential,
-                   @Settings ResolvedGoogleApiAuthSettings settings) {
-        this.httpTransport = checkNotNull(httpTransport);
-        this.credential = checkNotNull(credential);
-        applicationName = settings.applicationName();
+    SheetsProvider(@Authorization Provider<GoogleAuthorization> googleAuthorizationProvider) {
+        this.googleAuthorizationProvider = checkNotNull(googleAuthorizationProvider);
     }
 
     @Override
     public Sheets get() {
-        return getAsUnchecked(() -> new Sheets.Builder(httpTransport, JacksonFactory.getDefaultInstance(), credential)
-                .setApplicationName(applicationName)
-                .build());
+        var credential = googleAuthorizationProvider.get().getCredential();
+        return new Sheets.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential).build();
     }
 }

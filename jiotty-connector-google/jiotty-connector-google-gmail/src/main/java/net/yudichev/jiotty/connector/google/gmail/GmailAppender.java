@@ -1,12 +1,14 @@
 package net.yudichev.jiotty.connector.google.gmail;
 
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.Message.RecipientType;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import net.yudichev.jiotty.connector.google.common.ResolvedGoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
@@ -20,12 +22,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.api.services.gmail.GmailScopes.GMAIL_SEND;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.BaseEncoding.base64;
+import static net.yudichev.jiotty.common.lang.Locks.inLock;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.connector.google.gmail.Constants.ME;
 
 // TODO ensure it queues emails for a significant amount of time if unable to send, think internet connection interrupted
@@ -34,7 +42,11 @@ import static net.yudichev.jiotty.connector.google.gmail.Constants.ME;
         elementType = Appender.ELEMENT_TYPE)
 public final class GmailAppender extends AbstractAppender {
     private final String emailAddress;
-    private final ResolvedGoogleApiAuthSettings googleApiSettings;
+    private final Path authDataStorePath;
+    private final String applicationName;
+    private final URL credentialsUrl;
+    private final Lock lock = new ReentrantLock();
+    private Gmail service;
 
     @SuppressWarnings("ConstructorWithTooManyParameters")
     private GmailAppender(String name,
@@ -49,17 +61,14 @@ public final class GmailAppender extends AbstractAppender {
         super(name, filter, layout, ignoreExceptions, properties);
         this.emailAddress = checkNotNull(emailAddress, "emailAddress attribute is required");
         checkNotNull(credentialsResourcePath);
-        URL credentialsUrl = GmailAppender.class.getClassLoader().getResource(credentialsResourcePath);
+        credentialsUrl = GmailAppender.class.getClassLoader().getResource(credentialsResourcePath);
         checkArgument(credentialsUrl != null, "Credentials resource not found at %s", credentialsResourcePath);
-        googleApiSettings = ResolvedGoogleApiAuthSettings.builder()
-                .setAuthDataStoreRootDir(authDataStoreRootDir == null ?
-                        Paths.get(System.getProperty("user.home"))
-                                .resolve("." + applicationName)
-                                .resolve("googletokens") :
-                        Paths.get(authDataStoreRootDir))
-                .setApplicationName(applicationName)
-                .setCredentialsUrl(credentialsUrl)
-                .build();
+        this.applicationName = checkNotNull(applicationName, "applicationName attribute is required");
+        authDataStorePath = authDataStoreRootDir == null ?
+                Paths.get(System.getProperty("user.home"))
+                        .resolve("." + applicationName)
+                        .resolve("googletokens") :
+                Paths.get(authDataStoreRootDir);
     }
 
     @SuppressWarnings({"BooleanParameter", "MethodWithTooManyParameters"})
@@ -91,7 +100,7 @@ public final class GmailAppender extends AbstractAppender {
 
             email.setFrom(new InternetAddress(emailAddress));
             email.addRecipient(RecipientType.TO, new InternetAddress(emailAddress));
-            email.setSubject(googleApiSettings.applicationName() + " alert: " + event.getLevel());
+            email.setSubject(applicationName + " alert: " + event.getLevel());
             email.setText(toSerializable(event).toString());
 
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -100,7 +109,18 @@ public final class GmailAppender extends AbstractAppender {
             String encodedEmail = base64().encode(bytes);
             Message message = new Message();
             message.setRaw(encodedEmail);
-            GmailProvider.getService(googleApiSettings).users().messages().send(ME, message).execute();
+            inLock(lock, () -> {
+                if (service == null) {
+                    var googleAuthorization = GoogleAuthorization.builder()
+                            .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
+                            .setAuthDataStoreRootDir(authDataStorePath)
+                            .setCredentialsUrl(credentialsUrl)
+                            .addRequiredScope(GMAIL_SEND)
+                            .build();
+                    service = GmailProvider.createService(googleAuthorization);
+                }
+                return service;
+            }).users().messages().send(ME, message).execute();
         } catch (MessagingException | IOException e) {
             //noinspection CallToPrintStackTrace OK for appender
             e.printStackTrace();

@@ -1,15 +1,16 @@
 package net.yudichev.jiotty.connector.google.sheets;
 
-import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.assistedinject.Assisted;
 import net.yudichev.jiotty.common.rest.RestClients;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import okhttp3.*;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -18,20 +19,22 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
+import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;
+import static net.yudichev.jiotty.connector.google.sheets.Bindings.Internal;
 
 final class InternalGoogleSpreadsheet implements GoogleSpreadsheet {
-    private final Credential credential;
     private final Sheets sheets;
     private final Spreadsheet spreadsheet;
+    private final Provider<GoogleAuthorization> googleAuthorizationProvider;
     private final OkHttpClient httpClient;
 
     @Inject
-    InternalGoogleSpreadsheet(Credential credential,
-                              @Bindings.Internal Sheets sheets,
-                              @Assisted Spreadsheet spreadsheet) {
-        this.credential = checkNotNull(credential);
+    InternalGoogleSpreadsheet(@Internal Sheets sheets,
+                              @Assisted Spreadsheet spreadsheet,
+                              @Authorization Provider<GoogleAuthorization> googleAuthorizationProvider) {
         this.sheets = checkNotNull(sheets);
         this.spreadsheet = checkNotNull(spreadsheet);
+        this.googleAuthorizationProvider = checkNotNull(googleAuthorizationProvider);
         httpClient = RestClients.newClient();
     }
 
@@ -69,7 +72,7 @@ final class InternalGoogleSpreadsheet implements GoogleSpreadsheet {
                         .addQueryParameter("size", "7")
                         .addQueryParameter("portrait", "true")
                         .build())
-                .header("authorization", "Bearer " + credential.getAccessToken())
+                .header("authorization", "Bearer " + googleAuthorizationProvider.get().getCredential().getAccessToken())
                 .get()
                 .build())
                 .enqueue(new Callback() {
