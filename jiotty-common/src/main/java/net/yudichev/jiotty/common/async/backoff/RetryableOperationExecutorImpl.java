@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.Optional;
@@ -22,24 +23,30 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 final class RetryableOperationExecutorImpl implements RetryableOperationExecutor {
     private static final Logger logger = LoggerFactory.getLogger(RetryableOperationExecutorImpl.class);
-    private final BackingOffExceptionHandler backingOffExceptionHandler;
+    private final Provider<BackingOffExceptionHandler> exceptionHandlerProvider;
 
     @Inject
-    RetryableOperationExecutorImpl(@Dependency BackingOffExceptionHandler backingOffExceptionHandler) {
-        this.backingOffExceptionHandler = checkNotNull(backingOffExceptionHandler);
+    RetryableOperationExecutorImpl(@Dependency Provider<BackingOffExceptionHandler> exceptionHandlerProvider) {
+        this.exceptionHandlerProvider = checkNotNull(exceptionHandlerProvider);
     }
 
     @Override
     public <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
                                                         Supplier<? extends CompletableFuture<T>> action,
                                                         LongConsumer backoffEventConsumer) {
+        logger.debug("Executing operation '{}' with retries", operationName);
+        var exceptionHandler = exceptionHandlerProvider.get();
+        return doWithBackOffAndRetry(operationName, action, backoffEventConsumer, exceptionHandler);
+    }
+
+    private <T> CompletableFuture<T> doWithBackOffAndRetry(String operationName,
+                                                           Supplier<? extends CompletableFuture<T>> action,
+                                                           LongConsumer backoffEventConsumer,
+                                                           BackingOffExceptionHandler exceptionHandler) {
         return action.get()
-                .thenApply(value -> {
-                    backingOffExceptionHandler.reset();
-                    return Either.<T, RetryableFailure>left(value);
-                })
+                .thenApply(Either::<T, RetryableFailure>left)
                 .exceptionally(exception -> {
-                    Optional<Long> backoffDelayMs = backingOffExceptionHandler.handle(operationName, exception);
+                    Optional<Long> backoffDelayMs = exceptionHandler.handle(operationName, exception);
                     return Either.right(RetryableFailure.of(exception, backoffDelayMs));
                 })
                 .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
