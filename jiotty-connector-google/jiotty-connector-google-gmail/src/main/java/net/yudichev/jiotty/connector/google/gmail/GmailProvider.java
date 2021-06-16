@@ -25,6 +25,8 @@ final class GmailProvider implements Provider<Gmail> {
 
     static Gmail createService(GoogleAuthorization googleAuthorization) {
         var credential = googleAuthorization.getCredential();
-        return new Gmail.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential).build();
+        return new Gmail.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential)
+                .setApplicationName("jiotty")
+                .build();
     }
 }

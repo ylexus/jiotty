@@ -27,6 +27,7 @@ final class SmartDeviceManagementProvider implements Provider<SmartDeviceManagem
         return getAsUnchecked(() -> {
             NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
             return new SmartDeviceManagement.Builder(httpTransport, JacksonFactory.getDefaultInstance(), googleAuthorizationProvider.get().getCredential())
+                    .setApplicationName("jiotty")
                     .build();
         });
     }

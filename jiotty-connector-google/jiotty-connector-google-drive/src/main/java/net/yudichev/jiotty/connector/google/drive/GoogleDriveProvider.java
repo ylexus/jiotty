@@ -21,6 +21,8 @@ public final class GoogleDriveProvider implements Provider<Drive> {
     @Override
     public Drive get() {
         var credential = googleAuthorizationProvider.get().getCredential();
-        return new Drive.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential).build();
+        return new Drive.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential)
+                .setApplicationName("jiotty")
+                .build();
     }
 }

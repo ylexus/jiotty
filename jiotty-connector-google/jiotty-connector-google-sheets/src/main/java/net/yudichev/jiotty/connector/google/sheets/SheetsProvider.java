@@ -21,6 +21,8 @@ final class SheetsProvider implements Provider<Sheets> {
     @Override
     public Sheets get() {
         var credential = googleAuthorizationProvider.get().getCredential();
-        return new Sheets.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential).build();
+        return new Sheets.Builder(credential.getTransport(), JacksonFactory.getDefaultInstance(), credential)
+                .setApplicationName("jiotty")
+                .build();
     }
 }
