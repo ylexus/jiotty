@@ -14,6 +14,7 @@
 
 package net.yudichev.jiotty.common.lang.backoff;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
 /**
@@ -276,6 +277,19 @@ public class ExponentialBackOff implements BackOff {
         } else {
             currentIntervalMillis *= multiplier;
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("initialIntervalMillis", initialIntervalMillis)
+                .add("randomizationFactor", randomizationFactor)
+                .add("multiplier", multiplier)
+                .add("maxIntervalMillis", maxIntervalMillis)
+                .add("maxElapsedTimeMillis", maxElapsedTimeMillis)
+                .add("startTimeNanos", startTimeNanos)
+                .add("currentIntervalMillis", currentIntervalMillis)
+                .toString();
     }
 
     /**

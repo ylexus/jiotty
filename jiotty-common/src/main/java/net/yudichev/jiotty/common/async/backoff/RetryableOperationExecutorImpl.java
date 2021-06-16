@@ -34,8 +34,8 @@ final class RetryableOperationExecutorImpl implements RetryableOperationExecutor
     public <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
                                                         Supplier<? extends CompletableFuture<T>> action,
                                                         LongConsumer backoffEventConsumer) {
-        logger.debug("Executing operation '{}' with retries", operationName);
         var exceptionHandler = exceptionHandlerProvider.get();
+        logger.debug("Executing operation '{}' with retries using handler {}", operationName, exceptionHandler);
         return doWithBackOffAndRetry(operationName, action, backoffEventConsumer, exceptionHandler);
     }
 

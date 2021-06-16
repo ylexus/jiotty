@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.common.async.backoff;
 
+import com.google.common.base.MoreObjects;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import org.slf4j.Logger;
@@ -36,6 +37,7 @@ final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler
                 .findFirst()
                 .map(throwable -> {
                     long backOffMs = backOff.nextBackOffMillis();
+                    logger.debug("Operation '{}': backoff: {}", operationName, backOff);
                     checkState(backOffMs != BackOff.STOP, "Operation %s is being retried for too long - giving up", operationName);
                     logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms", operationName, backOffMs, throwable);
                     asUnchecked(() -> Thread.sleep(backOffMs));
@@ -47,6 +49,13 @@ final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler
     @Override
     public void reset() {
         asUnchecked(backOff::reset);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("backOff", backOff)
+                .toString();
     }
 
     @BindingAnnotation
