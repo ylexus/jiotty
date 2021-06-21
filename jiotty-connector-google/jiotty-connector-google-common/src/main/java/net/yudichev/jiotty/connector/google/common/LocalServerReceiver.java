@@ -18,14 +18,14 @@ package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.extensions.java6.auth.oauth2.VerificationCodeReceiver;
 import com.google.api.client.util.Throwables;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Request;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.handler.AbstractHandler;
+import jakarta.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.thread.ThreadPool;
 
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.concurrent.Semaphore;
@@ -114,10 +114,12 @@ public final class LocalServerReceiver implements VerificationCodeReceiver {
 
     @Override
     public String getRedirectUri() throws IOException {
-        server = new Server(port == -1 ? 0 : port);
-        Connector connector = server.getConnectors()[0];
+        server = new Server((ThreadPool) null);
+        var connector = new ServerConnector(server);
         connector.setHost(host);
-        server.addHandler(new CallbackHandler());
+        connector.setPort(port == -1 ? 0 : port);
+        server.addConnector(connector);
+        server.setHandler(new CallbackHandler());
         try {
             server.start();
             port = connector.getLocalPort();
@@ -243,10 +245,25 @@ public final class LocalServerReceiver implements VerificationCodeReceiver {
      */
     class CallbackHandler extends AbstractHandler {
 
+        private void writeLandingHtml(HttpServletResponse response) throws IOException {
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("text/html");
+
+            PrintWriter doc = response.getWriter();
+            doc.println("<html>");
+            doc.println("<head><title>OAuth 2.0 Authentication Token Received</title></head>");
+            doc.println("<body>");
+            doc.println("Received verification code. You may now close this window.");
+            doc.println("</body>");
+            doc.println("</html>");
+            doc.flush();
+        }
+
         @Override
-        public void handle(
-                String target, HttpServletRequest request, HttpServletResponse response, int dispatch)
-                throws IOException {
+        public void handle(String target,
+                           Request baseRequest,
+                           jakarta.servlet.http.HttpServletRequest request,
+                           jakarta.servlet.http.HttpServletResponse response) throws IOException {
             if (!callbackPath.equals(target)) {
                 return;
             }
@@ -267,20 +284,6 @@ public final class LocalServerReceiver implements VerificationCodeReceiver {
             } finally {
                 waitUnlessSignaled.release();
             }
-        }
-
-        private void writeLandingHtml(HttpServletResponse response) throws IOException {
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setContentType("text/html");
-
-            PrintWriter doc = response.getWriter();
-            doc.println("<html>");
-            doc.println("<head><title>OAuth 2.0 Authentication Token Received</title></head>");
-            doc.println("<body>");
-            doc.println("Received verification code. You may now close this window.");
-            doc.println("</body>");
-            doc.println("</html>");
-            doc.flush();
         }
     }
 }

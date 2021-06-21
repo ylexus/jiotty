@@ -9,7 +9,6 @@ import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.lang.Optionals;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
-import javax.inject.Singleton;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Optional;
@@ -41,7 +40,7 @@ public final class GoogleAuthorizationModule extends BaseLifecycleComponentModul
                 .installedBy(this::installLifecycleComponentModule);
         bind(GoogleApiAuthSettings.class).annotatedWith(GoogleAuthorizationProvider.Dependency.class).toInstance(settings);
         bind(new TypeLiteral<Collection<String>>() {}).annotatedWith(GoogleAuthorizationProvider.Scopes.class).toInstance(requiredScopes);
-        bind(getExposedKey()).toProvider(GoogleAuthorizationProvider.class).in(Singleton.class);
+        bind(getExposedKey()).toProvider(GoogleAuthorizationProvider.class);
         expose(getExposedKey());
     }
 
