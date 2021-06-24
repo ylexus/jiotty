@@ -157,11 +157,17 @@ public final class LocalServerReceiver implements VerificationCodeReceiver {
     public void stop() throws IOException {
         waitUnlessSignaled.release();
         if (server != null) {
+            // must temporary clear the Thread interrupted flag, else jetty won't be able to stop its threads
+            var wasInterrupted = Thread.interrupted();
             try {
                 server.stop();
             } catch (Exception e) {
                 Throwables.propagateIfPossible(e);
                 throw new IOException(e);
+            } finally {
+                if (wasInterrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
             server = null;
         }
