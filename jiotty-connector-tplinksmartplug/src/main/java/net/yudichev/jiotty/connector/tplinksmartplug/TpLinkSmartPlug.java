@@ -2,10 +2,10 @@ package net.yudichev.jiotty.connector.tplinksmartplug;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.appliance.Command;
+import net.yudichev.jiotty.appliance.CommandMeta;
 import net.yudichev.jiotty.appliance.PowerCommand;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
@@ -74,12 +74,12 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     }
 
     @Override
-    public Set<? extends Command> getAllSupportedCommands() {
-        return ImmutableSet.copyOf(PowerCommand.values());
+    public Set<CommandMeta<?>> getAllSupportedCommandMetadata() {
+        return PowerCommand.allPowerCommandMetas();
     }
 
     @Override
-    public CompletableFuture<?> execute(Command command) {
+    public CompletableFuture<?> execute(Command<?> command) {
         return whenStartedAndNotLifecycling(() -> {
             //noinspection RedundantTypeArguments compiler is not coping
             return tokenFuture

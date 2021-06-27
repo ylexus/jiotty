@@ -6,9 +6,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface Appliance extends HasName {
-    CompletableFuture<?> execute(Command command);
+    CompletableFuture<?> execute(Command<?> command);
 
-    Set<? extends Command> getAllSupportedCommands();
+    Set<CommandMeta<?>> getAllSupportedCommandMetadata();
 
     default CompletableFuture<?> turnOn() {
         return execute(PowerCommand.ON);

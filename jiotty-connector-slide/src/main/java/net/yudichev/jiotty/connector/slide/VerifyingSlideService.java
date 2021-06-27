@@ -21,25 +21,28 @@ import java.util.concurrent.Executor;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
 import static net.yudichev.jiotty.connector.slide.Bindings.ServiceExecutor;
-import static net.yudichev.jiotty.connector.slide.Constants.POSITION_TOLERANCE;
 
 final class VerifyingSlideService implements SlideService {
     private static final Logger logger = LoggerFactory.getLogger(VerifyingSlideService.class);
-    private static final Duration POSITION_POLL_PERIOD = Duration.ofSeconds(2);
+    private static final Duration POSITION_POLL_PERIOD = Duration.ofSeconds(1);
     private static final Duration POSITION_VERIFY_TIMEOUT = Duration.ofSeconds(30);
 
     private final SlideService delegate;
     private final Provider<SchedulingExecutor> executorProvider;
+    private final double positionTolerance;
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final Map<Long, TargetPosition> targetPositionBySlideId = new ConcurrentHashMap<>();
 
     @Inject
     VerifyingSlideService(@Delegate SlideService delegate,
                           @ServiceExecutor Provider<SchedulingExecutor> executorProvider,
+                          @Tolerance double positionTolerance,
                           CurrentDateTimeProvider currentDateTimeProvider) {
         this.delegate = checkNotNull(delegate);
         this.executorProvider = checkNotNull(executorProvider);
+        this.positionTolerance = positionTolerance;
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
     }
 
@@ -50,20 +53,44 @@ final class VerifyingSlideService implements SlideService {
 
     @Override
     public CompletableFuture<Void> setSlidePosition(long slideId, double position, Executor executor) {
-        var targetPosition = targetPositionBySlideId.compute(slideId, (theSlideId, existingPosition) -> {
-            if (existingPosition != null) {
-                existingPosition.cancel();
-            }
-            return new TargetPosition(theSlideId, position);
-        });
-        return delegate.setSlidePosition(slideId, position, executor)
-                .thenCompose(unused -> targetPosition.await());
+        var targetPosition = new TargetPosition(slideId, position);
+        TargetPosition previousPosition = targetPositionBySlideId.put(slideId, targetPosition);
+        boolean wasStillMoving = false;
+        if (previousPosition != null) {
+            wasStillMoving = previousPosition.inProgress();
+            previousPosition.cancel();
+        }
+        if (wasStillMoving) {
+            logger.debug("Slide {}: was moving, force new position {}", slideId, position);
+            return delegate.setSlidePosition(slideId, position, executor)
+                    .thenCompose(unused -> targetPosition.await());
+        } else {
+            return delegate.getSlideInfo(slideId)
+                    .thenCompose(slideInfo -> {
+                        double currentPosition = slideInfo.position();
+                        boolean withinTolerance = withinTolerance(currentPosition, position);
+                        logger.debug("Slide {}: current position {}, target position {}, within tolerance of {}: {}",
+                                slideId, currentPosition, position, positionTolerance, withinTolerance);
+                        return withinTolerance ? completedFuture() : delegate.setSlidePosition(slideId, position, executor);
+                    })
+                    .thenCompose(unused -> targetPosition.await());
+        }
+    }
+
+    private boolean withinTolerance(double currentPosition, double targetPosition) {
+        return Math.abs(currentPosition - targetPosition) < positionTolerance;
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface Delegate {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Tolerance {
     }
 
     private final class TargetPosition {
@@ -93,7 +120,7 @@ final class VerifyingSlideService implements SlideService {
                         if (e == null) {
                             double currentPosition = slideInfo.position();
                             logger.debug("Slide {}: current pos {}, target pos {}", slideId, currentPosition, targetPosition);
-                            if (Math.abs(currentPosition - targetPosition) < POSITION_TOLERANCE) {
+                            if (withinTolerance(currentPosition, targetPosition)) {
                                 logger.debug("Side {} reached satisfiable position", slideId);
                                 result.complete(null);
                             } else if (currentDateTimeProvider.currentInstant().isAfter(deadline)) {
@@ -112,6 +139,10 @@ final class VerifyingSlideService implements SlideService {
         public void cancel() {
             schedule.close();
             result.complete(null);
+        }
+
+        public boolean inProgress() {
+            return !result.isDone();
         }
     }
 }

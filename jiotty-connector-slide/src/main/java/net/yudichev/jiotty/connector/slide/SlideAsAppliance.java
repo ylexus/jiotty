@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.appliance.Command;
+import net.yudichev.jiotty.appliance.CommandMeta;
 import net.yudichev.jiotty.appliance.PowerCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +19,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.appliance.PowerCommand.ON;
-import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
 import static net.yudichev.jiotty.connector.slide.Bindings.SlideId;
+import static net.yudichev.jiotty.connector.slide.SetCurtainPositionCommand.allSetCurtainPositionCommandMetas;
 
 final class SlideAsAppliance implements Appliance {
     private static final Logger logger = LoggerFactory.getLogger(SlideAsAppliance.class);
+
+    private static final ImmutableSet<CommandMeta<?>> SUPPORTED_COMMANDS = ImmutableSet.<CommandMeta<?>>builder()
+            .addAll(PowerCommand.allPowerCommandMetas())
+            .addAll(allSetCurtainPositionCommandMetas())
+            .build();
 
     private final SlideService slideService;
     private final long slideId;
@@ -38,32 +44,25 @@ final class SlideAsAppliance implements Appliance {
     }
 
     @Override
-    public CompletableFuture<?> execute(Command command) {
-        return command
-                .acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) this::doExecuteCommand)
+    public CompletableFuture<?> execute(Command<?> command) {
+        return command.accept((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand -> setPosition(powerCommand == ON ? 1.0 : 0.0))
+                .orElseGet(() -> command.acceptOrFail((SetCurtainPositionCommand.Visitor<CompletableFuture<?>>) posCommand -> setPosition(posCommand.getPosition())))
                 .thenRun(() -> logger.info("Slide {}: executed {}", name, command));
     }
 
-    private CompletableFuture<Void> doExecuteCommand(PowerCommand powerCommand) {
-        return slideService.getSlideInfo(slideId)
-                .thenCompose(slideInfo -> {
-                    double currentPosition = slideInfo.position();
-                    double targetPosition = powerCommand == ON ? 1.0 : 0.0;
-                    logger.debug("Slide {}: current pos {}, target pos {}", name, currentPosition, targetPosition);
-                    return Math.abs(currentPosition - targetPosition) > Constants.POSITION_TOLERANCE ?
-                            slideService.setSlidePosition(slideId, targetPosition) :
-                            completedFuture();
-                });
+    private CompletableFuture<Void> setPosition(double targetPosition) {
+        return slideService.setSlidePosition(slideId, targetPosition);
     }
 
     @Override
-    public Set<? extends Command> getAllSupportedCommands() {
-        return ImmutableSet.copyOf(PowerCommand.values());
+    public Set<CommandMeta<?>> getAllSupportedCommandMetadata() {
+        return SUPPORTED_COMMANDS;
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME) @interface Dependency {
+    @Retention(RUNTIME)
+    @interface Dependency {
     }
 
     @BindingAnnotation

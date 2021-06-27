@@ -27,18 +27,12 @@ class VerifyingSlideServiceTest {
     void oppositeCommandsInQuickSuccessionExecutesLastCommand(@Mock SlideService delegate,
                                                               @Mock CurrentDateTimeProvider currentTimeProvider) {
         var executor = new DeterministicExecutor();
-        var service = new VerifyingSlideService(delegate, () -> executor, currentTimeProvider);
+        var service = new VerifyingSlideService(delegate, () -> executor, 0.11, currentTimeProvider);
 
         when(delegate.getSlideInfo(0))
-                .thenReturn(CompletableFuture.completedFuture(SlideInfo.builder()
-                        .setPosition(0.0)
-                        .build()))
-                .thenReturn(CompletableFuture.completedFuture(SlideInfo.builder()
-                        .setPosition(0.1) // started moving towards 1.0
-                        .build()))
-                .thenReturn(CompletableFuture.completedFuture(SlideInfo.builder()
-                        .setPosition(0.0) // returned back
-                        .build()));
+                .thenReturn(CompletableFuture.completedFuture(SlideInfo.of(0.0))) // moving towards 1.0: post move check 1
+                .thenReturn(CompletableFuture.completedFuture(SlideInfo.of(0.1))) // moving towards 1.0: post move check 2: started moving towards 1.0
+                .thenReturn(CompletableFuture.completedFuture(SlideInfo.of(0.0))); // moving back towards 0.0: returned back
         when(currentTimeProvider.currentInstant()).thenReturn(Instant.EPOCH);
         // these complete immediately in real life
         when(delegate.setSlidePosition(eq(0L), eq(1.0), any())).thenReturn(completedFuture());

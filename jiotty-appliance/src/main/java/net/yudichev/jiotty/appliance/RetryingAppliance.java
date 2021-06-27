@@ -25,15 +25,15 @@ public final class RetryingAppliance implements Appliance {
     }
 
     @Override
-    public CompletableFuture<?> execute(Command command) {
+    public CompletableFuture<?> execute(Command<?> command) {
         return retryableOperationExecutor.withBackOffAndRetry(
                 "execute " + command + " on " + delegate,
                 () -> delegate.execute(command));
     }
 
     @Override
-    public Set<? extends Command> getAllSupportedCommands() {
-        return delegate.getAllSupportedCommands();
+    public Set<CommandMeta<?>> getAllSupportedCommandMetadata() {
+        return delegate.getAllSupportedCommandMetadata();
     }
 
     @BindingAnnotation

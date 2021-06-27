@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.appliance;
 
+import com.google.common.collect.Maps;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.rest.RestServer;
@@ -38,14 +39,17 @@ final class ApplianceServer extends BaseLifecycleComponent {
 
     @Override
     public void doStart() {
-        appliance.getAllSupportedCommands().forEach(command -> {
-            String url = "/appliance/" + applianceId + "/" + command.name().toLowerCase();
+        appliance.getAllSupportedCommandMetadata().forEach(commandMeta -> {
+            String url = "/appliance/" + applianceId + "/" + commandMeta.commandName().toLowerCase();
             logger.info("Registering {}", url);
             restServer.post(url,
                     (request, response) -> {
+                        var paramValues = Maps.<String, CommandParamType, Object>transformEntries(commandMeta.parameterTypes(),
+                                (name, paramType) -> paramType.decode(request.queryParamsSafe(name)));
+                        Command<?> command = commandMeta.createCommand(paramValues);
                         logger.info("{} executing {}", applianceId, command);
                         Object responseData = RestServers.withErrorsHandledJson(url, response, appliance.execute(command));
-                        logger.info("{} is {}", applianceId, command);
+                        logger.info("{} executed {}", applianceId, command);
                         return responseData;
                     });
         });

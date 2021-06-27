@@ -6,24 +6,26 @@ import net.yudichev.jiotty.common.inject.*;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
 import javax.inject.Singleton;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 import static net.yudichev.jiotty.connector.slide.Bindings.*;
 
 public final class SlideServiceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<SlideService> {
     private final BindingSpec<String> emailSpec;
     private final BindingSpec<String> passwordSpec;
-    private final boolean positionVerification;
+    private final Optional<BindingSpec<Double>> positionVerificationToleranceSpec;
     private final Key<SlideService> exposedKey;
 
     private SlideServiceModule(BindingSpec<String> emailSpec,
                                BindingSpec<String> passwordSpec,
-                               boolean positionVerification,
+                               Optional<BindingSpec<Double>> positionVerificationToleranceSpec,
                                SpecifiedAnnotation specifiedAnnotation) {
         this.emailSpec = checkNotNull(emailSpec);
         this.passwordSpec = checkNotNull(passwordSpec);
-        this.positionVerification = positionVerification;
+        this.positionVerificationToleranceSpec = checkNotNull(positionVerificationToleranceSpec);
         exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
     }
 
@@ -46,12 +48,15 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
                 .installedBy(this::installLifecycleComponentModule);
 
         bind(SchedulingExecutor.class).annotatedWith(ServiceExecutor.class).toProvider(boundLifecycleComponent(ExecutorProvider.class)).in(Singleton.class);
-        if (positionVerification) {
-            bind(SlideService.class).annotatedWith(VerifyingSlideService.Delegate.class).to(boundLifecycleComponent(SlideServiceImpl.class));
-            bind(exposedKey).to(VerifyingSlideService.class);
-        } else {
-            bind(exposedKey).to(boundLifecycleComponent(SlideServiceImpl.class));
-        }
+        positionVerificationToleranceSpec.ifPresentOrElse(
+                toleranceSpec -> {
+                    toleranceSpec.bind(Double.class)
+                            .annotatedWith(VerifyingSlideService.Tolerance.class)
+                            .installedBy(this::installLifecycleComponentModule);
+                    bind(SlideService.class).annotatedWith(VerifyingSlideService.Delegate.class).to(boundLifecycleComponent(SlideServiceImpl.class));
+                    bind(exposedKey).to(VerifyingSlideService.class);
+                },
+                () -> bind(exposedKey).to(boundLifecycleComponent(SlideServiceImpl.class)));
         expose(exposedKey);
     }
 
@@ -59,7 +64,7 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
         private BindingSpec<String> emailSpec;
         private BindingSpec<String> passwordSpec;
         private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
-        private boolean positionVerification;
+        private BindingSpec<Double> positionVerificationToleranceSpec;
 
         public Builder setEmail(BindingSpec<String> emailSpec) {
             this.emailSpec = checkNotNull(emailSpec);
@@ -72,7 +77,11 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
         }
 
         public Builder withPositionVerification() {
-            positionVerification = true;
+            return withPositionVerification(literally(0.11));
+        }
+
+        public Builder withPositionVerification(BindingSpec<Double> positionVerificationToleranceSpec) {
+            this.positionVerificationToleranceSpec = checkNotNull(positionVerificationToleranceSpec);
             return this;
         }
 
@@ -84,7 +93,7 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
 
         @Override
         public ExposedKeyModule<SlideService> build() {
-            return new SlideServiceModule(emailSpec, passwordSpec, positionVerification, specifiedAnnotation);
+            return new SlideServiceModule(emailSpec, passwordSpec, Optional.ofNullable(positionVerificationToleranceSpec), specifiedAnnotation);
         }
     }
 }

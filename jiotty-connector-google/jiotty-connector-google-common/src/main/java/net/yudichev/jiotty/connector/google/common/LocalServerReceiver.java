@@ -18,7 +18,6 @@ package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.extensions.java6.auth.oauth2.VerificationCodeReceiver;
 import com.google.api.client.util.Throwables;
-import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -26,6 +25,8 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.util.thread.ThreadPool;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.concurrent.Semaphore;
@@ -266,10 +267,7 @@ public final class LocalServerReceiver implements VerificationCodeReceiver {
         }
 
         @Override
-        public void handle(String target,
-                           Request baseRequest,
-                           jakarta.servlet.http.HttpServletRequest request,
-                           jakarta.servlet.http.HttpServletResponse response) throws IOException {
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException {
             if (!callbackPath.equals(target)) {
                 return;
             }
