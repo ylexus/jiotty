@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.google.drive;
 
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
+import net.yudichev.jiotty.connector.google.drive.InMemoryGoogleDriveClient.Behaviour;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
 
@@ -15,8 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.failure;
 
 public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
+    private final Behaviour behaviour;
     @Nullable
     private final InMemoryGoogleDrivePath parent;
     private final String name;
@@ -25,11 +28,12 @@ public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
 
     private final Map<String, InMemoryGoogleDrivePath> childrenByName = new ConcurrentHashMap<>();
 
-    InMemoryGoogleDrivePath(@Nullable InMemoryGoogleDrivePath parent, String name) {
-        this(parent, name, null);
+    InMemoryGoogleDrivePath(Behaviour behaviour, @Nullable InMemoryGoogleDrivePath parent, String name) {
+        this(behaviour, parent, name, null);
     }
 
-    private InMemoryGoogleDrivePath(@Nullable InMemoryGoogleDrivePath parent, String name, @Nullable FileData fileData) {
+    private InMemoryGoogleDrivePath(Behaviour behaviour, @Nullable InMemoryGoogleDrivePath parent, String name, @Nullable FileData fileData) {
+        this.behaviour = checkNotNull(behaviour);
         this.parent = parent;
         this.name = checkNotNull(name);
         this.fileData = fileData;
@@ -41,18 +45,21 @@ public final class InMemoryGoogleDrivePath implements GoogleDrivePath {
 
     @Override
     public CompletableFuture<GoogleDrivePath> createSubFolder(String childFolderName) {
-        return completedFuture(new InMemoryGoogleDrivePath(this, childFolderName));
+        return completedFuture(new InMemoryGoogleDrivePath(behaviour, this, childFolderName));
     }
 
     @Override
     public CompletableFuture<GoogleDrivePath> createFile(String filename, String mimeType, byte[] fileData) {
-        return completedFuture(new InMemoryGoogleDrivePath(this, filename, FileData.of(mimeType, fileData)));
+        var failOnCreateFileException = behaviour.failOnCreateFileException;
+        return failOnCreateFileException != null ?
+                failure(failOnCreateFileException) :
+                completedFuture(new InMemoryGoogleDrivePath(behaviour, this, filename, FileData.of(mimeType, fileData)));
     }
 
     @Override
     public CompletableFuture<Void> delete() {
         if (parent == null) {
-            return CompletableFutures.failure("cannot delete root");
+            return failure("cannot delete root");
         }
         parent.childrenByName.remove(name);
         return CompletableFutures.completedFuture();

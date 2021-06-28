@@ -2,13 +2,15 @@ package net.yudichev.jiotty.connector.google.drive;
 
 import com.google.api.services.drive.model.About;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 public final class InMemoryGoogleDriveClient implements GoogleDriveClient {
-    private final InMemoryGoogleDrivePath rootPath = new InMemoryGoogleDrivePath(null, "/");
-    private final InMemoryGoogleDrivePath appDataPath = new InMemoryGoogleDrivePath(null, "/.appdata");
+    private final Behaviour behaviour = new Behaviour();
+    private final InMemoryGoogleDrivePath rootPath = new InMemoryGoogleDrivePath(behaviour, null, "/");
+    private final InMemoryGoogleDrivePath appDataPath = new InMemoryGoogleDrivePath(behaviour, null, "/.appdata");
 
     @Override
     public GoogleDrivePath getRootFolder(Executor executor) {
@@ -29,9 +31,26 @@ public final class InMemoryGoogleDriveClient implements GoogleDriveClient {
                 ));
     }
 
+    public Behaviour getBehaviour() {
+        return behaviour;
+    }
+
     private long usageIn(InMemoryGoogleDrivePath path) {
         long usage = path.getFileData().map(fileData -> fileData.getBytes().length).orElse(0);
         usage += path.getChildren().stream().mapToLong(this::usageIn).sum();
         return usage;
+    }
+
+    public static final class Behaviour {
+        @Nullable
+        volatile RuntimeException failOnCreateFileException;
+
+        public void reset() {
+            failOnCreateFileException = null;
+        }
+
+        public void failOnCreateFileWith(RuntimeException exception) {
+            failOnCreateFileException = exception;
+        }
     }
 }
