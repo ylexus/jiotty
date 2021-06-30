@@ -103,7 +103,7 @@ public final class TimeSheet {
     public enum Status {
         Approved, PendingApproval, Draft;
 
-        public static final class Converter extends AbstractBeanField<Status> {
+        public static final class Converter extends AbstractBeanField<Status, Integer> {
             @Override
             protected Object convert(String value) throws CsvDataTypeMismatchException {
                 switch (value) {
@@ -120,7 +120,7 @@ public final class TimeSheet {
         }
     }
 
-    public static class LocalDateConverter extends AbstractBeanField<LocalDate> {
+    public static class LocalDateConverter extends AbstractBeanField<LocalDate, Integer> {
         @Override
         protected Object convert(String value) throws CsvDataTypeMismatchException {
             try {
