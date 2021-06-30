@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
 import static net.yudichev.jiotty.connector.slide.Bindings.ServiceExecutor;
 
@@ -137,7 +138,7 @@ final class VerifyingSlideService implements SlideService {
         }
 
         public void cancel() {
-            schedule.close();
+            closeIfNotNull(schedule);
             result.complete(null);
         }
 

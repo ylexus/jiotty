@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.slide;
 
 import net.yudichev.jiotty.common.testutil.DeterministicExecutor;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,21 +15,29 @@ import java.util.concurrent.CompletableFuture;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 import static org.mockito.quality.Strictness.LENIENT;
 
 @ExtendWith(MockitoExtension.class)
 class VerifyingSlideServiceTest {
+    private DeterministicExecutor executor;
+    @Mock
+    private SlideService delegate;
+    @Mock
+    private CurrentDateTimeProvider currentTimeProvider;
+    private VerifyingSlideService service;
+
+    @BeforeEach
+    void setUp() {
+        executor = new DeterministicExecutor();
+        service = new VerifyingSlideService(delegate, () -> executor, 0.11, currentTimeProvider);
+    }
+
     @Test
     @MockitoSettings(strictness = LENIENT)
-    void oppositeCommandsInQuickSuccessionExecutesLastCommand(@Mock SlideService delegate,
-                                                              @Mock CurrentDateTimeProvider currentTimeProvider) {
-        var executor = new DeterministicExecutor();
-        var service = new VerifyingSlideService(delegate, () -> executor, 0.11, currentTimeProvider);
-
+    void oppositeCommandsInQuickSuccessionExecutesLastCommand() {
         when(delegate.getSlideInfo(0))
                 .thenReturn(CompletableFuture.completedFuture(SlideInfo.of(0.0))) // moving towards 1.0: post move check 1
                 .thenReturn(CompletableFuture.completedFuture(SlideInfo.of(0.1))) // moving towards 1.0: post move check 2: started moving towards 1.0
@@ -51,5 +60,15 @@ class VerifyingSlideServiceTest {
         assertThat(setTo1Future.isCompletedExceptionally(), is(false));
         assertThat(setTo2Future.isDone(), is(true));
         assertThat(setTo2Future.isCompletedExceptionally(), is(false));
+    }
+
+    @Test
+    void secondConcurrentCommandWhileFirstIsStillGettingSlideInfo() {
+        when(delegate.getSlideInfo(0)).thenReturn(new CompletableFuture<>());
+        when(delegate.setSlidePosition(eq(0L), anyDouble(), any())).thenReturn(new CompletableFuture<>());
+        when(currentTimeProvider.currentInstant()).thenReturn(Instant.EPOCH);
+
+        service.setSlidePosition(0, 1.0);
+        service.setSlidePosition(0, 0.0);
     }
 }
