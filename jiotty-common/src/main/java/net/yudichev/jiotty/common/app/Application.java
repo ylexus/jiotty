@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -31,6 +32,7 @@ public final class Application {
         SLF4JBridgeHandler.install();
 
         SysOutOverSLF4J.sendSystemOutAndErrToSLF4J();
+        java.util.logging.Logger.getLogger("").setLevel(Level.FINEST);
     }
 
     private final List<LifecycleComponent> componentsAttemptedToStart = new CopyOnWriteArrayList<>();
