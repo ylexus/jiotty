@@ -327,6 +327,7 @@
         <module>jiotty-connector-aws</module>
         <module>jiotty-connector-google</module>
         <module>jiotty-connector-ir</module>
+        <module>jiotty-connector-ip</module>
         <module>jiotty-connector-mqtt</module>
         <module>jiotty-connector-nest</module>
         <module>jiotty-connector-rpi</module>

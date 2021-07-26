@@ -85,6 +85,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-ip</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-ir</artifactId>
                 <version>${project.version}</version>
             </dependency>

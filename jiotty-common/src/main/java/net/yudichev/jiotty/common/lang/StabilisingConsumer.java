@@ -39,7 +39,8 @@ public final class StabilisingConsumer<T> implements Consumer<T> {
             closeIfNotNull(timerSchedule.getAndSet(null));
             delegate.accept(t);
         } else {
-            closeIfNotNull(timerSchedule.getAndSet(scheduler.schedule(stabilisationDuration, this::onStabilisationTimer)));
+            closeIfNotNull(timerSchedule.getAndSet(null));
+            timerSchedule.set(scheduler.schedule(stabilisationDuration, this::onStabilisationTimer));
         }
     }
 
