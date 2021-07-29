@@ -55,8 +55,8 @@ class HostMonitorImplTest {
     }
 
     @Test
-    void initialPingFailingOnlyNotifiedAfterStabilisationPeriod() throws UnknownHostException {
-        when(inetAddressResolver.resolve("hostname")).thenThrow(new UnknownHostException("hostname"));
+    void initialPingFailingOnlyNotifiedAfterStabilisationPeriod() {
+        expectFaiure();
         timeIs(0);
         monitor.start();
         monitor.addListener(statusConsumer, directExecutor());
@@ -84,6 +84,30 @@ class HostMonitorImplTest {
 
         clock.advanceTimeAndTick(Duration.ofSeconds(30));
         verify(statusConsumer).accept(UP);
+    }
+
+    @Test
+    void shortGlitchIsNotReported() {
+        // setup with initial ping succeeding
+        expectSuccessfulPing();
+        timeIs(0);
+        monitor.start();
+        monitor.addListener(statusConsumer, directExecutor());
+        clock.advanceTimeAndTick(Duration.ofSeconds(30));
+        verify(statusConsumer).accept(UP);
+
+        clock.advanceTimeAndTick(Duration.ofSeconds(30));
+
+        executor.schedule(Duration.ofSeconds(10), this::expectFaiure);
+        clock.advanceTimeAndTick(Duration.ofSeconds(10));
+        executor.schedule(Duration.ofSeconds(10), this::expectSuccessfulPing);
+
+        clock.advanceTimeAndTick(Duration.ofSeconds(60));
+        verifyNoMoreInteractions(statusConsumer);
+    }
+
+    private void expectFaiure() {
+        asUnchecked(() -> when(inetAddressResolver.resolve("hostname")).thenThrow(new UnknownHostException("hostname")));
     }
 
     @SuppressWarnings({"unused", "BoundedWildcard", "OverlyLongMethod"})

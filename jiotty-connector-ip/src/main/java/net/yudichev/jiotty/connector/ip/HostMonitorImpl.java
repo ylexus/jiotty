@@ -122,7 +122,6 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
 
     private void onStableStatus(Status status) {
         currentStableStatus = status;
-        logger.info("{} ({}) is {}", name, hostname, status);
         listeners.forEach(this::notifyListener);
     }
 
