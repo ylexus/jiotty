@@ -56,6 +56,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     private Status currentStatus;
     @Nullable
     private Status currentStableStatus;
+    private Closeable pingSchedule = Closeable.noop();
 
     @Inject
     HostMonitorImpl(ExecutorFactory executorFactory,
@@ -113,6 +114,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     @Override
     protected void doStop() {
         executor.execute(() -> {
+            pingSchedule.close();
             currentStatus = null;
             lastSuccessfulPing = null;
         });
@@ -126,7 +128,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     }
 
     private void scheduleNextPing() {
-        executor.schedule(periodBetweenPings, this::ping);
+        pingSchedule = executor.schedule(periodBetweenPings, this::ping);
     }
 
     private void ping() {

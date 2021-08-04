@@ -6,6 +6,7 @@ import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.MDC;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -92,8 +93,8 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
     }
 
     void closeExecutor(DeterministicExecutor executor) {
-        executeDueTasks();
-        removeTasksOf(executor);
+        // simulate taking 1 second to close the executor completely;
+        schedule(executor, Duration.ofSeconds(1), () -> removeTasksOf(executor));
     }
 
     private void removeTasksOf(DeterministicExecutor executor) {
@@ -156,10 +157,11 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
         public final Instant unSchedule() {
             checkState(due != null, "not scheduled");
             tasksByTriggerTime.compute(due, (duration, tasks) -> {
-                checkState(tasks != null, "unexpected: task {} not found", this);
-                tasks.remove(this);
-                if (tasks.isEmpty()) {
-                    return null;
+                if (tasks != null) { // can be null if the executor was shut down in the meantime, which eventually removes all its tasks
+                    tasks.remove(this);
+                    if (tasks.isEmpty()) {
+                        return null;
+                    }
                 }
                 return tasks;
             });

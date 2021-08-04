@@ -204,13 +204,13 @@ class ProgrammableClockTest {
     @Test
     void closingOneExecutorCancelsItsTasks_sameTime(@Mock Runnable task2) {
         SchedulingExecutor executor2 = clock.createSingleThreadedSchedulingExecutor("executor2");
-        executor.schedule(Duration.ofSeconds(1), task);
-        executor2.schedule(Duration.ofSeconds(1), task2);
+        executor.schedule(Duration.ofSeconds(2), task);
+        executor2.schedule(Duration.ofSeconds(2), task2);
         clock.tick();
 
         executor2.close();
 
-        clock.advanceTimeAndTick(Duration.ofSeconds(1));
+        clock.advanceTimeAndTick(Duration.ofSeconds(2));
         verify(task).run();
         verify(task2, never()).run();
     }
@@ -218,13 +218,13 @@ class ProgrammableClockTest {
     @Test
     void closingOneExecutorCancelsItsTasks_diffTime(@Mock Runnable task2) {
         SchedulingExecutor executor2 = clock.createSingleThreadedSchedulingExecutor("executor2");
-        executor.schedule(Duration.ofSeconds(1), task);
-        executor2.schedule(Duration.ofSeconds(2), task2);
+        executor.schedule(Duration.ofSeconds(2), task);
+        executor2.schedule(Duration.ofSeconds(3), task2);
         clock.tick();
 
         executor2.close();
 
-        clock.advanceTimeAndTick(Duration.ofSeconds(2));
+        clock.advanceTimeAndTick(Duration.ofSeconds(3));
         verify(task).run();
         verify(task2, never()).run();
     }

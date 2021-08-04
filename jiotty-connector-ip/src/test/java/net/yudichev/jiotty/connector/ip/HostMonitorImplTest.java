@@ -183,6 +183,19 @@ class HostMonitorImplTest {
         verifyNoMoreInteractions(statusConsumer);
     }
 
+    @Test
+    void shutdownWhileInFlight() {
+        expectSuccessfulPing();
+        timeIs(0);
+        monitor.start();
+        monitor.addListener(statusConsumer, directExecutor());
+        clock.tick();
+
+        clock.advanceTimeAndTick(Duration.ofSeconds(29).plus(Duration.ofMillis(500)));
+        monitor.stop();
+        clock.advanceTimeAndTick(Duration.ofSeconds(1));
+    }
+
     @SuppressWarnings("CodeBlock2Expr") // reads better
     private static Stream<Arguments> hostGoingDown_ConsumerCalledAfterStabilisationPeriod() {
         return Stream.of(
