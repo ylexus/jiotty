@@ -47,16 +47,16 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
                 .annotatedWith(Password.class)
                 .installedBy(this::installLifecycleComponentModule);
 
-        bind(SchedulingExecutor.class).annotatedWith(ServiceExecutor.class).toProvider(boundLifecycleComponent(ExecutorProvider.class)).in(Singleton.class);
+        bind(SchedulingExecutor.class).annotatedWith(ServiceExecutor.class).toProvider(registerLifecycleComponent(ExecutorProvider.class)).in(Singleton.class);
         positionVerificationToleranceSpec.ifPresentOrElse(
                 toleranceSpec -> {
                     toleranceSpec.bind(Double.class)
                             .annotatedWith(VerifyingSlideService.Tolerance.class)
                             .installedBy(this::installLifecycleComponentModule);
-                    bind(SlideService.class).annotatedWith(VerifyingSlideService.Delegate.class).to(boundLifecycleComponent(SlideServiceImpl.class));
+                    bind(SlideService.class).annotatedWith(VerifyingSlideService.Delegate.class).to(registerLifecycleComponent(SlideServiceImpl.class));
                     bind(exposedKey).to(VerifyingSlideService.class);
                 },
-                () -> bind(exposedKey).to(boundLifecycleComponent(SlideServiceImpl.class)));
+                () -> bind(exposedKey).to(registerLifecycleComponent(SlideServiceImpl.class)));
         expose(exposedKey);
     }
 

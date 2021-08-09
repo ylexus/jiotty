@@ -57,7 +57,7 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
                 .withAnnotation(forAnnotation(MqttImpl.Dependency.class))
                 .build());
 
-        bind(exposedKey).to(boundLifecycleComponent(MqttImpl.class));
+        bind(exposedKey).to(registerLifecycleComponent(MqttImpl.class));
         expose(exposedKey);
     }
 

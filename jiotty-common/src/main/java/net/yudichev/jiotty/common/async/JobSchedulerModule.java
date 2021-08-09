@@ -6,7 +6,7 @@ import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 public final class JobSchedulerModule extends BaseLifecycleComponentModule implements ExposedKeyModule<JobScheduler> {
     @Override
     protected void configure() {
-        bind(getExposedKey()).to(boundLifecycleComponent(JobSchedulerImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(JobSchedulerImpl.class));
         expose(getExposedKey());
     }
 }

@@ -26,7 +26,7 @@ public final class GmailModule extends BaseGoogleServiceModule implements Expose
                 .build(InternalGmailObjectFactory.class));
 
         bind(Gmail.class).annotatedWith(Bindings.GmailService.class).toProvider(GmailProvider.class).in(Singleton.class);
-        bind(getExposedKey()).to(boundLifecycleComponent(GmailClientImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(GmailClientImpl.class));
         expose(getExposedKey());
     }
 

@@ -23,7 +23,7 @@ public final class BroadLinkIrDeviceModule extends BaseLifecycleComponentModule 
     protected void configure() {
         bindConstant().annotatedWith(BroadLinkIrDevice.Host.class).to(host);
         bindConstant().annotatedWith(BroadLinkIrDevice.MacAddress.class).to(macAddress);
-        bind(getExposedKey()).to(boundLifecycleComponent(BroadLinkIrDevice.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(BroadLinkIrDevice.class));
         expose(getExposedKey());
     }
 

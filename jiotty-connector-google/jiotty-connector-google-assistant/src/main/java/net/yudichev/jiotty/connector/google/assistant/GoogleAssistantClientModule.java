@@ -42,7 +42,7 @@ public final class GoogleAssistantClientModule extends BaseGoogleServiceModule i
                 .annotatedWith(GoogleAssistantClientImpl.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule);
 
-        bind(getExposedKey()).to(boundLifecycleComponent(GoogleAssistantClientImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(GoogleAssistantClientImpl.class));
         expose(getExposedKey());
     }
 

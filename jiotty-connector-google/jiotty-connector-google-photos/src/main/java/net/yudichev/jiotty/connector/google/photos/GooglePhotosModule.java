@@ -16,7 +16,7 @@ public final class GooglePhotosModule extends BaseGoogleServiceModule implements
 
     @Override
     protected void doConfigure() {
-        bind(getExposedKey()).to(boundLifecycleComponent(GooglePhotosClientImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(GooglePhotosClientImpl.class));
         expose(getExposedKey());
     }
 

@@ -25,7 +25,7 @@ public final class RpiDigitalPinStatusMonitorModule extends BaseLifecycleCompone
     protected void configure() {
         bind(Pin.class).annotatedWith(RpiDigitalPinStatusMonitorImpl.Dependency.class).toInstance(pin);
         bind(PinPullResistance.class).annotatedWith(RpiDigitalPinStatusMonitorImpl.Dependency.class).toInstance(pinPullResistance);
-        bind(getExposedKey()).to(boundLifecycleComponent(RpiDigitalPinStatusMonitorImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(RpiDigitalPinStatusMonitorImpl.class));
         expose(getExposedKey());
     }
 

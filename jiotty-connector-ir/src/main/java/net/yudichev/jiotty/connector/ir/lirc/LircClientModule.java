@@ -49,7 +49,7 @@ public final class LircClientModule extends BaseLifecycleComponentModule impleme
                         .build()))
                 .withAnnotation(forAnnotation(TcpLircClient.Dependency.class))
                 .build());
-        bind(getExposedKey()).to(boundLifecycleComponent(TcpLircClient.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(TcpLircClient.class));
         expose(getExposedKey());
     }
 

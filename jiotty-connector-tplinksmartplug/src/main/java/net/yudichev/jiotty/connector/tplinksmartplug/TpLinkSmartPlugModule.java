@@ -55,7 +55,7 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
         nameSpec.bind(String.class)
                 .annotatedWith(TpLinkSmartPlug.Name.class)
                 .installedBy(this::installLifecycleComponentModule);
-        return boundLifecycleComponent(TpLinkSmartPlug.class);
+        return registerLifecycleComponent(TpLinkSmartPlug.class);
     }
 
     public static class Builder implements TypedBuilder<ExposedKeyModule<Appliance>>, HasWithAnnotation {

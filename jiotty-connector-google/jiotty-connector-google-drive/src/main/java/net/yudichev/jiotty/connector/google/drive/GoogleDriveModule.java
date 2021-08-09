@@ -18,7 +18,7 @@ public final class GoogleDriveModule extends BaseGoogleServiceModule implements 
     @Override
     protected void doConfigure() {
         bind(Drive.class).annotatedWith(GoogleDriveClientImpl.Dependency.class).toProvider(GoogleDriveProvider.class);
-        bind(getExposedKey()).to(boundLifecycleComponent(GoogleDriveClientImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(GoogleDriveClientImpl.class));
         expose(getExposedKey());
     }
 

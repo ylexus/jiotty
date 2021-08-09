@@ -37,7 +37,7 @@ public final class ApplianceServerModule extends BaseLifecycleComponentModule {
         restServerSpec.bind(RestServer.class)
                 .annotatedWith(ApplianceServer.Dependency.class)
                 .installedBy(this::installLifecycleComponentModule);
-        boundLifecycleComponent(ApplianceServer.class);
+        registerLifecycleComponent(ApplianceServer.class);
     }
 
     public static final class Builder implements TypedBuilder<Module> {

@@ -44,7 +44,7 @@ public final class HostMonitorModule extends BaseLifecycleComponentModule implem
         toleranceSpec.bind(Duration.class)
                 .annotatedWith(HostMonitorImpl.Tolerance.class)
                 .installedBy(this::installLifecycleComponentModule);
-        bind(exposedKey).to(boundLifecycleComponent(HostMonitorImpl.class));
+        bind(exposedKey).to(registerLifecycleComponent(HostMonitorImpl.class));
         expose(exposedKey);
     }
 

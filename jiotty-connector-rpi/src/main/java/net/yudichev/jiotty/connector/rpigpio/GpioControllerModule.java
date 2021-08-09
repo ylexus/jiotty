@@ -15,7 +15,7 @@ public final class GpioControllerModule extends BaseLifecycleComponentModule imp
 
     @Override
     protected void configure() {
-        bind(getExposedKey()).toProvider(boundLifecycleComponent(GpioControllerProvider.class));
+        bind(getExposedKey()).toProvider(registerLifecycleComponent(GpioControllerProvider.class));
         expose(getExposedKey());
     }
 

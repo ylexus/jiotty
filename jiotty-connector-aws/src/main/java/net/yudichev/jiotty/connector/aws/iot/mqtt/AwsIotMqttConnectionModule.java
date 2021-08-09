@@ -29,7 +29,7 @@ public final class AwsIotMqttConnectionModule extends BaseLifecycleComponentModu
         bindConstant().annotatedWith(AwsIotMqttConnectionImpl.ClientEndpoint.class).to(clientEndpoint);
         bind(Duration.class).annotatedWith(AwsIotMqttConnectionImpl.Timeout.class).toInstance(timeout);
 
-        bind(getExposedKey()).to(boundLifecycleComponent(AwsIotMqttConnectionImpl.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(AwsIotMqttConnectionImpl.class));
         expose(getExposedKey());
     }
 
