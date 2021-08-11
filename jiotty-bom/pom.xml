@@ -6,7 +6,7 @@
     <parent>
         <groupId>net.yudichev.jiotty</groupId>
         <artifactId>jiotty</artifactId>
-        <version>2.2.1</version>
+        <version>2.2.2-SNAPSHOT</version>
     </parent>
 
     <artifactId>jiotty-bom</artifactId>
@@ -225,7 +225,7 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-bom</artifactId>
                 <!-- WARNING: do not upgrade to a new major ver without ensuring spark supports it -->
-                <version>9.4.42.v20210604</version>
+                <version>9.4.43.v20210629</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
