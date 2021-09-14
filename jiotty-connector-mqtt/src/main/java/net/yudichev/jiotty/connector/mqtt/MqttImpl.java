@@ -118,8 +118,8 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     @Override
     protected void doStop() {
         synchronized (lock) {
-            asUnchecked(client::disconnect);
-            asUnchecked(client::close); // I have a right as both this component and the client provider are singletons
+            closeSafelyIfNotNull(logger, client::disconnect);
+            closeSafelyIfNotNull(logger, client); // I have a right as both this component and the client provider are singletons
             closeIfNotNull(executor);
         }
     }
