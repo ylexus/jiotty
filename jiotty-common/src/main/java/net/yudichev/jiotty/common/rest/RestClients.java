@@ -71,7 +71,7 @@ public final class RestClients {
             public void onFailure(Call call, IOException e) {
                 logger.debug("Call failed: {}, retries left: {}", call, retryCount, e);
                 if (retryCount == 0) {
-                    future.completeExceptionally(new RuntimeException("call failed: " + call, e));
+                    future.completeExceptionally(new RuntimeException("call failed: " + call.request(), e));
                 } else {
                     call(call.clone(), responseType, retryCount - 1)
                             .whenComplete((result, exception) -> {
