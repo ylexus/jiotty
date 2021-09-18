@@ -113,13 +113,14 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
 
     @Override
     protected void doStop() {
+        SchedulingExecutor executor = this.executor;
+        this.executor = null;
         executor.execute(() -> {
             pingSchedule.close();
             currentStatus = null;
             lastSuccessfulPing = null;
         });
         closeSafelyIfNotNull(logger, executor);
-        executor = null;
     }
 
     private void onStableStatus(Status status) {
@@ -128,7 +129,12 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     }
 
     private void scheduleNextPing() {
-        pingSchedule = executor.schedule(periodBetweenPings, this::ping);
+        whenStartedAndNotLifecycling(() -> {
+            SchedulingExecutor executor = this.executor;
+            if (executor != null) {
+                pingSchedule = executor.schedule(periodBetweenPings, this::ping);
+            }
+        });
     }
 
     private void ping() {
