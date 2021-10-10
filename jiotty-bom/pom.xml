@@ -264,7 +264,7 @@
             <dependency>
                 <groupId>com.google.photos.library</groupId>
                 <artifactId>google-photos-library-client</artifactId>
-                <version>1.6.1</version>
+                <version>1.7.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.apis</groupId>
@@ -320,6 +320,12 @@
                 <groupId>org.eclipse.paho</groupId>
                 <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
                 <version>1.2.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.api</groupId>
+                <artifactId>api-common</artifactId>
+                <!-- must be compatible with at least google-photos-client -->
+                <version>1.10.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
