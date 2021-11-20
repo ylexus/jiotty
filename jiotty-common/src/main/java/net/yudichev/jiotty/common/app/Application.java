@@ -10,9 +10,13 @@ import net.yudichev.jiotty.common.lang.TypedBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+import org.slf4j.spi.LocationAwareLogger;
 import uk.org.lidalia.sysoutslf4j.context.SysOutOverSLF4J;
 
+import java.text.MessageFormat;
 import java.util.List;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +24,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -29,7 +35,61 @@ public final class Application {
 
     static {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
+
+        // copy-paste from source class with one tiny change: CONFIG is also included in DEBUG because many google HTTP classes use it to log
+        // all sent and received messages
+        LogManager.getLogManager().getLogger("").addHandler(new SLF4JBridgeHandler() {
+            private final String FQCN = java.util.logging.Logger.class.getName();
+
+            @Override
+            protected void callLocationAwareLogger(LocationAwareLogger lal, LogRecord record) {
+                int julLevelValue = record.getLevel().intValue();
+                int slf4jLevel;
+
+                if (julLevelValue <= Level.FINEST.intValue()) {
+                    slf4jLevel = LocationAwareLogger.TRACE_INT;
+                } else if (julLevelValue <= Level.CONFIG.intValue()) { // THIS IS WHERE THE CHANGE IS
+                    slf4jLevel = LocationAwareLogger.DEBUG_INT;
+                } else if (julLevelValue <= Level.INFO.intValue()) {
+                    slf4jLevel = LocationAwareLogger.INFO_INT;
+                } else if (julLevelValue <= Level.WARNING.intValue()) {
+                    slf4jLevel = LocationAwareLogger.WARN_INT;
+                } else {
+                    slf4jLevel = LocationAwareLogger.ERROR_INT;
+                }
+                String i18nMessage = getMessageI18N(record);
+                lal.log(null, FQCN, slf4jLevel, i18nMessage, null, record.getThrown());
+            }
+
+            private String getMessageI18N(LogRecord record) {
+                String message = record.getMessage();
+
+                if (message == null) {
+                    return null;
+                }
+
+                ResourceBundle bundle = record.getResourceBundle();
+                if (bundle != null) {
+                    try {
+                        message = bundle.getString(message);
+                    } catch (MissingResourceException e) {
+                    }
+                }
+                Object[] params = record.getParameters();
+                // avoid formatting when there are no or 0 parameters. see also
+                // http://jira.qos.ch/browse/SLF4J-203
+                if (params != null && params.length > 0) {
+                    try {
+                        message = MessageFormat.format(message, params);
+                    } catch (IllegalArgumentException e) {
+                        // default to the same behavior as in java.util.logging.Formatter.formatMessage(LogRecord)
+                        // see also http://jira.qos.ch/browse/SLF4J-337
+                        return message;
+                    }
+                }
+                return message;
+            }
+        });
 
         SysOutOverSLF4J.sendSystemOutAndErrToSLF4J();
         java.util.logging.Logger.getLogger("").setLevel(Level.FINEST);
