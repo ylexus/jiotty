@@ -32,6 +32,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.Closeable.*;
 import static net.yudichev.jiotty.common.lang.CompositeException.runForAll;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.Runnables.guarded;
 
@@ -118,7 +119,12 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     @Override
     protected void doStop() {
         synchronized (lock) {
-            closeSafelyIfNotNull(logger, client::disconnect);
+            try {
+                client.disconnect();
+            } catch (MqttException e) {
+                // if the client is already disconnected, disconnect() blows, and we do not care much about it
+                logger.info("Failed to disconnect client: {}", humanReadableMessage(e));
+            }
             closeSafelyIfNotNull(logger, client); // I have a right as both this component and the client provider are singletons
             closeIfNotNull(executor);
         }
