@@ -35,10 +35,8 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
             logger.debug("devices.get({})...", deviceName);
             GoogleHomeEnterpriseSdmV1Device device = smartDeviceManagement.enterprises().devices().get(deviceName).execute();
             logger.debug("... {}", device);
-            @SuppressWarnings("unchecked")
             Map<String, String> modeTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatMode");
             checkState(modeTrait != null, "Thermostat does not support modes");
-            @SuppressWarnings("unchecked")
             Map<String, String> ecoTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatEco");
             if (ecoTrait != null) {
                 if ("MANUAL_ECO".equals(ecoTrait.get("mode"))) {

@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.tplinksmartplug;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.appliance.Command;
@@ -11,10 +12,7 @@ import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
-import okhttp3.HttpUrl;
-import okhttp3.MediaType;
-import okhttp3.Request;
-import okhttp3.RequestBody;
+import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +31,7 @@ import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.time.Duration.ZERO;
 import static java.time.Duration.ofDays;
+import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static net.yudichev.jiotty.appliance.PowerCommand.OFF;
 import static net.yudichev.jiotty.appliance.PowerCommand.ON;
 import static net.yudichev.jiotty.common.lang.Json.object;
@@ -42,7 +41,7 @@ import static net.yudichev.jiotty.common.rest.RestClients.*;
 final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance {
     private static final Logger logger = LoggerFactory.getLogger(TpLinkSmartPlug.class);
     private static final Duration TOKEN_REFRESH_PERIOD = ofDays(14);
-    private static final Map<Command, Integer> COMMAND_TO_STATE = ImmutableMap.of(
+    private static final Map<Command<?>, Integer> COMMAND_TO_STATE = ImmutableMap.of(
             ON, 1,
             OFF, 0
     );
@@ -53,8 +52,8 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private final String deviceId;
     private final String name;
     private final ExecutorFactory executorFactory;
+    private final OkHttpClient httpClient;
     private SchedulingExecutor executor;
-
     private CompletableFuture<String> tokenFuture;
     private Closeable tokenRefreshSchedule = Closeable.noop();
 
@@ -71,6 +70,10 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         this.deviceId = checkNotNull(deviceId);
         this.name = checkNotNull(name);
         this.executorFactory = checkNotNull(executorFactory);
+        httpClient = newClient(builder -> builder.dispatcher(new Dispatcher(newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+                .setNameFormat(name + "-%d")
+                .setDaemon(true)
+                .build()))));
     }
 
     @Override
@@ -106,7 +109,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private void refreshToken() {
         whenStartedAndNotLifecycling(() -> {
             logger.info("Plug {}: requesting token", name);
-            tokenFuture = call(new Request.Builder()
+            tokenFuture = call(httpClient.newCall(new Request.Builder()
                             .url(new HttpUrl.Builder()
                                     .scheme("https")
                                     .host("eu-wap.tplinkcloud.com")
@@ -120,7 +123,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                                                     .put("terminalUUID", UUID.randomUUID().toString()))
                                             .toString(),
                                     MediaType.get(CONTENT_TYPE_JSON)))
-                            .build(),
+                            .build()),
                     JsonNode.class)
                     .thenApply(TpLinkSmartPlug::verifyResponse)
                     .thenApply(resultJsonNode -> {
@@ -132,31 +135,30 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
 
     private CompletableFuture<?> post(String token, int state) {
         logger.debug("Setting plug {} state to {}", name, state);
-        return call(new Request.Builder()
-                        .url(new HttpUrl.Builder()
-                                .scheme("https")
-                                .host("eu-wap.tplinkcloud.com")
-                                .addQueryParameter("token", token)
-                                .addQueryParameter("appName", "Kasa_Android")
-                                .addQueryParameter("termID", termId)
-                                .addQueryParameter("appVer", "1.4.4.607")
-                                .addQueryParameter("ospf", "Android 6.0.1")
-                                .addQueryParameter("netType", "wifi")
-                                .addQueryParameter("locale", "en_US")
-                                .build())
-                        .post(RequestBody.create(object()
-                                        .put("method", "passthrough")
-                                        .set("params", object()
-                                                .put("deviceId", deviceId)
-                                                .put("requestData", object()
-                                                        .set("system", object()
-                                                                .set("set_relay_state", object()
-                                                                        .put("state", state)))
-                                                        .toString()))
-                                        .toString(),
-                                MediaType.get(CONTENT_TYPE_JSON)))
-                        .build(),
-                JsonNode.class)
+        return call(httpClient.newCall(new Request.Builder()
+                .url(new HttpUrl.Builder()
+                        .scheme("https")
+                        .host("eu-wap.tplinkcloud.com")
+                        .addQueryParameter("token", token)
+                        .addQueryParameter("appName", "Kasa_Android")
+                        .addQueryParameter("termID", termId)
+                        .addQueryParameter("appVer", "1.4.4.607")
+                        .addQueryParameter("ospf", "Android 6.0.1")
+                        .addQueryParameter("netType", "wifi")
+                        .addQueryParameter("locale", "en_US")
+                        .build())
+                .post(RequestBody.create(object()
+                                .put("method", "passthrough")
+                                .set("params", object()
+                                        .put("deviceId", deviceId)
+                                        .put("requestData", object()
+                                                .set("system", object()
+                                                        .set("set_relay_state", object()
+                                                                .put("state", state)))
+                                                .toString()))
+                                .toString(),
+                        MediaType.get(CONTENT_TYPE_JSON)))
+                .build()), JsonNode.class)
                 .thenAccept(TpLinkSmartPlug::verifyResponse);
     }
 
