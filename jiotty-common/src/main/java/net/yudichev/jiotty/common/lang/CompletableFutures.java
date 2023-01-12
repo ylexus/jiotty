@@ -94,6 +94,16 @@ public final class CompletableFutures {
         };
     }
 
+    public static <T> BiConsumer<T, Throwable> thenComplete(CompletableFuture<? super T> anotherFuture) {
+        return (result, error) -> {
+            if (error == null) {
+                anotherFuture.complete(result);
+            } else {
+                anotherFuture.completeExceptionally(error);
+            }
+        };
+    }
+
     private static class FutureChainBuilder<T, R> {
         private final Function<T, CompletableFuture<R>> operation;
         private final Object mutex;

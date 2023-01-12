@@ -22,6 +22,7 @@
       <w>ossrh</w>
       <w>owntracks</w>
       <w>passthrough</w>
+      <w>retryable</w>
       <w>runnables</w>
       <w>sparkjava</w>
       <w>throwables</w>

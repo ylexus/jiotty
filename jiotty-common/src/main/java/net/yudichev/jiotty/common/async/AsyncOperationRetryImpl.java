@@ -1,0 +1,52 @@
+package net.yudichev.jiotty.common.async;
+
+import net.yudichev.jiotty.common.lang.Either;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.failure;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.thenComplete;
+
+public class AsyncOperationRetryImpl implements AsyncOperationRetry {
+    private static final Logger logger = LoggerFactory.getLogger(AsyncOperationRetryImpl.class);
+    private final AsyncOperationFailureHandler backOffHandler;
+
+    @Inject
+    public AsyncOperationRetryImpl(AsyncOperationFailureHandler backOffHandler) {
+        this.backOffHandler = checkNotNull(backOffHandler);
+    }
+
+    @Override
+    public <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
+                                                        Supplier<? extends CompletableFuture<T>> action,
+                                                        BiConsumer<? super Long, Runnable> backoffHandler) {
+        return action.get()
+                .thenApply(value -> {
+                    backOffHandler.reset();
+                    return Either.<T, RetryableFailure>left(value);
+                })
+                .exceptionally(exception -> {
+                    var backoffDelayMs = backOffHandler.handle(operationName, exception);
+                    return Either.right(RetryableFailure.of(exception, backoffDelayMs));
+                })
+                .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
+                        CompletableFuture::completedFuture,
+                        retryableFailure -> retryableFailure.backoffDelayMs()
+                                .map(backoffDelayMs -> {
+                                    logger.debug("Retrying operation '{}' with backoff {}ms", operationName, retryableFailure.backoffDelayMs());
+                                    var retryFuture = new CompletableFuture<T>();
+                                    backoffHandler.accept(
+                                            backoffDelayMs,
+                                            () -> withBackOffAndRetry(operationName, action, backoffHandler).whenComplete(thenComplete(retryFuture)));
+                                    return retryFuture;
+                                })
+                                .orElseGet(() -> failure(retryableFailure.exception()))
+                ));
+    }
+}
