@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,14 +37,27 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
     }
 
     @Override
+    public <T> CompletableFuture<T> submit(Callable<T> task) {
+        var resultFuture = new CompletableFuture<T>();
+        executor.submit(() -> {
+            try {
+                resultFuture.complete(task.call());
+            } catch (Exception e) {
+                resultFuture.completeExceptionally(e);
+            }
+        });
+        return resultFuture;
+    }
+
+    @Override
     public void execute(Runnable command) {
-        executor.execute(Runnables.guarded(logger, "task", command));
+        executor.execute(guard("task", command));
     }
 
     @Override
     public Closeable schedule(Duration delay, Runnable command) {
         Closeable scheduledHandle = new ScheduledHandle(executor.schedule(
-                Runnables.guarded(logger, "scheduled task", command), delay.toNanos(), NANOSECONDS));
+                guard("scheduled task", command), delay.toNanos(), NANOSECONDS));
         scheduleHandles.add(scheduledHandle);
         return scheduledHandle;
     }
@@ -50,7 +65,7 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
     @Override
     public Closeable scheduleAtFixedRate(Duration initialDelay, Duration period, Runnable command) {
         Closeable scheduledHandle = new ScheduledHandle(
-                executor.scheduleAtFixedRate(Runnables.guarded(logger, "scheduled task", command), initialDelay.toNanos(), period.toNanos(), NANOSECONDS));
+                executor.scheduleAtFixedRate(guard("scheduled task", command), initialDelay.toNanos(), period.toNanos(), NANOSECONDS));
         scheduleHandles.add(scheduledHandle);
         return scheduledHandle;
     }
@@ -61,6 +76,10 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
         if (!MoreExecutors.shutdownAndAwaitTermination(executor, 10, SECONDS)) {
             logger.warn("Was not able to gracefully stop executor in 10 seconds");
         }
+    }
+
+    private static Runnable guard(String task, Runnable command) {
+        return Runnables.guarded(logger, task, command);
     }
 
     private final class ScheduledHandle extends BaseIdempotentCloseable {

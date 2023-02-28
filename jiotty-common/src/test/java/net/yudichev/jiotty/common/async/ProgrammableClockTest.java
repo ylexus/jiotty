@@ -10,14 +10,29 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.Callable;
 
-import static org.mockito.Mockito.*;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ProgrammableClockTest {
 
     @Mock
     private Runnable task;
+    @Mock
+    private Callable<String> callableTask;
     private ProgrammableClock clock;
     private SchedulingExecutor executor;
 
@@ -43,6 +58,55 @@ class ProgrammableClockTest {
 
         clock.tick();
         verify(task).run();
+    }
+
+    @Test
+    void submitSimpleCallable() throws Exception {
+        var resultFuture = executor.submit(callableTask);
+        assertThat(resultFuture.isDone(), is(false));
+        verify(callableTask, never()).call();
+
+        when(callableTask.call()).thenReturn("result");
+        clock.tick();
+        assertThat(resultFuture.getNow(null), is("result"));
+    }
+
+    @Test
+    void submitFailingCallable() throws Exception {
+        var resultFuture = executor.submit(callableTask);
+
+        when(callableTask.call()).thenThrow(new RuntimeException("oops"));
+        clock.tick();
+
+        assertThat(assertThrows(Throwable.class, () -> resultFuture.getNow(null)).getMessage(), containsString("oops"));
+    }
+
+    @Test
+    void submitSimpleRunnable() throws Exception {
+        var resultFuture = executor.submit(task);
+        assertThat(resultFuture.isDone(), is(false));
+        verify(callableTask, never()).call();
+
+        clock.tick();
+        verify(task).run();
+        assertThat(resultFuture.isDone() && !resultFuture.isCompletedExceptionally(), is(true));
+    }
+
+    @Test
+    void submitFailingRunnable() {
+        var resultFuture = executor.submit(task);
+
+        doThrow(new RuntimeException("oops")).when(task).run();
+        clock.tick();
+
+        assertThat(assertThrows(Throwable.class, () -> resultFuture.getNow(null)).getMessage(), containsString("oops"));
+    }
+
+    @Test
+    void nanoTime() {
+        assertThat(clock.nanoTime(), is(0L));
+        clock.advanceTimeAndTick(Duration.ofSeconds(5));
+        assertThat(clock.nanoTime(), is(SECONDS.toNanos(5)));
     }
 
     @Test

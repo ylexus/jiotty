@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.failure;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.thenComplete;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 
 public class AsyncOperationRetryImpl implements AsyncOperationRetry {
     private static final Logger logger = LoggerFactory.getLogger(AsyncOperationRetryImpl.class);
@@ -39,7 +40,8 @@ public class AsyncOperationRetryImpl implements AsyncOperationRetry {
                         CompletableFuture::completedFuture,
                         retryableFailure -> retryableFailure.backoffDelayMs()
                                 .map(backoffDelayMs -> {
-                                    logger.debug("Retrying operation '{}' with backoff {}ms", operationName, retryableFailure.backoffDelayMs());
+                                    logger.info("Retrying operation '{}' with backoff {}ms because: {}",
+                                            operationName, backoffDelayMs, humanReadableMessage(retryableFailure.exception()));
                                     var retryFuture = new CompletableFuture<T>();
                                     backoffHandler.accept(
                                             backoffDelayMs,

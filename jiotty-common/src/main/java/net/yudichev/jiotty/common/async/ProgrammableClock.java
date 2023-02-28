@@ -2,6 +2,7 @@ package net.yudichev.jiotty.common.async;
 
 import net.yudichev.jiotty.common.lang.BaseIdempotentCloseable;
 import net.yudichev.jiotty.common.lang.Closeable;
+import net.yudichev.jiotty.common.lang.backoff.NanoClock;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.MDC;
 
@@ -11,11 +12,19 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAmount;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.Optional;
+import java.util.TreeMap;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
-public final class ProgrammableClock implements CurrentDateTimeProvider, ExecutorFactory {
+public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClock, ExecutorFactory {
     private final NavigableMap<Instant, List<Task>> tasksByTriggerTime = new TreeMap<>();
     private Instant currentTime = Instant.EPOCH;
     private boolean mdc;
@@ -49,6 +58,12 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
     @Override
     public Instant currentInstant() {
         return currentTaskTime == null ? currentTime : currentTaskTime;
+    }
+
+    @Override
+    public long nanoTime() {
+        var currentInstant = currentInstant();
+        return SECONDS.toNanos(currentInstant().getEpochSecond()) + currentInstant.getNano();
     }
 
     @Override

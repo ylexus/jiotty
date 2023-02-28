@@ -4,6 +4,8 @@ import net.yudichev.jiotty.common.lang.BaseIdempotentCloseable;
 import net.yudichev.jiotty.common.lang.Closeable;
 
 import java.time.Duration;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -19,8 +21,17 @@ final class DeterministicExecutor extends BaseIdempotentCloseable implements Sch
     }
 
     @Override
-    public void execute(Runnable command) {
-        schedule(Duration.ZERO, command);
+    public <T> CompletableFuture<T> submit(Callable<T> task) {
+        var resultFuture = new CompletableFuture<T>();
+        //noinspection resource
+        schedule(Duration.ZERO, () -> {
+            try {
+                resultFuture.complete(task.call());
+            } catch (Exception e) {
+                resultFuture.completeExceptionally(e);
+            }
+        });
+        return resultFuture;
     }
 
     @Override
