@@ -1,15 +1,30 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.BindingAnnotation;
+import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
+import net.yudichev.jiotty.common.async.AsyncOperationRetryImpl;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.Scheduler;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.DeduplicatingBiConsumer;
+import net.yudichev.jiotty.common.lang.MoreThrowables.CheckedExceptionThrowingSupplier;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
+import net.yudichev.jiotty.common.lang.backoff.NanoClock;
+import net.yudichev.jiotty.common.lang.backoff.SynchronizedBackOff;
 import net.yudichev.jiotty.common.lang.throttling.ThresholdThrottlingConsumerFactory;
-import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttTopic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,42 +37,60 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static net.yudichev.jiotty.common.lang.Closeable.*;
+import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
+import static net.yudichev.jiotty.common.lang.Closeable.noop;
 import static net.yudichev.jiotty.common.lang.CompositeException.runForAll;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.Runnables.guarded;
 
-final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
+class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     private static final Logger logger = LoggerFactory.getLogger(MqttImpl.class);
     private final ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory;
     private final MqttConnectOptions mqttConnectOptions;
-    private final Object lock = new Object();
     private final Map<String, MqttMessage> lastReceivedMessageByTopic = new HashMap<>();
     private final Map<String, Set<BiConsumer<String, MqttMessage>>> subscriptionsByFilter = new HashMap<>();
-    private final IMqttClient client;
+    private final IMqttAsyncClient client;
     private final ExecutorFactory executorFactory;
     private final String name;
+    private final double connectBackoffRandmisationFactor;
+    private final NanoClock nanoClock;
     private SchedulingExecutor executor;
 
     @Inject
-    MqttImpl(IMqttClient client,
+    MqttImpl(IMqttAsyncClient client,
              ExecutorFactory executorFactory,
              @Dependency ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory,
              @Dependency MqttConnectOptions mqttConnectOptions) {
+        this(client, executorFactory, throttledLoggerFactory, mqttConnectOptions, System::nanoTime, ExponentialBackOff.DEFAULT_RANDOMIZATION_FACTOR);
+    }
+
+    MqttImpl(IMqttAsyncClient client,
+             ExecutorFactory executorFactory,
+             ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory,
+             MqttConnectOptions mqttConnectOptions,
+             NanoClock nanoClock,
+             double connectBackoffRandmisationFactor) {
         this.executorFactory = checkNotNull(executorFactory);
         this.throttledLoggerFactory = checkNotNull(throttledLoggerFactory);
         this.mqttConnectOptions = checkNotNull(mqttConnectOptions);
         this.client = client;
         name = super.name() + " " + client.getClientId() + " " + client.getServerURI();
+        this.nanoClock = checkNotNull(nanoClock);
+        this.connectBackoffRandmisationFactor = connectBackoffRandmisationFactor;
     }
 
     @Override
@@ -66,20 +99,65 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     }
 
     @Override
+    protected void doStart() {
+        executor = executorFactory.createSingleThreadedSchedulingExecutor("Handler-" + client.getServerURI());
+        BackOff backoff = new SynchronizedBackOff(new ExponentialBackOff.Builder()
+                .setNanoClock(nanoClock)
+                .setInitialIntervalMillis(1000)
+                .setMaxIntervalMillis(30_000)
+                .setMaxElapsedTimeMillis(Integer.MAX_VALUE)
+                .setRandomizationFactor(connectBackoffRandmisationFactor)
+                .build());
+        AsyncOperationRetry asyncOperationRetry = new AsyncOperationRetryImpl(AsyncOperationFailureHandler.forBackoff(backoff, logger));
+        executor.execute(() -> {
+            client.setCallback(new ResubscribeOnReconnectCallback());
+            CompletableFuture<Void> connectFuture = asyncOperationRetry
+                    .withBackOffAndRetry("MQTT Connect to " + client.getServerURI(),
+                            () -> {
+                                logger.debug("MQTT Connecting to {}", client.getServerURI());
+                                return toCompletableFuture(() -> client.connect(mqttConnectOptions));
+                            },
+                            (delayMillis, runnable) -> scheduleReconnect(executor, delayMillis, runnable));
+            try {
+                waitForConnectFutureAndThen(connectFuture, () -> logger.info("Connected to {}", client.getServerURI()));
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                logger.warn("Failed to connect to {}", client.getServerURI(), e);
+            }
+        });
+    }
+
+    // overridable for tests
+    void scheduleReconnect(Scheduler scheduler, Long delayMillis, Runnable runnable) {
+        // must block the task, so that all user actions queue after start()
+        if (delayMillis > 0) {
+            asUnchecked(() -> Thread.sleep(delayMillis));
+        }
+        runnable.run();
+    }
+
+    // overridable for tests
+    void waitForConnectFutureAndThen(CompletableFuture<Void> connectFuture, Runnable whenDone) throws InterruptedException, ExecutionException {
+        // must block the task, so that all user actions queue after start()
+        connectFuture.get();
+        whenDone.run();
+    }
+
+    @Override
     public Closeable subscribe(String topicFilter, BiConsumer<String, String> dataCallback) {
         checkStarted();
         BiConsumer<String, MqttMessage> callback = exceptionLogging(new MessageToStringDataCallback(new DeduplicatingBiConsumer<>(dataCallback)));
-
-        synchronized (lock) {
-            deliverLastMessages(topicFilter, callback);
-
+        executor.execute(() -> {
+            deliverImage(topicFilter, callback);
             subscriptionsByFilter.computeIfAbsent(topicFilter, filter -> {
                 doSubscribe(filter, (topic, message) -> runForAll(subscriptionsByFilter.get(filter), consumer -> consumer.accept(topic, message)));
                 return new HashSet<>();
             }).add(callback);
-        }
-        return idempotent(() -> {
-            synchronized (lock) {
+        });
+
+        return idempotent(() -> executor.submit(guarded(logger, "unsubscribe", () ->
                 subscriptionsByFilter.computeIfPresent(topicFilter, (filter, callbacks) -> {
                     callbacks.remove(callback);
                     if (callbacks.isEmpty()) {
@@ -89,44 +167,51 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
                         return null;
                     }
                     return callbacks;
-                });
-            }
-        });
+                }))));
     }
 
     @Override
     public CompletableFuture<Void> publish(String topic, String message) {
         checkStarted();
         return supplyAsync(() -> {
-            synchronized (lock) {
-                logger.debug("OUT topic: {}, msg: {}", topic, message);
-                asUnchecked(() -> client.publish(topic, message.getBytes(UTF_8), 1, false));
-            }
+            logger.debug("OUT topic: {}, msg: {}", topic, message);
+            asUnchecked(() -> client.publish(topic, message.getBytes(UTF_8), 1, false));
             return null;
-        });
+        }, executor);
     }
 
-    @Override
-    protected void doStart() {
-        synchronized (lock) {
-            executor = executorFactory.createSingleThreadedSchedulingExecutor("sub-retry");
-            client.setCallback(new ResubscribeOnReconnectCallback());
-            asUnchecked(() -> client.connect(mqttConnectOptions));
-            logger.info("Connected to broker");
+    private static CompletableFuture<Void> toCompletableFuture(CheckedExceptionThrowingSupplier<IMqttToken> tokenSupplier) {
+        var result = new CompletableFuture<Void>();
+        try {
+            IMqttToken mqttToken = tokenSupplier.get();
+            mqttToken.setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    result.complete(null);
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    result.completeExceptionally(exception);
+                }
+            });
+        } catch (Exception e) {
+            result.completeExceptionally(e);
         }
+        return result;
     }
 
     @Override
     protected void doStop() {
-        synchronized (lock) {
-            try {
-                client.disconnect();
-            } catch (MqttException e) {
-                // if the client is already disconnected, disconnect() blows, and we do not care much about it
-                logger.info("Failed to disconnect client: {}", humanReadableMessage(e));
-            }
+        closeIfNotNull(executor);
+        // disconnect must not be scheduled to the executor that is potentially blocked on connect; this method also seems to be thread safe
+        try {
+            client.disconnect();
+        } catch (MqttException e) {
+            // if the client is already disconnected, disconnect() blows, and we do not care much about it
+            logger.info("Failed to disconnect client: {}", humanReadableMessage(e));
+        } finally {
             closeSafelyIfNotNull(logger, client); // I have a right as both this component and the client provider are singletons
-            closeIfNotNull(executor);
         }
     }
 
@@ -141,13 +226,13 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     }
 
     private void doSubscribe(String topicFilter, BiConsumer<String, MqttMessage> callback) {
-        asUnchecked(() -> client.subscribe(topicFilter, (topic, message) -> {
+        asUnchecked(() -> client.subscribe(topicFilter, 2, (topic, message) -> {
             logger.debug("IN topic: {}, msg: {}", topic, message);
-            callback.accept(topic, message);
+            guarded(logger, "Notify client on MQTT message", () -> callback.accept(topic, message)).run();
         }));
     }
 
-    private void deliverLastMessages(String topicFilter, BiConsumer<String, MqttMessage> callback) {
+    private void deliverImage(String topicFilter, BiConsumer<String, MqttMessage> callback) {
         lastReceivedMessageByTopic.forEach((topic, message) -> {
             if (MqttTopic.isMatched(topicFilter, topic)) {
                 logger.debug("Delivering last known message {} -> {}", topic, message);
@@ -192,20 +277,10 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             if (reconnect) {
                 restoreSubscriptions();
             }
-
-        }
-
-        @Override
-        public void connectionLost(Throwable cause) {
-            logger.info("{} lost connection to {}", client.getClientId(), client.getServerURI(), cause);
-            synchronized (lock) {
-                subRetryTimerHandle.close();
-            }
-            throttledErrorLogger.accept(cause);
         }
 
         private void restoreSubscriptions() {
-            synchronized (lock) {
+            executor.submit(() -> {
                 logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
                 try {
                     subscriptionsByFilter.forEach((topicFilter, callbacks) ->
@@ -216,15 +291,24 @@ final class MqttImpl extends BaseLifecycleComponent implements Mqtt {
                     logger.info("Re-subscription failed, will re-try in {}ms", nextRetryInMs, e);
                     subRetryTimerHandle = executor.schedule(Duration.ofMillis(nextRetryInMs), this::restoreSubscriptions);
                 }
-            }
+            });
+        }
+
+        @Override
+        public void connectionLost(Throwable cause) {
+            logger.info("{} lost connection to {}", client.getClientId(), client.getServerURI(), cause);
+            executor.submit(() -> {
+                subRetryTimerHandle.close();
+                throttledErrorLogger.accept(cause);
+            });
         }
 
         @Override
         public void messageArrived(String topic, MqttMessage message) {
-            synchronized (lock) {
+            executor.submit(() -> {
                 logger.debug("messageArrived: {}->{}", topic, message);
                 lastReceivedMessageByTopic.put(topic, message);
-            }
+            });
         }
 
         @Override

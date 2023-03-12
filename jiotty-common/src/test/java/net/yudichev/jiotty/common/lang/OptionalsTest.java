@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class OptionalsTest {
@@ -22,13 +22,13 @@ class OptionalsTest {
     void ifPresentOrElseWithPresentValue() {
         Optionals.ifPresent(Optional.of(42), presentValueConsumer).orElse(emptyValueAction);
         verify(presentValueConsumer).accept(42);
-        verifyZeroInteractions(emptyValueAction);
+        verifyNoInteractions(emptyValueAction);
     }
 
     @Test
     void ifPresentOrElseWithEmptyValue() {
         Optionals.ifPresent(Optional.empty(), presentValueConsumer).orElse(emptyValueAction);
         verify(emptyValueAction).run();
-        verifyZeroInteractions(presentValueConsumer);
+        verifyNoInteractions(presentValueConsumer);
     }
 }

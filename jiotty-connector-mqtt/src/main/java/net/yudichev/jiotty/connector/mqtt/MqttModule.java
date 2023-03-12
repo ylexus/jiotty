@@ -7,7 +7,7 @@ import net.yudichev.jiotty.common.inject.HasWithAnnotation;
 import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.lang.throttling.ThresholdThrottlingConsumerModule;
-import org.eclipse.paho.client.mqttv3.IMqttClient;
+import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 
 import javax.inject.Singleton;
@@ -46,7 +46,7 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
     protected void configure() {
         bindConstant().annotatedWith(MqttClientProvider.ServerUri.class).to(serverUri);
         bindConstant().annotatedWith(MqttClientProvider.ClientId.class).to(clientId);
-        bind(IMqttClient.class).toProvider(MqttClientProvider.class).in(Singleton.class);
+        bind(IMqttAsyncClient.class).toProvider(MqttClientProvider.class).in(Singleton.class);
 
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
         connectionOptionsCustomiser.accept(mqttConnectOptions);

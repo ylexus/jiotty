@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.common.async;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.LongConsumer;
@@ -12,10 +13,21 @@ public interface AsyncOperationRetry {
 
     default <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
                                                          Supplier<? extends CompletableFuture<T>> action,
+                                                         SchedulingExecutor retryScheduler) {
+        return withBackOffAndRetry(operationName, action, (delayMs, retryTask) -> retryScheduler.schedule(Duration.ofMillis(delayMs), retryTask));
+    }
+
+    default <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
+                                                         Supplier<? extends CompletableFuture<T>> action,
                                                          LongConsumer backoffHandler) {
         return withBackOffAndRetry(operationName, action, (delayMs, retry) -> {
             backoffHandler.accept(delayMs);
             retry.run();
         });
+    }
+
+    default <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
+                                                         Supplier<? extends CompletableFuture<T>> action) {
+        return withBackOffAndRetry(operationName, action, ignored -> {});
     }
 }

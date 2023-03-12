@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -33,7 +34,7 @@ public class AsyncOperationRetryImpl implements AsyncOperationRetry {
                     return Either.<T, RetryableFailure>left(value);
                 })
                 .exceptionally(exception -> {
-                    var backoffDelayMs = backOffHandler.handle(operationName, exception);
+                    Optional<Long> backoffDelayMs = backOffHandler.handle(operationName, exception);
                     return Either.right(RetryableFailure.of(exception, backoffDelayMs));
                 })
                 .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(

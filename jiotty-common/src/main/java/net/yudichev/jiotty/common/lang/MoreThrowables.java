@@ -8,6 +8,9 @@ public final class MoreThrowables {
         try {
             action.run();
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new RuntimeException(e);
         }
     }

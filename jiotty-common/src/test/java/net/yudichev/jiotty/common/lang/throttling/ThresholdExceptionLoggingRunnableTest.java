@@ -7,7 +7,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.contains;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ThresholdExceptionLoggingRunnableTest {
@@ -29,10 +34,10 @@ class ThresholdExceptionLoggingRunnableTest {
         doThrow(exception).when(delegate).run();
 
         runnable.run();
-        verifyZeroInteractions(logger);
+        verifyNoInteractions(logger);
 
         runnable.run();
-        verifyZeroInteractions(logger);
+        verifyNoInteractions(logger);
 
         runnable.run();
         verify(logger).error(any(String.class), contains("description"), eq(exception));
@@ -51,6 +56,6 @@ class ThresholdExceptionLoggingRunnableTest {
         runnable.run();
         runnable.run();
         runnable.run();
-        verifyZeroInteractions(logger);
+        verifyNoInteractions(logger);
     }
 }

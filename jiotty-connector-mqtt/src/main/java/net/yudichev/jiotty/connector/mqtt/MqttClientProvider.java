@@ -1,7 +1,8 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.BindingAnnotation;
-import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,11 +13,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
-final class MqttClientProvider implements Provider<MqttClient> {
+final class MqttClientProvider implements Provider<IMqttAsyncClient> {
     private static final Logger logger = LoggerFactory.getLogger(MqttClientProvider.class);
     private final String serverUri;
     private final String clientId;
@@ -29,10 +32,9 @@ final class MqttClientProvider implements Provider<MqttClient> {
     }
 
     @Override
-    public MqttClient get() {
+    public IMqttAsyncClient get() {
         logger.info("Creating MQTT client for {} as {}", serverUri, clientId);
-        //noinspection resource closed in MqttImpl
-        return getAsUnchecked(() -> new MqttClient(serverUri, clientId, new MemoryPersistence()));
+        return getAsUnchecked(() -> new MqttAsyncClient(serverUri, clientId, new MemoryPersistence()));
     }
 
     @BindingAnnotation

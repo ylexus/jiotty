@@ -1,8 +1,16 @@
 package net.yudichev.jiotty.connector.mqtt;
 
-import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.async.ProgrammableClock;
+import net.yudichev.jiotty.common.async.Scheduler;
 import net.yudichev.jiotty.common.lang.Closeable;
-import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,37 +19,75 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class MqttImplTest {
     private static final String TOPIC_FILTER = "/topic/+";
     @Mock
-    private IMqttClient client;
+    private IMqttAsyncClient client;
+    @Mock
+    private IMqttToken token;
     @Mock
     private BiConsumer<String, String> dataCallback;
-    @Mock
-    private SchedulingExecutor executor;
     @Captor
     private ArgumentCaptor<IMqttMessageListener> messageListenerArgumentCaptor;
+    @Captor
+    private ArgumentCaptor<IMqttActionListener> actionListenerCaptor;
     private MqttImpl mqtt;
     private MqttCallbackExtended mqttCallback;
+    private ProgrammableClock clock;
 
     @BeforeEach
     void setUp() throws MqttException {
+        clock = new ProgrammableClock().withMdc();
+
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqtt = new MqttImpl(client, threadNameBase -> executor, (threshold, throttlingDuration, delegate) -> e -> {}, mqttConnectOptions);
+        when(client.connect(mqttConnectOptions)).thenReturn(token);
+        mqtt = new MqttImpl(client, clock, (threshold, throttlingDuration, delegate) -> e -> {}, mqttConnectOptions, clock, 0) {
+            @Override
+            void scheduleReconnect(Scheduler scheduler, Long delayMillis, Runnable runnable) {
+                scheduler.schedule(Duration.ofMillis(delayMillis), runnable);
+            }
+
+            @Override
+            void waitForConnectFutureAndThen(CompletableFuture<Void> connectFuture, Runnable whenDone) {
+                connectFuture.thenRun(whenDone);
+            }
+        };
         mqtt.start();
+        clock.tick();
 
         ArgumentCaptor<MqttCallbackExtended> callbackCaptor = ArgumentCaptor.forClass(MqttCallbackExtended.class);
         verify(client).setCallback(callbackCaptor.capture());
+        verify(client).connect(any());
         mqttCallback = callbackCaptor.getValue();
-        verify(client).connect(mqttConnectOptions);
+
+        // testing re-connect
+        verify(token).setActionCallback(actionListenerCaptor.capture());
+        IMqttActionListener actionListener = actionListenerCaptor.getValue();
+        actionListener.onFailure(token, new RuntimeException("failure1"));
+
+        clock.advanceTimeAndTick(Duration.ofSeconds(1));
+        verify(client, times(2)).connect(any());
+        verify(token, times(2)).setActionCallback(actionListenerCaptor.capture());
+        actionListener = actionListenerCaptor.getValue();
+        actionListener.onSuccess(token);
+
+        reset(client);
+        clock.advanceTimeAndTick(Duration.ofDays(1));
+        verify(client, never()).connect(any());
     }
 
     @Test
@@ -50,8 +96,9 @@ class MqttImplTest {
 
         mqttCallback.connectionLost(new RuntimeException("oops"));
         mqttCallback.connectComplete(true, "serverUri");
+        clock.tick();
 
-        verify(client).subscribe(TOPIC_FILTER, messageListener);
+        verify(client).subscribe(TOPIC_FILTER, 2, messageListener);
     }
 
     @Test
@@ -70,33 +117,40 @@ class MqttImplTest {
 
         mqttCallback.connectComplete(false, "serverUrl");
         Closeable sub1 = mqtt.subscribe(TOPIC_FILTER, dataCallback);
+        clock.tick();
 
-        verify(client).subscribe(eq(TOPIC_FILTER), messageListenerArgumentCaptor.capture());
+        verify(client).subscribe(eq(TOPIC_FILTER), eq(2), messageListenerArgumentCaptor.capture());
         IMqttMessageListener mqttListener = messageListenerArgumentCaptor.getValue();
 
         Closeable sub2 = mqtt.subscribe(TOPIC_FILTER, dataCallback2);
-        verify(client, times(1)).subscribe(eq(TOPIC_FILTER), any());
+        clock.tick();
+        verify(client, times(1)).subscribe(eq(TOPIC_FILTER), eq(2), any());
 
         mqttListener.messageArrived("/topic/a", mqttMessage("msg"));
+        clock.tick();
         verify(dataCallback).accept("/topic/a", "msg");
         verify(dataCallback2).accept("/topic/a", "msg");
 
         sub1.close();
+        clock.tick();
         verify(client, never()).unsubscribe(TOPIC_FILTER);
 
         mqttListener.messageArrived("/topic/a", mqttMessage("msg2"));
+        clock.tick();
         verify(dataCallback, never()).accept("/topic/a", "msg2");
         verify(dataCallback2).accept("/topic/a", "msg2");
 
         sub2.close();
+        clock.tick();
         verify(client).unsubscribe(TOPIC_FILTER);
     }
 
     private IMqttMessageListener doSubscribe() throws MqttException {
         mqttCallback.connectComplete(false, "serverUrl");
         mqtt.subscribe(TOPIC_FILTER, dataCallback);
+        clock.tick();
 
-        verify(client).subscribe(eq(TOPIC_FILTER), messageListenerArgumentCaptor.capture());
+        verify(client).subscribe(eq(TOPIC_FILTER), eq(2), messageListenerArgumentCaptor.capture());
         return messageListenerArgumentCaptor.getValue();
     }
 
