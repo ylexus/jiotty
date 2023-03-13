@@ -6,7 +6,6 @@ import net.yudichev.jiotty.common.lang.Closeable;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -38,8 +37,6 @@ class MqttImplTest {
     @Mock
     private IMqttAsyncClient client;
     @Mock
-    private IMqttToken token;
-    @Mock
     private BiConsumer<String, String> dataCallback;
     @Captor
     private ArgumentCaptor<IMqttMessageListener> messageListenerArgumentCaptor;
@@ -54,7 +51,6 @@ class MqttImplTest {
         clock = new ProgrammableClock().withMdc();
 
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        when(client.connect(mqttConnectOptions)).thenReturn(token);
         mqtt = new MqttImpl(client, clock, (threshold, throttlingDuration, delegate) -> e -> {}, mqttConnectOptions, clock, 0) {
             @Override
             void scheduleReconnect(Scheduler scheduler, Long delayMillis, Runnable runnable) {
@@ -71,23 +67,21 @@ class MqttImplTest {
 
         ArgumentCaptor<MqttCallbackExtended> callbackCaptor = ArgumentCaptor.forClass(MqttCallbackExtended.class);
         verify(client).setCallback(callbackCaptor.capture());
-        verify(client).connect(any());
+        verify(client).connect(any(), eq(null), actionListenerCaptor.capture());
         mqttCallback = callbackCaptor.getValue();
 
         // testing re-connect
-        verify(token).setActionCallback(actionListenerCaptor.capture());
         IMqttActionListener actionListener = actionListenerCaptor.getValue();
-        actionListener.onFailure(token, new RuntimeException("failure1"));
+        actionListener.onFailure(null, new RuntimeException("failure1"));
 
         clock.advanceTimeAndTick(Duration.ofSeconds(1));
-        verify(client, times(2)).connect(any());
-        verify(token, times(2)).setActionCallback(actionListenerCaptor.capture());
+        verify(client, times(2)).connect(any(), eq(null), actionListenerCaptor.capture());
         actionListener = actionListenerCaptor.getValue();
-        actionListener.onSuccess(token);
+        actionListener.onSuccess(null);
 
         reset(client);
         clock.advanceTimeAndTick(Duration.ofDays(1));
-        verify(client, never()).connect(any());
+        verify(client, never()).connect(any(), any(), any());
     }
 
     @Test

@@ -10,7 +10,6 @@ import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.DeduplicatingBiConsumer;
-import net.yudichev.jiotty.common.lang.MoreThrowables.CheckedExceptionThrowingSupplier;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
 import net.yudichev.jiotty.common.lang.backoff.NanoClock;
@@ -115,7 +114,23 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
                     .withBackOffAndRetry("MQTT Connect to " + client.getServerURI(),
                             () -> {
                                 logger.debug("MQTT Connecting to {}", client.getServerURI());
-                                return toCompletableFuture(() -> client.connect(mqttConnectOptions));
+                                var future = new CompletableFuture<Void>();
+                                try {
+                                    client.connect(mqttConnectOptions, null, new IMqttActionListener() {
+                                        @Override
+                                        public void onSuccess(IMqttToken asyncActionToken) {
+                                            future.complete(null);
+                                        }
+
+                                        @Override
+                                        public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                                            future.completeExceptionally(exception);
+                                        }
+                                    });
+                                } catch (MqttException e) {
+                                    future.completeExceptionally(e);
+                                }
+                                return future;
                             },
                             (delayMillis, runnable) -> scheduleReconnect(executor, delayMillis, runnable));
             try {
@@ -178,27 +193,6 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             asUnchecked(() -> client.publish(topic, message.getBytes(UTF_8), 1, false));
             return null;
         }, executor);
-    }
-
-    private static CompletableFuture<Void> toCompletableFuture(CheckedExceptionThrowingSupplier<IMqttToken> tokenSupplier) {
-        var result = new CompletableFuture<Void>();
-        try {
-            IMqttToken mqttToken = tokenSupplier.get();
-            mqttToken.setActionCallback(new IMqttActionListener() {
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    result.complete(null);
-                }
-
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    result.completeExceptionally(exception);
-                }
-            });
-        } catch (Exception e) {
-            result.completeExceptionally(e);
-        }
-        return result;
     }
 
     @Override
