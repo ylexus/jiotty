@@ -13,6 +13,7 @@ import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class InternalGoogleNestThermostat implements GoogleNestThermostat {
@@ -49,19 +50,25 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
 
     @Override
     public CompletableFuture<Void> setMode(Mode mode) {
-        return CompletableFuture.supplyAsync(() -> getAsUnchecked(() -> {
-            if (mode == Mode.ECO) {
-                setEcoMode("MANUAL_ECO");
-            } else {
-                // must first switch off ECO, otherwise thermostat remains on ECO and the main trait is ignored
-                setEcoMode("OFF");
-                GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request = new GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest();
-                request.setCommand("sdm.devices.commands.ThermostatMode.SetMode");
-                request.setParams(ImmutableMap.of("mode", mode.name()));
-                executeRequest(request);
-            }
-            return null;
-        }), executor);
+        return getCurrentMode().thenAccept(currentMode ->
+                asUnchecked(() -> {
+                    if (mode == currentMode) {
+                        logger.debug("already in {}, will do nothing", mode);
+                        return;
+                    }
+                    if (mode == Mode.ECO) {
+                        setEcoMode("MANUAL_ECO");
+                    } else {
+                        if (currentMode == Mode.ECO) {
+                            // must first switch off ECO, otherwise thermostat remains on ECO and the main trait is ignored
+                            setEcoMode("OFF");
+                        }
+                        GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request = new GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest();
+                        request.setCommand("sdm.devices.commands.ThermostatMode.SetMode");
+                        request.setParams(ImmutableMap.of("mode", mode.name()));
+                        executeRequest(request);
+                    }
+                }));
     }
 
     private void setEcoMode(String ecoMode) throws java.io.IOException {
