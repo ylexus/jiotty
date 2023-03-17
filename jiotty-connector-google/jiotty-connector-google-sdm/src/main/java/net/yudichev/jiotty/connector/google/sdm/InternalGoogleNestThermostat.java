@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -32,24 +33,11 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
 
     @Override
     public CompletableFuture<Mode> getCurrentMode() {
-        return CompletableFuture.supplyAsync(() -> getAsUnchecked(() -> {
-            logger.debug("devices.get({})...", deviceName);
-            GoogleHomeEnterpriseSdmV1Device device = smartDeviceManagement.enterprises().devices().get(deviceName).execute();
-            logger.debug("... {}", device);
-            Map<String, String> modeTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatMode");
-            checkState(modeTrait != null, "Thermostat does not support modes");
-            Map<String, String> ecoTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatEco");
-            if (ecoTrait != null) {
-                if ("MANUAL_ECO".equals(ecoTrait.get("mode"))) {
-                    return Mode.ECO;
-                }
-            }
-            return Mode.valueOf(modeTrait.get("mode"));
-        }), executor);
+        return CompletableFuture.supplyAsync(() -> getAsUnchecked(this::doGetCurrentMode), executor);
     }
 
     @Override
-    public CompletableFuture<Void> setMode(Mode mode) {
+    public CompletableFuture<Void> setMode(Mode mode, boolean verify) {
         return getCurrentMode().thenAccept(currentMode ->
                 asUnchecked(() -> {
                     if (mode == currentMode) {
@@ -67,8 +55,29 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
                         request.setCommand("sdm.devices.commands.ThermostatMode.SetMode");
                         request.setParams(ImmutableMap.of("mode", mode.name()));
                         executeRequest(request);
+
+                        // verify
+                        if (verify) {
+                            Mode actualMode = doGetCurrentMode();
+                            checkState(actualMode == mode, "Mode verification failed, requested %s, but it's still %s", mode, actualMode);
+                        }
                     }
                 }));
+    }
+
+    private Mode doGetCurrentMode() throws IOException {
+        logger.debug("devices.get({})...", deviceName);
+        GoogleHomeEnterpriseSdmV1Device device = smartDeviceManagement.enterprises().devices().get(deviceName).execute();
+        logger.debug("... {}", device);
+        Map<String, String> modeTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatMode");
+        checkState(modeTrait != null, "Thermostat does not support modes");
+        Map<String, String> ecoTrait = (Map<String, String>) device.getTraits().get("sdm.devices.traits.ThermostatEco");
+        if (ecoTrait != null) {
+            if ("MANUAL_ECO".equals(ecoTrait.get("mode"))) {
+                return Mode.ECO;
+            }
+        }
+        return Mode.valueOf(modeTrait.get("mode"));
     }
 
     private void setEcoMode(String ecoMode) throws java.io.IOException {

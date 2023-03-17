@@ -9,7 +9,6 @@ import net.yudichev.jiotty.common.async.Scheduler;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
-import net.yudichev.jiotty.common.lang.DeduplicatingBiConsumer;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
 import net.yudichev.jiotty.common.lang.backoff.NanoClock;
@@ -135,10 +134,10 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
                             (delayMillis, runnable) -> scheduleReconnect(executor, delayMillis, runnable));
             try {
                 waitForConnectFutureAndThen(connectFuture, () -> logger.info("Connected to {}", client.getServerURI()));
-            } catch (Exception e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("Failed to connect to {}", client.getServerURI(), e);
+            } catch (ExecutionException e) {
                 logger.warn("Failed to connect to {}", client.getServerURI(), e);
             }
         });
@@ -163,7 +162,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     @Override
     public Closeable subscribe(String topicFilter, BiConsumer<String, String> dataCallback) {
         checkStarted();
-        BiConsumer<String, MqttMessage> callback = exceptionLogging(new MessageToStringDataCallback(new DeduplicatingBiConsumer<>(dataCallback)));
+        BiConsumer<String, MqttMessage> callback = exceptionLogging(new MessageToStringDataCallback(dataCallback));
         executor.execute(() -> {
             deliverImage(topicFilter, callback);
             subscriptionsByFilter.computeIfAbsent(topicFilter, filter -> {
