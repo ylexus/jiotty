@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.TemporalAmount;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,18 +31,38 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
     private boolean mdc;
     @Nullable
     private Instant currentTaskTime;
+    private ZoneId zoneId = ZoneOffset.UTC;
+    private boolean taskSeeingTargetTime;
 
     public ProgrammableClock withMdc() {
         mdc = true;
         return this;
     }
 
+    public ProgrammableClock withTimeZone(ZoneId zoneId) {
+        this.zoneId = zoneId;
+        return this;
+    }
+
+    public ProgrammableClock withTasksSeeingTargetTime(boolean taskSeeingTargetTime) {
+        this.taskSeeingTargetTime = taskSeeingTargetTime;
+        return this;
+    }
+
     public void tick() {
-        executeDueTasks();
+        // execute due tasks
+        checkState(currentTaskTime == null, "ticking from inside a task is not supported");
+        Instant targetTime = currentTime;
+        boolean pendingTasks = !tasksByTriggerTime.isEmpty();
+        while (pendingTasks) {
+            Optional<List<Task>> tasksDueAtEarliestInstant = tasksByTriggerTime.headMap(targetTime, true).values().stream().findFirst();
+            tasksDueAtEarliestInstant.ifPresent(tasks -> new ArrayList<>(tasks).forEach(Task::run));
+            pendingTasks = tasksDueAtEarliestInstant.isPresent();
+        }
     }
 
     public void setTimeAndTick(Instant time) {
-        setCurrentTime(time);
+        setTime(time);
         tick();
     }
 
@@ -52,12 +73,12 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
 
     @Override
     public LocalDateTime currentDateTime() {
-        return currentInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        return currentInstant().atZone(zoneId).toLocalDateTime();
     }
 
     @Override
     public Instant currentInstant() {
-        return currentTaskTime == null ? currentTime : currentTaskTime;
+        return currentTaskTime == null || taskSeeingTargetTime ? currentTime : currentTaskTime;
     }
 
     @Override
@@ -69,16 +90,6 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
     @Override
     public SchedulingExecutor createSingleThreadedSchedulingExecutor(String threadNameBase) {
         return new DeterministicExecutor(this, threadNameBase);
-    }
-
-    public void executeDueTasks() {
-        Instant now = currentInstant();
-        boolean pendingTasks = !tasksByTriggerTime.isEmpty();
-        while (pendingTasks) {
-            Optional<List<Task>> tasksDueAtEarliestInstant = tasksByTriggerTime.headMap(now, true).values().stream().findFirst();
-            tasksDueAtEarliestInstant.ifPresent(tasks -> new ArrayList<>(tasks).forEach(Task::run));
-            pendingTasks = tasksDueAtEarliestInstant.isPresent();
-        }
     }
 
     Closeable schedule(DeterministicExecutor executor, TemporalAmount delay, Runnable command) {
@@ -123,14 +134,14 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
         }
     }
 
-    private void setCurrentTime(Instant currentTime) {
+    public void setTime(Instant currentTime) {
         checkArgument(currentTime.isAfter(this.currentTime) || currentTime.equals(this.currentTime),
                 "time cannot go backward from %s to %s", this.currentTime, currentTime);
         this.currentTime = checkNotNull(currentTime);
     }
 
-    private void advanceTime(TemporalAmount increment) {
-        setCurrentTime(currentTime.plus(increment));
+    public void advanceTime(TemporalAmount increment) {
+        setTime(currentTime.plus(increment));
     }
 
     private abstract class Task extends BaseIdempotentCloseable implements Runnable {
