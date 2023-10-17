@@ -16,7 +16,7 @@ import java.time.LocalTime;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 
-final class JobSchedulerImpl extends BaseLifecycleComponent implements JobScheduler {
+public final class JobSchedulerImpl extends BaseLifecycleComponent implements JobScheduler {
     private static final Logger logger = LoggerFactory.getLogger(JobSchedulerImpl.class);
 
     private final ExecutorFactory executorFactory;
@@ -24,8 +24,8 @@ final class JobSchedulerImpl extends BaseLifecycleComponent implements JobSchedu
     private SchedulingExecutor sharedScheduler;
 
     @Inject
-    JobSchedulerImpl(ExecutorFactory executorFactory,
-                     CurrentDateTimeProvider currentDateTimeProvider) {
+    public JobSchedulerImpl(ExecutorFactory executorFactory,
+                            CurrentDateTimeProvider currentDateTimeProvider) {
         this.executorFactory = checkNotNull(executorFactory);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
     }

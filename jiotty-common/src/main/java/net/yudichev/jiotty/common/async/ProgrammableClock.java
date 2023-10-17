@@ -111,7 +111,11 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
             public void doRun() {
                 command.run();
                 Instant wasDue = unSchedule();
-                schedule(wasDue.plus(period));
+                if (wasDue != null) {
+                    schedule(wasDue.plus(period));
+                } else {
+                    // task closed itself
+                }
             }
         };
         task.schedule(currentInstant().plus(initialDelay));
@@ -181,16 +185,17 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
         }
 
         public final Instant unSchedule() {
-            checkState(due != null, "not scheduled");
-            tasksByTriggerTime.compute(due, (duration, tasks) -> {
-                if (tasks != null) { // can be null if the executor was shut down in the meantime, which eventually removes all its tasks
-                    tasks.remove(this);
-                    if (tasks.isEmpty()) {
-                        return null;
+            if (due != null) {
+                tasksByTriggerTime.compute(due, (duration, tasks) -> {
+                    if (tasks != null) { // can be null if the executor was shut down in the meantime, which eventually removes all its tasks
+                        tasks.remove(this);
+                        if (tasks.isEmpty()) {
+                            return null;
+                        }
                     }
-                }
-                return tasks;
-            });
+                    return tasks;
+                });
+            }
             Instant wasDue = due;
             due = null;
             return wasDue;

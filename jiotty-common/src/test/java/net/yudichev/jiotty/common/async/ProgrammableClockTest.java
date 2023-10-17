@@ -292,4 +292,36 @@ class ProgrammableClockTest {
         verify(task).run();
         verify(task2, never()).run();
     }
+
+    @Test
+    void oneTimeScheduledTaskClosesItself() {
+        new Object() {
+            private Closeable schedule;
+
+            {
+                schedule = executor.schedule(Duration.ofSeconds(1), () -> {
+                    task.run();
+                    schedule.close();
+                });
+                clock.advanceTimeAndTick(Duration.ofSeconds(1));
+                verify(task).run();
+            }
+        };
+    }
+
+    @Test
+    void periodicScheduledTaskClosesItself() {
+        new Object() {
+            private Closeable schedule;
+
+            {
+                schedule = executor.scheduleAtFixedRate(Duration.ofSeconds(1), Duration.ofSeconds(1), () -> {
+                    task.run();
+                    schedule.close();
+                });
+                clock.advanceTimeAndTick(Duration.ofSeconds(10));
+                verify(task).run();
+            }
+        };
+    }
 }
