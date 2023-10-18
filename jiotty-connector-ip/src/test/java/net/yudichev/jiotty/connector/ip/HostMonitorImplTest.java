@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -26,7 +27,14 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.connector.ip.HostMonitor.Status.DOWN;
 import static net.yudichev.jiotty.connector.ip.HostMonitor.Status.UP;
 import static net.yudichev.jiotty.connector.ip.HostMonitorImpl.InetAddressResolver;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(MockitoExtension.class)
@@ -45,18 +53,14 @@ class HostMonitorImplTest {
     @BeforeEach
     void setUp() {
         clock = new ProgrammableClock().withMdc();
-        monitor = new HostMonitorImpl(clock,
-                clock,
-                "hostname",
-                "name",
-                Duration.ofSeconds(30),
-                inetAddressResolver);
         executor = clock.createSingleThreadedSchedulingExecutor("test");
     }
 
     @Test
     void initialPingFailingOnlyNotifiedAfterStabilisationPeriod() {
-        expectFaiure();
+        createMonitor("hostname");
+
+        expectFailure("hostname");
         timeIs(0);
         monitor.start();
         monitor.addListener(statusConsumer, directExecutor());
@@ -72,7 +76,9 @@ class HostMonitorImplTest {
 
     @Test
     void initialPingSucceedingOnlyNotifiedAfterStabilisationPeriod() {
-        expectSuccessfulPing();
+        createMonitor("hostname");
+
+        expectSuccessfulPing("hostname");
         timeIs(0);
         monitor.start();
         monitor.addListener(statusConsumer, directExecutor());
@@ -88,8 +94,10 @@ class HostMonitorImplTest {
 
     @Test
     void shortGlitchIsNotReported() {
+        createMonitor("hostname");
+
         // setup with initial ping succeeding
-        expectSuccessfulPing();
+        expectSuccessfulPing("hostname");
         timeIs(0);
         monitor.start();
         monitor.addListener(statusConsumer, directExecutor());
@@ -98,24 +106,22 @@ class HostMonitorImplTest {
 
         clock.advanceTimeAndTick(Duration.ofSeconds(30));
 
-        executor.schedule(Duration.ofSeconds(10), this::expectFaiure);
+        executor.schedule(Duration.ofSeconds(10), () -> expectFailure("hostname"));
         clock.advanceTimeAndTick(Duration.ofSeconds(10));
-        executor.schedule(Duration.ofSeconds(10), this::expectSuccessfulPing);
+        executor.schedule(Duration.ofSeconds(10), () -> expectSuccessfulPing("hostname"));
 
         clock.advanceTimeAndTick(Duration.ofSeconds(60));
         verifyNoMoreInteractions(statusConsumer);
-    }
-
-    private void expectFaiure() {
-        asUnchecked(() -> when(inetAddressResolver.resolve("hostname")).thenThrow(new UnknownHostException("hostname")));
     }
 
     @SuppressWarnings({"unused", "BoundedWildcard", "OverlyLongMethod"})
     @ParameterizedTest(name = "{0}")
     @MethodSource
     void hostGoingDown_ConsumerCalledAfterStabilisationPeriod(String name, Consumer<InetAddressResolver> pingFailure) {
+        createMonitor("hostname");
+
         // setup with initial ping succeeding
-        expectSuccessfulPing();
+        expectSuccessfulPing("hostname");
         timeIs(0);
         monitor.start();
         monitor.addListener(statusConsumer, directExecutor());
@@ -131,7 +137,7 @@ class HostMonitorImplTest {
         verify(statusConsumer, never()).accept(any());
 
         // 35s: host goes up 25s after going down
-        executor.schedule(Duration.ofSeconds(25), this::expectSuccessfulPing);
+        executor.schedule(Duration.ofSeconds(25), () -> expectSuccessfulPing("hostname"));
         timeIs(35);
         verify(statusConsumer, never()).accept(any());
 
@@ -158,7 +164,7 @@ class HostMonitorImplTest {
         verify(statusConsumer, never()).accept(any());
 
         // 201s: host goes up
-        executor.schedule(Duration.ofSeconds(1), this::expectSuccessfulPing);
+        executor.schedule(Duration.ofSeconds(1), () -> expectSuccessfulPing("hostname"));
         timeIs(201);
         verify(statusConsumer, never()).accept(any());
 
@@ -171,7 +177,7 @@ class HostMonitorImplTest {
         verify(statusConsumer, never()).accept(any());
 
         // 230s: host goes up
-        executor.schedule(Duration.ofSeconds(15), this::expectSuccessfulPing);
+        executor.schedule(Duration.ofSeconds(15), () -> expectSuccessfulPing("hostname"));
         timeIs(230);
         verify(statusConsumer, never()).accept(any());
 
@@ -183,21 +189,8 @@ class HostMonitorImplTest {
         verifyNoMoreInteractions(statusConsumer);
     }
 
-    @Test
-    void shutdownWhileInFlight() {
-        expectSuccessfulPing();
-        timeIs(0);
-        monitor.start();
-        monitor.addListener(statusConsumer, directExecutor());
-        clock.tick();
-
-        clock.advanceTimeAndTick(Duration.ofSeconds(29).plus(Duration.ofMillis(500)));
-        monitor.stop();
-        clock.advanceTimeAndTick(Duration.ofSeconds(1));
-    }
-
     @SuppressWarnings("CodeBlock2Expr") // reads better
-    private static Stream<Arguments> hostGoingDown_ConsumerCalledAfterStabilisationPeriod() {
+    static Stream<Arguments> hostGoingDown_ConsumerCalledAfterStabilisationPeriod() {
         return Stream.of(
                 Arguments.of("unreachable", (Consumer<InetAddressResolver>) inetAddressResolver -> asUnchecked(() -> {
                     InetAddress inetAddress = mock(InetAddress.class);
@@ -215,12 +208,68 @@ class HostMonitorImplTest {
         );
     }
 
-    private void expectSuccessfulPing() {
+    @Test
+    void shutdownWhileInFlight() {
+        createMonitor("hostname");
+        expectSuccessfulPing("hostname");
+        timeIs(0);
+        monitor.start();
+        monitor.addListener(statusConsumer, directExecutor());
+        clock.tick();
+
+        clock.advanceTimeAndTick(Duration.ofSeconds(29).plus(Duration.ofMillis(500)));
+        monitor.stop();
+        clock.advanceTimeAndTick(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void multipleHosts() {
+        createMonitor("host1", "host2");
+
+        // setup with initial ping succeeding
+        expectSuccessfulPing("host1");
+        monitor.start();
+        monitor.addListener(statusConsumer, directExecutor());
+        clock.advanceTimeAndTick(Duration.ofSeconds(60));
+        verify(statusConsumer).accept(UP);
+
+        expectSuccessfulPing("host2");
+        expectFailure("host1");
+        clock.advanceTimeAndTick(Duration.ofSeconds(60));
+        verifyNoMoreInteractions(statusConsumer);
+
+        reset(inetAddressResolver, statusConsumer);
+        expectFailure("host1");
+        expectFailure("host2");
+        clock.advanceTimeAndTick(Duration.ofSeconds(60));
+        verify(statusConsumer).accept(DOWN);
+
+        reset(statusConsumer);
+        expectSuccessfulPing("host2");
+        expectFailure("host1");
+        clock.advanceTimeAndTick(Duration.ofSeconds(60));
+        verify(statusConsumer).accept(UP);
+    }
+
+    private void createMonitor(String... hostnames) {
+        monitor = new HostMonitorImpl(clock,
+                clock,
+                List.of(hostnames),
+                "deviceName",
+                Duration.ofSeconds(30),
+                inetAddressResolver);
+    }
+
+    private void expectSuccessfulPing(String hostname) {
         asUnchecked(() -> {
             reset(inetAddressResolver, inetAddress);
-            when(inetAddressResolver.resolve("hostname")).thenReturn(inetAddress);
-            when(inetAddress.isReachable(anyInt())).thenReturn(true);
+            lenient().when(inetAddressResolver.resolve(hostname)).thenReturn(inetAddress);
+            lenient().when(inetAddress.isReachable(anyInt())).thenReturn(true);
         });
+    }
+
+    private void expectFailure(String hostname) {
+        asUnchecked(() -> lenient().when(inetAddressResolver.resolve(hostname)).thenThrow(new UnknownHostException(hostname)));
     }
 
     private void timeIs(long seconds) {

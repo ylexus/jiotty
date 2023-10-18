@@ -1,20 +1,28 @@
 package net.yudichev.jiotty.connector.ip;
 
+import com.google.common.reflect.TypeToken;
 import com.google.inject.Key;
-import net.yudichev.jiotty.common.inject.*;
+import com.google.inject.TypeLiteral;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
+import net.yudichev.jiotty.common.inject.BindingSpec;
+import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import net.yudichev.jiotty.common.inject.HasWithAnnotation;
+import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class HostMonitorModule extends BaseLifecycleComponentModule implements ExposedKeyModule<HostMonitor> {
-    private final BindingSpec<String> hostnameSpec;
+    private final BindingSpec<List<String>> hostnameSpec;
     private final BindingSpec<String> nameSpec;
     private final BindingSpec<Duration> toleranceSpec;
     private final Key<HostMonitor> exposedKey;
 
-    private HostMonitorModule(BindingSpec<String> hostnameSpec,
+    private HostMonitorModule(BindingSpec<List<String>> hostnameSpec,
                               BindingSpec<String> nameSpec,
                               BindingSpec<Duration> toleranceSpec,
                               SpecifiedAnnotation specifiedAnnotation) {
@@ -35,8 +43,8 @@ public final class HostMonitorModule extends BaseLifecycleComponentModule implem
 
     @Override
     protected void configure() {
-        hostnameSpec.bind(String.class)
-                .annotatedWith(HostMonitorImpl.Hostname.class)
+        hostnameSpec.bind(new TypeLiteral<>() {})
+                .annotatedWith(HostMonitorImpl.Hostnames.class)
                 .installedBy(this::installLifecycleComponentModule);
         nameSpec.bind(String.class)
                 .annotatedWith(HostMonitorImpl.Name.class)
@@ -49,12 +57,12 @@ public final class HostMonitorModule extends BaseLifecycleComponentModule implem
     }
 
     public static final class Builder implements TypedBuilder<ExposedKeyModule<HostMonitor>>, HasWithAnnotation {
-        private BindingSpec<String> hostnameSpec;
+        private BindingSpec<List<String>> hostnameSpec;
         private BindingSpec<String> nameSpec;
         private BindingSpec<Duration> toleranceSpec = BindingSpec.literally(Duration.ofSeconds(30));
         private SpecifiedAnnotation specifiedAnnotation = SpecifiedAnnotation.forNoAnnotation();
 
-        public Builder setHostname(BindingSpec<String> hostnameSpec) {
+        public Builder setHostnames(BindingSpec<List<String>> hostnameSpec) {
             this.hostnameSpec = checkNotNull(hostnameSpec);
             return this;
         }
@@ -77,7 +85,12 @@ public final class HostMonitorModule extends BaseLifecycleComponentModule implem
 
         @Override
         public ExposedKeyModule<HostMonitor> build() {
-            return new HostMonitorModule(hostnameSpec, nameSpec == null ? hostnameSpec : nameSpec, toleranceSpec, specifiedAnnotation);
+            return new HostMonitorModule(hostnameSpec,
+                    nameSpec == null
+                            ? hostnameSpec.map(new TypeToken<>() {}, new TypeToken<>() {}, Objects::toString)
+                            : nameSpec,
+                    toleranceSpec,
+                    specifiedAnnotation);
         }
     }
 }

@@ -10,6 +10,7 @@ import net.yudichev.jiotty.common.time.TimeModule;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
@@ -22,7 +23,7 @@ class HostMonitorModuleTest {
                 new ExecutorModule(),
                 new TimeModule(),
                 HostMonitorModule.builder()
-                        .setHostname(literally("hostname"))
+                        .setHostnames(literally(List.of("host1", "host2")))
                         .withName(literally("name"))
                         .withTolerance(literally(Duration.ofSeconds(1)))
                         .withAnnotation(forAnnotation(annotation))
