@@ -163,7 +163,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
                     //noinspection BreakStatement
                     break;
                 } else {
-                    unreachableReasons.add("Address " + hostname + "unreachable");
+                    unreachableReasons.add("Address " + hostname + " unreachable");
                 }
             } catch (IOException e) {
                 unreachableReasons.add(hostname + ": " + humanReadableMessage(e));
