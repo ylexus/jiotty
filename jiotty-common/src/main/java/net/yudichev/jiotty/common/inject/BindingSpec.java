@@ -2,15 +2,23 @@ package net.yudichev.jiotty.common.inject;
 
 import com.google.common.reflect.TypeParameter;
 import com.google.common.reflect.TypeToken;
+import com.google.inject.BindingAnnotation;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.*;
+import com.google.inject.Scope;
+import com.google.inject.TypeLiteral;
 import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.name.Names;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.lang.annotation.*;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
