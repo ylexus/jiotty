@@ -25,10 +25,12 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.common.rest.ContentTypes.CONTENT_TYPE_JSON;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
-import static net.yudichev.jiotty.connector.slide.Bindings.*;
+import static net.yudichev.jiotty.connector.slide.Bindings.Email;
+import static net.yudichev.jiotty.connector.slide.Bindings.Password;
+import static net.yudichev.jiotty.connector.slide.Bindings.ServiceExecutor;
 
-final class SlideServiceImpl extends BaseLifecycleComponent implements SlideService {
-    private static final Logger logger = LoggerFactory.getLogger(SlideServiceImpl.class);
+final class CloudSlideService extends BaseLifecycleComponent implements SlideService {
+    private static final Logger logger = LoggerFactory.getLogger(CloudSlideService.class);
 
     private final OkHttpClient client = newClient();
     private final String email;
@@ -38,9 +40,9 @@ final class SlideServiceImpl extends BaseLifecycleComponent implements SlideServ
     private Closeable tokenRefreshSchedule = Closeable.noop();
 
     @Inject
-    SlideServiceImpl(@ServiceExecutor Provider<SchedulingExecutor> executorProvider,
-                     @Email String email,
-                     @Password String password) {
+    CloudSlideService(@ServiceExecutor Provider<SchedulingExecutor> executorProvider,
+                      @Email String email,
+                      @Password String password) {
         this.executorProvider = checkNotNull(executorProvider);
         this.email = checkNotNull(email);
         this.password = checkNotNull(password);

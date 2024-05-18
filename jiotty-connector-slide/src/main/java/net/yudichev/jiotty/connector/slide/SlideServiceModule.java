@@ -2,29 +2,43 @@ package net.yudichev.jiotty.connector.slide;
 
 import com.google.inject.Key;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
-import net.yudichev.jiotty.common.inject.*;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
+import net.yudichev.jiotty.common.inject.BindingSpec;
+import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import net.yudichev.jiotty.common.inject.HasWithAnnotation;
+import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
 import javax.inject.Singleton;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
-import static net.yudichev.jiotty.connector.slide.Bindings.*;
+import static net.yudichev.jiotty.connector.slide.Bindings.DeviceHost;
+import static net.yudichev.jiotty.connector.slide.Bindings.Email;
+import static net.yudichev.jiotty.connector.slide.Bindings.Password;
+import static net.yudichev.jiotty.connector.slide.Bindings.ServiceExecutor;
 
 public final class SlideServiceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<SlideService> {
+    private final BindingSpec<String> hostSpec;
     private final BindingSpec<String> emailSpec;
     private final BindingSpec<String> passwordSpec;
     private final Optional<BindingSpec<Double>> positionVerificationToleranceSpec;
     private final Key<SlideService> exposedKey;
 
-    private SlideServiceModule(BindingSpec<String> emailSpec,
+    private boolean executorBound;
+
+    private SlideServiceModule(BindingSpec<String> hostSpec,
+                               BindingSpec<String> emailSpec,
                                BindingSpec<String> passwordSpec,
                                Optional<BindingSpec<Double>> positionVerificationToleranceSpec,
                                SpecifiedAnnotation specifiedAnnotation) {
-        this.emailSpec = checkNotNull(emailSpec);
-        this.passwordSpec = checkNotNull(passwordSpec);
+        this.hostSpec = hostSpec;
+        this.emailSpec = emailSpec;
+        this.passwordSpec = passwordSpec;
         this.positionVerificationToleranceSpec = checkNotNull(positionVerificationToleranceSpec);
         exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
     }
@@ -40,39 +54,72 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
 
     @Override
     protected void configure() {
-        emailSpec.bind(String.class)
-                .annotatedWith(Email.class)
-                .installedBy(this::installLifecycleComponentModule);
-        passwordSpec.bind(String.class)
-                .annotatedWith(Password.class)
-                .installedBy(this::installLifecycleComponentModule);
+        Supplier<Key<? extends SlideService>> serivceImplKeySupplier;
 
-        bind(SchedulingExecutor.class).annotatedWith(ServiceExecutor.class).toProvider(registerLifecycleComponent(ExecutorProvider.class)).in(Singleton.class);
+        if (hostSpec != null) {
+            hostSpec.bind(String.class)
+                    .annotatedWith(DeviceHost.class)
+                    .installedBy(this::installLifecycleComponentModule);
+            serivceImplKeySupplier = () -> Key.get(LocalSlideService.class);
+        } else {
+            emailSpec.bind(String.class)
+                    .annotatedWith(Email.class)
+                    .installedBy(this::installLifecycleComponentModule);
+            passwordSpec.bind(String.class)
+                    .annotatedWith(Password.class)
+                    .installedBy(this::installLifecycleComponentModule);
+            bindExecutor();
+            serivceImplKeySupplier = () -> registerLifecycleComponent(CloudSlideService.class);
+        }
+
         positionVerificationToleranceSpec.ifPresentOrElse(
                 toleranceSpec -> {
                     toleranceSpec.bind(Double.class)
                             .annotatedWith(VerifyingSlideService.Tolerance.class)
                             .installedBy(this::installLifecycleComponentModule);
-                    bind(SlideService.class).annotatedWith(VerifyingSlideService.Delegate.class).to(registerLifecycleComponent(SlideServiceImpl.class));
+                    bindExecutor();
+                    bind(SlideService.class).annotatedWith(VerifyingSlideService.Delegate.class).to(serivceImplKeySupplier.get());
                     bind(exposedKey).to(VerifyingSlideService.class);
                 },
-                () -> bind(exposedKey).to(registerLifecycleComponent(SlideServiceImpl.class)));
+                () -> bind(exposedKey).to(serivceImplKeySupplier.get()));
         expose(exposedKey);
+    }
+
+    private void bindExecutor() {
+        if (!executorBound) {
+            bind(SchedulingExecutor.class).annotatedWith(ServiceExecutor.class)
+                    .toProvider(registerLifecycleComponent(ExecutorProvider.class))
+                    .in(Singleton.class);
+            executorBound = true;
+        }
     }
 
     public static final class Builder implements TypedBuilder<ExposedKeyModule<SlideService>>, HasWithAnnotation {
         private BindingSpec<String> emailSpec;
         private BindingSpec<String> passwordSpec;
+        private BindingSpec<String> hostSpec;
         private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
         private BindingSpec<Double> positionVerificationToleranceSpec;
 
         public Builder setEmail(BindingSpec<String> emailSpec) {
+            ensureHostNotSet();
             this.emailSpec = checkNotNull(emailSpec);
             return this;
         }
 
         public Builder setPassword(BindingSpec<String> passwordSpec) {
+            ensureHostNotSet();
             this.passwordSpec = checkNotNull(passwordSpec);
+            return this;
+        }
+
+        private void ensureHostNotSet() {
+            checkState(hostSpec == null, "host is mutually exclusive with email/password");
+        }
+
+        public Builder setHost(BindingSpec<String> hostSpec) {
+            checkState(emailSpec == null && passwordSpec == null, "host is mutually exclusive with email/password");
+            this.hostSpec = checkNotNull(hostSpec);
             return this;
         }
 
@@ -93,7 +140,11 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
 
         @Override
         public ExposedKeyModule<SlideService> build() {
-            return new SlideServiceModule(emailSpec, passwordSpec, Optional.ofNullable(positionVerificationToleranceSpec), specifiedAnnotation);
+            if (hostSpec == null) {
+                checkState(emailSpec != null && passwordSpec != null, "email and password are required when host is not specified");
+            }
+
+            return new SlideServiceModule(hostSpec, emailSpec, passwordSpec, Optional.ofNullable(positionVerificationToleranceSpec), specifiedAnnotation);
         }
     }
 }

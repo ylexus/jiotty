@@ -4,15 +4,16 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import net.yudichev.jiotty.appliance.Appliance;
-import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.async.backoff.BackOffConfig;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.time.TimeModule;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.stream.Stream;
 
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -20,11 +21,9 @@ import static org.hamcrest.Matchers.is;
 
 @ExtendWith(MockitoExtension.class)
 class SlideApplianceModuleTest {
-    @Mock
-    private ExecutorFactory executorFactory;
-
-    @Test
-    void test() {
+    @ParameterizedTest
+    @MethodSource
+    void test(ExposedKeyModule<SlideService> slideServiceModule) {
         ExposedKeyModule<Appliance> applianceModule = SlideApplianceModule.builder()
                 .setSlideIdSpec(literally(1L))
                 .withRetries(literally(BackOffConfig.builder().build()))
@@ -32,14 +31,24 @@ class SlideApplianceModuleTest {
         Injector injector = Guice.createInjector(
                 new TimeModule(),
                 new ExecutorModule(),
+                slideServiceModule,
+                applianceModule);
+
+        assertThat(applianceModule.getExposedKey(), is(Key.get(Appliance.class)));
+        injector.getBinding(applianceModule.getExposedKey());
+    }
+
+    public static Stream<ExposedKeyModule<SlideService>> test() {
+        return Stream.of(
                 SlideServiceModule.builder()
                         .setEmail(literally("email"))
                         .setPassword(literally("password"))
                         .withPositionVerification()
                         .build(),
-                applianceModule);
-
-        assertThat(applianceModule.getExposedKey(), is(Key.get(Appliance.class)));
-        injector.getBinding(applianceModule.getExposedKey());
+                SlideServiceModule.builder()
+                        .setHost(literally("host"))
+                        .withPositionVerification()
+                        .build()
+        );
     }
 }

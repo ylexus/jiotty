@@ -5,7 +5,9 @@ import com.google.inject.BindingAnnotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 final class Bindings {
@@ -20,16 +22,25 @@ final class Bindings {
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME) @interface Password {
+    @Retention(RUNTIME)
+    @interface Password {
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME) @interface SlideId {
+    @Retention(RUNTIME)
+    @interface DeviceHost {
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME) @interface ServiceExecutor {
+    @Retention(RUNTIME)
+    @interface SlideId {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface ServiceExecutor {
     }
 }
