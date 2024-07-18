@@ -1,43 +1,46 @@
 package net.yudichev.jiotty.connector.rpigpio;
 
-import com.pi4j.io.gpio.GpioController;
-import com.pi4j.io.gpio.GpioPinDigitalInput;
-import com.pi4j.io.gpio.PinPullResistance;
-import com.pi4j.io.gpio.PinState;
-import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
-import com.pi4j.io.gpio.event.GpioPinListenerDigital;
+import com.pi4j.context.Context;
+import com.pi4j.io.gpio.digital.DigitalInput;
+import com.pi4j.io.gpio.digital.DigitalInputConfig;
+import com.pi4j.io.gpio.digital.DigitalInputProvider;
+import com.pi4j.io.gpio.digital.DigitalState;
+import com.pi4j.io.gpio.digital.DigitalStateChangeEvent;
+import com.pi4j.io.gpio.digital.DigitalStateChangeListener;
+import com.pi4j.io.gpio.digital.PullResistance;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.function.Consumer;
 
-import static com.pi4j.io.gpio.RaspiPin.GPIO_13;
-import static org.mockito.Mockito.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RpiDigitalPinStatusMonitorImplTest {
     @Mock
-    private GpioController gpioController;
+    private Context pi4jContext;
     @Mock
-    private GpioPinDigitalInput input;
+    private DigitalInput input;
     @Mock
-    private Consumer<PinState> stateConsumer;
+    private Consumer<DigitalState> stateConsumer;
     private RpiDigitalPinStatusMonitorImpl monitor;
 
     @BeforeEach
     void setUp() {
-        monitor = new RpiDigitalPinStatusMonitorImpl(() -> gpioController, GPIO_13, PinPullResistance.PULL_DOWN);
-    }
-
-    @Test
-    void startProvisionsPin() {
-        doStart();
-
-        verify(input).setShutdownOptions(true);
+        monitor = new RpiDigitalPinStatusMonitorImpl(() -> pi4jContext, 13, PullResistance.PULL_DOWN);
     }
 
     @Test
@@ -50,59 +53,65 @@ class RpiDigitalPinStatusMonitorImplTest {
     @Test
     void deliversInitialValueToNewSubscriber() {
         doStart();
-        when(input.getState()).thenReturn(PinState.HIGH);
+        when(input.state()).thenReturn(DigitalState.HIGH);
 
         monitor.addListener(stateConsumer);
 
-        verify(stateConsumer).accept(PinState.HIGH);
+        verify(stateConsumer).accept(DigitalState.HIGH);
     }
 
     @Test
     void deliversNewValueToSubscribers() {
         doStart();
-        when(input.getState()).thenReturn(PinState.HIGH);
-        GpioPinListenerDigital gpioPinListener = verifyInputAddListener();
+        when(input.state()).thenReturn(DigitalState.HIGH);
+        DigitalStateChangeListener digitalStateChangeListener = verifyInputAddListener();
         monitor.addListener(stateConsumer);
-        verify(stateConsumer).accept(PinState.HIGH);
-        verify(stateConsumer, never()).accept(PinState.LOW);
+        verify(stateConsumer).accept(DigitalState.HIGH);
+        verify(stateConsumer, never()).accept(DigitalState.LOW);
 
-        when(input.getState()).thenReturn(PinState.LOW);
-        gpioPinListener.handleGpioPinDigitalStateChangeEvent(new GpioPinDigitalStateChangeEvent(new Object(), input, PinState.LOW));
+        lenient().when(input.state()).thenReturn(DigitalState.LOW);
+        digitalStateChangeListener.onDigitalStateChange(new DigitalStateChangeEvent<>(input, DigitalState.LOW));
 
-        verify(stateConsumer).accept(PinState.LOW);
+        verify(stateConsumer).accept(DigitalState.LOW);
     }
 
     @Test
     void stopsDeliveringNewValuesToUnsubscribedSubscribers() {
         doStart();
-        when(input.getState()).thenReturn(PinState.HIGH);
+        when(input.state()).thenReturn(DigitalState.HIGH);
         monitor.addListener(stateConsumer).close();
-        GpioPinListenerDigital gpioPinListener = verifyInputAddListener();
+        DigitalStateChangeListener digitalStateChangeListener = verifyInputAddListener();
 
-        gpioPinListener.handleGpioPinDigitalStateChangeEvent(new GpioPinDigitalStateChangeEvent(new Object(), input, PinState.LOW));
+        digitalStateChangeListener.onDigitalStateChange(new DigitalStateChangeEvent<>(input, DigitalState.LOW));
 
-        verify(stateConsumer).accept(PinState.HIGH);
+        verify(stateConsumer).accept(DigitalState.HIGH);
         verifyNoMoreInteractions(stateConsumer);
     }
 
     @Test
     void stopRemovesControllerListener() {
         doStart();
-        GpioPinListenerDigital listener = verifyInputAddListener();
+        DigitalStateChangeListener listener = verifyInputAddListener();
 
         monitor.stop();
 
-        verify(input).removeListener(listener);
+        verify(input).shutdown(pi4jContext);
     }
 
-    private GpioPinListenerDigital verifyInputAddListener() {
-        ArgumentCaptor<GpioPinListenerDigital> listenerCaptor = ArgumentCaptor.forClass(GpioPinListenerDigital.class);
+    private DigitalStateChangeListener verifyInputAddListener() {
+        ArgumentCaptor<DigitalStateChangeListener> listenerCaptor = ArgumentCaptor.forClass(DigitalStateChangeListener.class);
         verify(input).addListener(listenerCaptor.capture());
         return listenerCaptor.getValue();
     }
 
     private void doStart() {
-        when(gpioController.provisionDigitalInputPin(GPIO_13, PinPullResistance.PULL_DOWN)).thenReturn(input);
+        var digitalInputProvider = mock(DigitalInputProvider.class);
+        when(pi4jContext.provider("gpiod-digital-input")).thenReturn(digitalInputProvider);
+        when(digitalInputProvider.create(any(DigitalInputConfig.class))).thenReturn(input);
         monitor.start();
+        verify(digitalInputProvider).create(ArgumentMatchers.<DigitalInputConfig>assertArg(digitalInputConfig -> {
+            assertThat(digitalInputConfig.address(), is(13));
+            assertThat(digitalInputConfig.pull(), is(PullResistance.PULL_DOWN));
+        }));
     }
 }

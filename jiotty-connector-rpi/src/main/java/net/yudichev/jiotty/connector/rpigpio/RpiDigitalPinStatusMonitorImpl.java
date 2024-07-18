@@ -1,8 +1,11 @@
 package net.yudichev.jiotty.connector.rpigpio;
 
 import com.google.inject.BindingAnnotation;
-import com.pi4j.io.gpio.*;
-import com.pi4j.io.gpio.event.GpioPinListenerDigital;
+import com.pi4j.context.Context;
+import com.pi4j.io.gpio.digital.DigitalInput;
+import com.pi4j.io.gpio.digital.DigitalInputProvider;
+import com.pi4j.io.gpio.digital.DigitalState;
+import com.pi4j.io.gpio.digital.PullResistance;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 
@@ -16,45 +19,49 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.CompositeException.runForAll;
 
 final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implements RpiDigitalPinStatusMonitor {
-    private final Provider<GpioController> gpioControllerProvider;
-    private final Pin pin;
-    private final PinPullResistance pinPullResistance;
-    private final Set<Consumer<PinState>> listeners = new CopyOnWriteArraySet<>();
+    private final Provider<Context> pi4jContextProvider;
+    private final Integer pin;
+    private final PullResistance pullResistance;
+    private final Set<Consumer<DigitalState>> listeners = new CopyOnWriteArraySet<>();
 
-    private GpioPinDigitalInput input;
     private Closeable closeable;
+    private DigitalInput input;
 
     @Inject
-    RpiDigitalPinStatusMonitorImpl(Provider<GpioController> gpioControllerProvider,
-                                   @Dependency Pin pin,
-                                   @Dependency PinPullResistance pinPullResistance) {
-        this.gpioControllerProvider = checkNotNull(gpioControllerProvider);
+    RpiDigitalPinStatusMonitorImpl(Provider<Context> pi4jContextProvider,
+                                   @Pin Integer pin,
+                                   @Dependency PullResistance pullResistance) {
+        this.pi4jContextProvider = checkNotNull(pi4jContextProvider);
         this.pin = checkNotNull(pin);
-        this.pinPullResistance = checkNotNull(pinPullResistance);
+        this.pullResistance = checkNotNull(pullResistance);
     }
 
     @Override
-    public Closeable addListener(Consumer<PinState> listener) {
+    public Closeable addListener(Consumer<DigitalState> listener) {
         return whenStartedAndNotLifecycling(() -> {
             checkArgument(listeners.add(listener), "already added: %s", listener);
-            listener.accept(input.getState());
+            listener.accept(input.state());
             return Closeable.idempotent(() -> listeners.remove(listener));
         });
     }
 
     @Override
     protected void doStart() {
-        input = gpioControllerProvider.get().provisionDigitalInputPin(pin, pinPullResistance);
-        input.setShutdownOptions(true);
-        // https://github.com/Pi4J/pi4j/issues/489: always query the PIN state and ignore the event value
-        GpioPinListenerDigital listener = event -> onListenerStateChange(input.getState());
-        input.addListener(listener);
-        closeable = Closeable.idempotent(() -> input.removeListener(listener));
+        Context pi4jContext = pi4jContextProvider.get();
+        DigitalInputProvider digitalInputProvider = pi4jContext.provider("gpiod-digital-input");
+        input = digitalInputProvider.create(DigitalInput.newConfigBuilder(pi4jContext)
+                .address(pin)
+                .pull(pullResistance)
+                .build());
+        input.addListener(event -> onListenerStateChange(event.state()));
+        closeable = Closeable.idempotent(() -> input.shutdown(pi4jContext));
     }
 
     @Override
@@ -62,7 +69,7 @@ final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implem
         closeable.close();
     }
 
-    private void onListenerStateChange(PinState state) {
+    private void onListenerStateChange(DigitalState state) {
         runForAll(listeners, pinStateConsumer -> pinStateConsumer.accept(state));
     }
 
@@ -70,5 +77,11 @@ final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implem
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface Dependency {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Pin {
     }
 }

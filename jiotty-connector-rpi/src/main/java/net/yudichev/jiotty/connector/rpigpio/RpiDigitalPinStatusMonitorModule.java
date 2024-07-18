@@ -1,7 +1,6 @@
 package net.yudichev.jiotty.connector.rpigpio;
 
-import com.pi4j.io.gpio.Pin;
-import com.pi4j.io.gpio.PinPullResistance;
+import com.pi4j.io.gpio.digital.PullResistance;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
@@ -9,12 +8,12 @@ import net.yudichev.jiotty.common.lang.TypedBuilder;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class RpiDigitalPinStatusMonitorModule extends BaseLifecycleComponentModule implements ExposedKeyModule<RpiDigitalPinStatusMonitor> {
-    private final Pin pin;
-    private final PinPullResistance pinPullResistance;
+    private final Integer pin;
+    private final PullResistance pullResistance;
 
-    private RpiDigitalPinStatusMonitorModule(Pin pin, PinPullResistance pinPullResistance) {
-        this.pin = checkNotNull(pin);
-        this.pinPullResistance = checkNotNull(pinPullResistance);
+    private RpiDigitalPinStatusMonitorModule(int pin, PullResistance pullResistance) {
+        this.pin = pin;
+        this.pullResistance = checkNotNull(pullResistance);
     }
 
     public static Builder builder() {
@@ -23,29 +22,29 @@ public final class RpiDigitalPinStatusMonitorModule extends BaseLifecycleCompone
 
     @Override
     protected void configure() {
-        bind(Pin.class).annotatedWith(RpiDigitalPinStatusMonitorImpl.Dependency.class).toInstance(pin);
-        bind(PinPullResistance.class).annotatedWith(RpiDigitalPinStatusMonitorImpl.Dependency.class).toInstance(pinPullResistance);
+        bind(Integer.class).annotatedWith(RpiDigitalPinStatusMonitorImpl.Pin.class).toInstance(pin);
+        bind(PullResistance.class).annotatedWith(RpiDigitalPinStatusMonitorImpl.Dependency.class).toInstance(pullResistance);
         bind(getExposedKey()).to(registerLifecycleComponent(RpiDigitalPinStatusMonitorImpl.class));
         expose(getExposedKey());
     }
 
     public static class Builder implements TypedBuilder<ExposedKeyModule<RpiDigitalPinStatusMonitor>> {
-        private Pin pin;
-        private PinPullResistance pinPullResistance;
+        private int pin;
+        private PullResistance pullResistance;
 
-        public Builder setPin(Pin pin) {
-            this.pin = checkNotNull(pin);
+        public Builder setPin(int pin) {
+            this.pin = pin;
             return this;
         }
 
-        public Builder setPinPullResistance(PinPullResistance pinPullResistance) {
-            this.pinPullResistance = checkNotNull(pinPullResistance);
+        public Builder setPullResistance(PullResistance pullResistance) {
+            this.pullResistance = checkNotNull(pullResistance);
             return this;
         }
 
         @Override
         public ExposedKeyModule<RpiDigitalPinStatusMonitor> build() {
-            return new RpiDigitalPinStatusMonitorModule(pin, pinPullResistance);
+            return new RpiDigitalPinStatusMonitorModule(pin, pullResistance);
         }
     }
 }

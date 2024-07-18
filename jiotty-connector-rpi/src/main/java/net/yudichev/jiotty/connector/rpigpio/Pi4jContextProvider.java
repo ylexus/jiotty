@@ -1,22 +1,22 @@
 package net.yudichev.jiotty.connector.rpigpio;
 
-import com.pi4j.io.gpio.GpioController;
-import com.pi4j.io.gpio.GpioFactory;
+import com.pi4j.Pi4J;
+import com.pi4j.context.Context;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 
 import javax.inject.Provider;
 
-final class GpioControllerProvider extends BaseLifecycleComponent implements Provider<GpioController> {
-    private GpioController gpio;
+final class Pi4jContextProvider extends BaseLifecycleComponent implements Provider<Context> {
+    private Context gpio;
 
     @Override
-    public GpioController get() {
+    public Context get() {
         return whenStartedAndNotLifecycling(() -> gpio);
     }
 
     @Override
     public void doStart() {
-        gpio = GpioFactory.getInstance();
+        gpio = Pi4J.newAutoContext();
     }
 
     @Override
