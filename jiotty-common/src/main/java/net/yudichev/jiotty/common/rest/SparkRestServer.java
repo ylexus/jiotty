@@ -32,5 +32,6 @@ final class SparkRestServer extends BaseLifecycleComponent implements RestServer
     @Override
     protected void doStop() {
         http.stop();
+        http.awaitStop();
     }
 }
