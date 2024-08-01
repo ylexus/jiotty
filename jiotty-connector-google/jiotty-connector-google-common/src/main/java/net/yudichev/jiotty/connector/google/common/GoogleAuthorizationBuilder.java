@@ -17,6 +17,7 @@ public final class GoogleAuthorizationBuilder implements TypedBuilder<GoogleAuth
     private Path authDataStoreRootDir;
     private URL credentialsUrl;
     private AuthorizationCodeInstalledApp.Browser browser = new AuthorizationCodeInstalledApp.DefaultBrowser();
+    private String localReceiverHostName = "localhost";
 
     public GoogleAuthorizationBuilder setHttpTransport(NetHttpTransport httpTransport) {
         this.httpTransport = checkNotNull(httpTransport);
@@ -25,6 +26,11 @@ public final class GoogleAuthorizationBuilder implements TypedBuilder<GoogleAuth
 
     public GoogleAuthorizationBuilder setAuthDataStoreRootDir(Path authDataStoreRootDir) {
         this.authDataStoreRootDir = checkNotNull(authDataStoreRootDir);
+        return this;
+    }
+
+    public GoogleAuthorizationBuilder setLocalReceiverHostName(String localReceiverHostName) {
+        this.localReceiverHostName = checkNotNull(localReceiverHostName);
         return this;
     }
 
@@ -57,6 +63,6 @@ public final class GoogleAuthorizationBuilder implements TypedBuilder<GoogleAuth
 
     @Override
     public GoogleAuthorization build() {
-        return new GoogleAuthorizationImpl(httpTransport, authDataStoreRootDir, credentialsUrl, requiredScopesBuilder.build(), browser);
+        return new GoogleAuthorizationImpl(httpTransport, authDataStoreRootDir, localReceiverHostName, credentialsUrl, requiredScopesBuilder.build(), browser);
     }
 }

@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
@@ -45,6 +47,7 @@ final class GoogleAuthorizationProvider implements Provider<GoogleAuthorization>
                 .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
                 .setAuthDataStoreRootDir(settings.authDataStoreRootDir())
                 .setCredentialsUrl(credentialsUrl)
+                .setLocalReceiverHostName(settings.localReceiverHostName())
                 .addRequiredScopes(requiredScopes)
                 .withBrowser(authorizationBrowser)
                 .build();
@@ -53,12 +56,10 @@ final class GoogleAuthorizationProvider implements Provider<GoogleAuthorization>
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    @interface Dependency {
-    }
+    @interface Dependency {}
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    @interface Scopes {
-    }
+    @interface Scopes {}
 }

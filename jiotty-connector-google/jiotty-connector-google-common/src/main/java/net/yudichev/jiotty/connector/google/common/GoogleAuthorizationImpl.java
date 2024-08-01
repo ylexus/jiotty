@@ -25,6 +25,7 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
     @SuppressWarnings("ConstructorWithTooManyParameters")
     GoogleAuthorizationImpl(NetHttpTransport httpTransport,
                             Path authDataStoreRootDir,
+                            String localReceiverHostName,
                             URL credentialsUrl,
                             List<String> scopes,
                             AuthorizationCodeInstalledApp.Browser browser) {
@@ -41,6 +42,7 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
                             .setAccessType("offline")
                             .build();
             LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+                    .setHost(localReceiverHostName)
                     .setPort(8888)
                     .build();
             credential = new AuthorizationCodeInstalledApp(flow, receiver, browser).authorize("user");
