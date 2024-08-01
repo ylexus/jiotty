@@ -18,6 +18,7 @@ final class Pi4jContextProvider extends BaseLifecycleComponent implements Provid
     private static final Logger logger = LoggerFactory.getLogger(Pi4jContextProvider.class);
 
     private final CountDownLatch shutdownBlocker = new CountDownLatch(1);
+    private volatile boolean pi4jShuttingDown;
     private Context gpio;
 
     @Override
@@ -32,6 +33,7 @@ final class Pi4jContextProvider extends BaseLifecycleComponent implements Provid
         gpio.addListener(new ShutdownListener() {
             @Override
             public void beforeShutdown(ShutdownEvent event) {
+                pi4jShuttingDown = true;
                 logger.debug("Blocking pi4j shutdown until this component is closed");
                 asUnchecked(() -> {
                     var stopTriggered = shutdownBlocker.await(1, MINUTES);
@@ -53,6 +55,9 @@ final class Pi4jContextProvider extends BaseLifecycleComponent implements Provid
     protected void doStop() {
         logger.debug("Releasing pi4j shutdown gate and shutting down pi4j");
         shutdownBlocker.countDown();
-        gpio.shutdown();
+        // best effort prevent double shutdown call, will work if the pi4j shutdown hook fires first
+        if (!pi4jShuttingDown) {
+            gpio.shutdown();
+        }
     }
 }
