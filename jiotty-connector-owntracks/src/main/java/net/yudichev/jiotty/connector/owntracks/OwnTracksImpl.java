@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.owntracks;
 
+import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.async.DispatchedConsumer;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.Json;
@@ -8,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +19,10 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 final class OwnTracksImpl implements OwnTracks {
     private static final Logger logger = LoggerFactory.getLogger(OwnTracksImpl.class);
@@ -23,7 +30,7 @@ final class OwnTracksImpl implements OwnTracks {
     private final Mqtt mqtt;
 
     @Inject
-    OwnTracksImpl(Mqtt mqtt) {
+    OwnTracksImpl(@Dependency Mqtt mqtt) {
         this.mqtt = checkNotNull(mqtt);
     }
 
@@ -73,6 +80,12 @@ final class OwnTracksImpl implements OwnTracks {
 
     private static <T> Consumer<OwnTracksJsonMessage> parsed(Consumer<OwnTracksUpdate<T>> handler, Class<T> type) {
         return ownTracksJsonMessage -> handler.accept(OwnTracksUpdate.of(ownTracksJsonMessage.deviceKey(), Json.parse(ownTracksJsonMessage.payload(), type)));
+    }
+
+    @Retention(RUNTIME)
+    @Target({FIELD, PARAMETER, METHOD})
+    @BindingAnnotation
+    @interface Dependency {
     }
 
     private static class OrderProtectingConsumer<T extends HasFixTimestamp> implements Consumer<OwnTracksUpdate<T>> {
