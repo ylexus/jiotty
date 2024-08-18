@@ -46,6 +46,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
@@ -199,7 +200,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         closeIfNotNull(executor);
         // disconnect must not be scheduled to the executor that is potentially blocked on connect; this method also seems to be thread safe
         try {
-            client.disconnect();
+            client.disconnect().waitForCompletion(SECONDS.toMillis(10));
         } catch (MqttException e) {
             // if the client is already disconnected, disconnect() blows, and we do not care much about it
             logger.info("Failed to disconnect client: {}", humanReadableMessage(e));

@@ -12,7 +12,12 @@ import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
-import okhttp3.*;
+import okhttp3.Dispatcher;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,19 +29,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.time.Duration.ZERO;
 import static java.time.Duration.ofDays;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static net.yudichev.jiotty.appliance.PowerCommand.OFF;
 import static net.yudichev.jiotty.appliance.PowerCommand.ON;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.noop;
 import static net.yudichev.jiotty.common.lang.Json.object;
 import static net.yudichev.jiotty.common.rest.ContentTypes.CONTENT_TYPE_JSON;
-import static net.yudichev.jiotty.common.rest.RestClients.*;
+import static net.yudichev.jiotty.common.rest.RestClients.call;
+import static net.yudichev.jiotty.common.rest.RestClients.getRequiredNode;
+import static net.yudichev.jiotty.common.rest.RestClients.getRequiredNodeInt;
+import static net.yudichev.jiotty.common.rest.RestClients.getRequiredNodeString;
+import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 
 final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance {
     private static final Logger logger = LoggerFactory.getLogger(TpLinkSmartPlug.class);
@@ -52,10 +66,11 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private final String deviceId;
     private final String name;
     private final ExecutorFactory executorFactory;
-    private final OkHttpClient httpClient;
+    private OkHttpClient httpClient;
     private SchedulingExecutor executor;
     private CompletableFuture<String> tokenFuture;
-    private Closeable tokenRefreshSchedule = Closeable.noop();
+    private Closeable tokenRefreshSchedule = noop();
+    private ScheduledExecutorService clientExecutor;
 
     @Inject
     TpLinkSmartPlug(@Username String username,
@@ -70,10 +85,6 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         this.deviceId = checkNotNull(deviceId);
         this.name = checkNotNull(name);
         this.executorFactory = checkNotNull(executorFactory);
-        httpClient = newClient(builder -> builder.dispatcher(new Dispatcher(newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-                .setNameFormat(name + "-%d")
-                .setDaemon(true)
-                .build()))));
     }
 
     @Override
@@ -96,14 +107,18 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
 
     @Override
     protected void doStart() {
-        executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug");
+        clientExecutor = newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+                .setNameFormat(name + "-%d")
+                .setDaemon(true)
+                .build());
+        httpClient = newClient(builder -> builder.dispatcher(new Dispatcher(clientExecutor)));
+        executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug-" + name);
         tokenRefreshSchedule = executor.scheduleAtFixedRate(ZERO, TOKEN_REFRESH_PERIOD, this::refreshToken);
     }
 
     @Override
     protected void doStop() {
-        tokenRefreshSchedule.close();
-        executor.close();
+        closeSafelyIfNotNull(logger, tokenRefreshSchedule, executor, clientExecutor);
     }
 
     private void refreshToken() {
