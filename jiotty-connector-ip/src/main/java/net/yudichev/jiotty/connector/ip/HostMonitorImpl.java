@@ -139,12 +139,10 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     }
 
     private void scheduleNextPing() {
-        whenStartedAndNotLifecycling(() -> {
-            SchedulingExecutor executor = this.executor;
-            if (executor != null) {
-                pingSchedule = executor.schedule(periodBetweenPings, this::ping);
-            }
-        });
+        SchedulingExecutor executor = this.executor;
+        if (executor != null) {
+            pingSchedule = executor.schedule(periodBetweenPings, this::ping);
+        }
     }
 
     private void ping() {
