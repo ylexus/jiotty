@@ -7,6 +7,8 @@
       <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="64" />
     </JavaCodeStyleSettings>
     <codeStyleSettings language="JAVA">
+      <option name="ALIGN_MULTILINE_CHAINED_METHODS" value="true" />
+      <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
       <option name="CALL_PARAMETERS_WRAP" value="5" />
       <option name="METHOD_PARAMETERS_WRAP" value="5" />
       <option name="RESOURCE_LIST_WRAP" value="1" />

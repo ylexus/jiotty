@@ -12,5 +12,9 @@ public abstract class BaseIdempotentCloseable implements Closeable {
         }
     }
 
+    public final boolean isClosed() {
+        return closed.get();
+    }
+
     protected abstract void doClose();
 }

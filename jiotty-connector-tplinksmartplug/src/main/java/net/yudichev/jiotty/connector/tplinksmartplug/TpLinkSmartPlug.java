@@ -10,6 +10,7 @@ import net.yudichev.jiotty.appliance.CommandMeta;
 import net.yudichev.jiotty.appliance.PowerCommand;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import okhttp3.Dispatcher;
@@ -66,6 +67,8 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private final String deviceId;
     private final String name;
     private final ExecutorFactory executorFactory;
+    private final RetryableOperationExecutor retryableOperationExecutor;
+
     private OkHttpClient httpClient;
     private SchedulingExecutor executor;
     private CompletableFuture<String> tokenFuture;
@@ -78,12 +81,14 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                     @TermId String termId,
                     @DeviceId String deviceId,
                     @Name String name,
+                    @Dependency RetryableOperationExecutor retryableOperationExecutor,
                     ExecutorFactory executorFactory) {
         this.username = checkNotNull(username);
         this.password = checkNotNull(password);
         this.termId = checkNotNull(termId);
         this.deviceId = checkNotNull(deviceId);
         this.name = checkNotNull(name);
+        this.retryableOperationExecutor = retryableOperationExecutor;
         this.executorFactory = checkNotNull(executorFactory);
     }
 
@@ -97,9 +102,12 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         return whenStartedAndNotLifecycling(() -> {
             //noinspection RedundantTypeArguments compiler is not coping
             return tokenFuture
-                    .thenComposeAsync(token ->
-                                    command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
-                                            post(token, COMMAND_TO_STATE.get(powerCommand))),
+                    .thenComposeAsync(
+                            token -> retryableOperationExecutor.withBackOffAndRetry(
+                                    "execute " + command + " for plug " + name,
+                                    () -> command.<CompletableFuture<?>>acceptOrFail((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand ->
+                                            post(token, COMMAND_TO_STATE.get(powerCommand)))
+                            ),
                             executor)
                     .thenRun(() -> logger.info("Plug {}: executed {}", name, command));
         });
@@ -108,9 +116,9 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     @Override
     protected void doStart() {
         clientExecutor = newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-                .setNameFormat(name + "-%d")
-                .setDaemon(true)
-                .build());
+                                                                  .setNameFormat(name + "-%d")
+                                                                  .setDaemon(true)
+                                                                  .build());
         httpClient = newClient(builder -> builder.dispatcher(new Dispatcher(clientExecutor)));
         executor = executorFactory.createSingleThreadedSchedulingExecutor("tp-link-plug-" + name);
         tokenRefreshSchedule = executor.scheduleAtFixedRate(ZERO, TOKEN_REFRESH_PERIOD, this::refreshToken);
@@ -125,21 +133,21 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         whenStartedAndNotLifecycling(() -> {
             logger.info("Plug {}: requesting token", name);
             tokenFuture = call(httpClient.newCall(new Request.Builder()
-                            .url(new HttpUrl.Builder()
-                                    .scheme("https")
-                                    .host("eu-wap.tplinkcloud.com")
-                                    .build())
-                            .post(RequestBody.create(object()
-                                            .put("method", "login")
-                                            .set("params", object()
-                                                    .put("appType", "Kasa_Android")
-                                                    .put("cloudUserName", username)
-                                                    .put("cloudPassword", password)
-                                                    .put("terminalUUID", UUID.randomUUID().toString()))
-                                            .toString(),
-                                    MediaType.get(CONTENT_TYPE_JSON)))
-                            .build()),
-                    JsonNode.class)
+                                                          .url(new HttpUrl.Builder()
+                                                                       .scheme("https")
+                                                                       .host("eu-wap.tplinkcloud.com")
+                                                                       .build())
+                                                          .post(RequestBody.create(object()
+                                                                                           .put("method", "login")
+                                                                                           .set("params", object()
+                                                                                                   .put("appType", "Kasa_Android")
+                                                                                                   .put("cloudUserName", username)
+                                                                                                   .put("cloudPassword", password)
+                                                                                                   .put("terminalUUID", UUID.randomUUID().toString()))
+                                                                                           .toString(),
+                                                                                   MediaType.get(CONTENT_TYPE_JSON)))
+                                                          .build()),
+                               JsonNode.class)
                     .thenApply(TpLinkSmartPlug::verifyResponse)
                     .thenApply(resultJsonNode -> {
                         logger.info("Plug {}: obtained token", name);
@@ -148,32 +156,32 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
         });
     }
 
-    private CompletableFuture<?> post(String token, int state) {
+    private CompletableFuture<Void> post(String token, int state) {
         logger.debug("Setting plug {} state to {}", name, state);
         return call(httpClient.newCall(new Request.Builder()
-                .url(new HttpUrl.Builder()
-                        .scheme("https")
-                        .host("eu-wap.tplinkcloud.com")
-                        .addQueryParameter("token", token)
-                        .addQueryParameter("appName", "Kasa_Android")
-                        .addQueryParameter("termID", termId)
-                        .addQueryParameter("appVer", "1.4.4.607")
-                        .addQueryParameter("ospf", "Android 6.0.1")
-                        .addQueryParameter("netType", "wifi")
-                        .addQueryParameter("locale", "en_US")
-                        .build())
-                .post(RequestBody.create(object()
-                                .put("method", "passthrough")
-                                .set("params", object()
-                                        .put("deviceId", deviceId)
-                                        .put("requestData", object()
-                                                .set("system", object()
-                                                        .set("set_relay_state", object()
-                                                                .put("state", state)))
-                                                .toString()))
-                                .toString(),
-                        MediaType.get(CONTENT_TYPE_JSON)))
-                .build()), JsonNode.class)
+                                               .url(new HttpUrl.Builder()
+                                                            .scheme("https")
+                                                            .host("eu-wap.tplinkcloud.com")
+                                                            .addQueryParameter("token", token)
+                                                            .addQueryParameter("appName", "Kasa_Android")
+                                                            .addQueryParameter("termID", termId)
+                                                            .addQueryParameter("appVer", "1.4.4.607")
+                                                            .addQueryParameter("ospf", "Android 6.0.1")
+                                                            .addQueryParameter("netType", "wifi")
+                                                            .addQueryParameter("locale", "en_US")
+                                                            .build())
+                                               .post(RequestBody.create(object()
+                                                                                .put("method", "passthrough")
+                                                                                .set("params", object()
+                                                                                        .put("deviceId", deviceId)
+                                                                                        .put("requestData", object()
+                                                                                                .set("system", object()
+                                                                                                        .set("set_relay_state", object()
+                                                                                                                .put("state", state)))
+                                                                                                .toString()))
+                                                                                .toString(),
+                                                                        MediaType.get(CONTENT_TYPE_JSON)))
+                                               .build()), JsonNode.class)
                 .thenAccept(TpLinkSmartPlug::verifyResponse);
     }
 
@@ -218,5 +226,11 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface Name {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Dependency {
     }
 }

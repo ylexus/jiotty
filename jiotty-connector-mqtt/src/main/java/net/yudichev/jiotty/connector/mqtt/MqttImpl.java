@@ -101,38 +101,38 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     protected void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("Handler-" + client.getServerURI());
         BackOff backoff = new SynchronizedBackOff(new ExponentialBackOff.Builder()
-                .setNanoClock(nanoClock)
-                .setInitialIntervalMillis(1000)
-                .setMaxIntervalMillis(30_000)
-                .setMaxElapsedTimeMillis(Integer.MAX_VALUE)
-                .setRandomizationFactor(connectBackoffRandmisationFactor)
-                .build());
+                                                          .setNanoClock(nanoClock)
+                                                          .setInitialIntervalMillis(1000)
+                                                          .setMaxIntervalMillis(30_000)
+                                                          .setMaxElapsedTimeMillis(Integer.MAX_VALUE)
+                                                          .setRandomizationFactor(connectBackoffRandmisationFactor)
+                                                          .build());
         AsyncOperationRetry asyncOperationRetry = new AsyncOperationRetryImpl(AsyncOperationFailureHandler.forBackoff(backoff, logger));
         executor.execute(() -> {
             client.setCallback(new ResubscribeOnReconnectCallback());
             CompletableFuture<Void> connectFuture = asyncOperationRetry
                     .withBackOffAndRetry("MQTT Connect to " + client.getServerURI(),
-                            () -> {
-                                logger.debug("MQTT Connecting to {}", client.getServerURI());
-                                var future = new CompletableFuture<Void>();
-                                try {
-                                    client.connect(mqttConnectOptions, null, new IMqttActionListener() {
-                                        @Override
-                                        public void onSuccess(IMqttToken asyncActionToken) {
-                                            future.complete(null);
-                                        }
+                                         () -> {
+                                             logger.debug("MQTT Connecting to {}", client.getServerURI());
+                                             var future = new CompletableFuture<Void>();
+                                             try {
+                                                 client.connect(mqttConnectOptions, null, new IMqttActionListener() {
+                                                     @Override
+                                                     public void onSuccess(IMqttToken asyncActionToken) {
+                                                         future.complete(null);
+                                                     }
 
-                                        @Override
-                                        public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                                            future.completeExceptionally(exception);
-                                        }
-                                    });
-                                } catch (MqttException e) {
-                                    future.completeExceptionally(e);
-                                }
-                                return future;
-                            },
-                            (delayMillis, runnable) -> scheduleReconnect(executor, delayMillis, runnable));
+                                                     @Override
+                                                     public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                                                         future.completeExceptionally(exception);
+                                                     }
+                                                 });
+                                             } catch (MqttException e) {
+                                                 future.completeExceptionally(e);
+                                             }
+                                             return future;
+                                         },
+                                         (delayMillis, runnable) -> scheduleReconnect(executor, delayMillis, runnable));
             try {
                 waitForConnectFutureAndThen(connectFuture, () -> logger.info("Connected to {}", client.getServerURI()));
             } catch (InterruptedException e) {
@@ -167,7 +167,13 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         executor.execute(() -> {
             deliverImage(topicFilter, callback);
             subscriptionsByFilter.computeIfAbsent(topicFilter, filter -> {
-                doSubscribe(filter, (topic, message) -> runForAll(subscriptionsByFilter.get(filter), consumer -> consumer.accept(topic, message)));
+                doSubscribe(filter,
+                            (topic, message) -> {
+                                Set<BiConsumer<String, MqttMessage>> subscriptions = subscriptionsByFilter.get(filter);
+                                if (!subscriptions.isEmpty()) {
+                                    runForAll(subscriptions, consumer -> consumer.accept(topic, message));
+                                }
+                            });
                 return new HashSet<>();
             }).add(callback);
         });
@@ -278,7 +284,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
                 logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
                 try {
                     subscriptionsByFilter.forEach((topicFilter, callbacks) ->
-                            callbacks.forEach(callback -> doSubscribe(topicFilter, callback)));
+                                                          callbacks.forEach(callback -> doSubscribe(topicFilter, callback)));
                     backOff.reset();
                 } catch (RuntimeException e) {
                     long nextRetryInMs = backOff.nextBackOffMillis();

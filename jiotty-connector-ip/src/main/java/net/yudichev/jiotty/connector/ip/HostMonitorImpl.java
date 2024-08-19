@@ -85,7 +85,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
         this.name = checkNotNull(name);
         inetAddressResolver = checkNotNull(inetAddressFactory);
         checkState(tolerance.compareTo(Duration.ofSeconds(5)) >= 0,
-                "tolerance must be >= 5 seconds, but was %s", tolerance);
+                   "tolerance must be >= 5 seconds, but was %s", tolerance);
         this.tolerance = checkNotNull(tolerance);
         periodBetweenPings = tolerance.dividedBy(10);
     }
@@ -109,7 +109,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
         logger.info("Start monitoring {} ({}) with tolerance {}", name, hostnames, tolerance);
         executor = executorFactory.createSingleThreadedSchedulingExecutor("host-monitor-" + name);
         statusStabiliser = new DeduplicatingConsumer<>(referenceEquality(),
-                new StabilisingConsumer<>(executor, tolerance, this::onStableStatus));
+                                                       new StabilisingConsumer<>(executor, tolerance, this::onStableStatus));
 
         executor.execute(() -> {
             onStatus(UP, "Assume UP on startup");
@@ -122,6 +122,8 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
         SchedulingExecutor executor = this.executor;
         //noinspection AssignmentToNull
         this.executor = null;
+        // after this, provided everyone who uses executor on its thread checks for the nullness of the executor field, there will be no more tasks, meaning
+        // that the task below is guaranteed to be the last one
         executor.execute(() -> {
             pingSchedule.close();
             currentStatus = null;
@@ -184,7 +186,11 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
         if (status != currentStatus) {
             logger.info("{} ({}) provisionally {}->{} ({})", name, hostnames, currentStatus, status, description);
             currentStatus = status;
-            statusStabiliser.accept(currentStatus);
+            SchedulingExecutor executor = this.executor;
+            if (executor != null) {
+                // executor is used by the stabiliser to schedule more events; this cannot be done if we have stopped, or started stopping
+                statusStabiliser.accept(currentStatus);
+            }
         }
     }
 

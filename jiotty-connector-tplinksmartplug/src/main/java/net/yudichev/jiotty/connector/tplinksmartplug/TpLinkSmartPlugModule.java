@@ -3,13 +3,21 @@ package net.yudichev.jiotty.connector.tplinksmartplug;
 import com.google.inject.Key;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.appliance.ApplianceModule;
+import net.yudichev.jiotty.common.async.backoff.BackOffConfig;
+import net.yudichev.jiotty.common.async.backoff.BackingOffExceptionHandlerModule;
+import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutorModule;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.inject.HasWithAnnotation;
 import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
+import java.time.Duration;
+
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.inject.BindingSpec.exposedBy;
+import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
+import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
 public final class TpLinkSmartPlugModule extends ApplianceModule {
@@ -41,20 +49,34 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
     @Override
     protected Key<? extends Appliance> configureDependencies() {
         usernameSpec.bind(String.class)
-                .annotatedWith(TpLinkSmartPlug.Username.class)
-                .installedBy(this::installLifecycleComponentModule);
+                    .annotatedWith(TpLinkSmartPlug.Username.class)
+                    .installedBy(this::installLifecycleComponentModule);
         passwordSpec.bind(String.class)
-                .annotatedWith(TpLinkSmartPlug.Password.class)
-                .installedBy(this::installLifecycleComponentModule);
+                    .annotatedWith(TpLinkSmartPlug.Password.class)
+                    .installedBy(this::installLifecycleComponentModule);
         termIdSpec.bind(String.class)
-                .annotatedWith(TpLinkSmartPlug.TermId.class)
-                .installedBy(this::installLifecycleComponentModule);
+                  .annotatedWith(TpLinkSmartPlug.TermId.class)
+                  .installedBy(this::installLifecycleComponentModule);
         deviceIdSpec.bind(String.class)
-                .annotatedWith(TpLinkSmartPlug.DeviceId.class)
-                .installedBy(this::installLifecycleComponentModule);
+                    .annotatedWith(TpLinkSmartPlug.DeviceId.class)
+                    .installedBy(this::installLifecycleComponentModule);
         nameSpec.bind(String.class)
                 .annotatedWith(TpLinkSmartPlug.Name.class)
                 .installedBy(this::installLifecycleComponentModule);
+        installLifecycleComponentModule(
+                RetryableOperationExecutorModule
+                        .builder()
+                        .withAnnotation(forAnnotation(TpLinkSmartPlug.Dependency.class))
+                        .setBackingOffExceptionHandler(
+                                exposedBy(BackingOffExceptionHandlerModule
+                                                  .builder()
+                                                  .setRetryableExceptionPredicate(literally(throwable -> true))
+                                                  .withConfig(literally(BackOffConfig.builder().setInitialInterval(Duration.ofMillis(500))
+                                                                                     .setMaxInterval(Duration.ofSeconds(30))
+                                                                                     .setMaxElapsedTime(Duration.ofHours(3))
+                                                                                     .build()))
+                                                  .build()))
+                        .build());
         return registerLifecycleComponent(TpLinkSmartPlug.class);
     }
 

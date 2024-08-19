@@ -9,7 +9,11 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
-import org.apache.logging.log4j.core.*;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Core;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -21,6 +25,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,6 +37,7 @@ import static com.google.api.services.gmail.GmailScopes.GMAIL_SEND;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.BaseEncoding.base64;
+import static java.lang.Boolean.TRUE;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.connector.google.gmail.Constants.ME;
@@ -56,6 +62,7 @@ public final class GmailAppender extends AbstractAppender {
                           String emailAddress,
                           String authDataStoreRootDir,
                           String applicationName,
+                          Boolean addHostNameToSubject,
                           String credentialsResourcePath,
                           Property[] properties) {
         super(name, filter, layout, ignoreExceptions, properties);
@@ -63,11 +70,12 @@ public final class GmailAppender extends AbstractAppender {
         checkNotNull(credentialsResourcePath);
         credentialsUrl = GmailAppender.class.getClassLoader().getResource(credentialsResourcePath);
         checkArgument(credentialsUrl != null, "Credentials resource not found at %s", credentialsResourcePath);
-        this.applicationName = checkNotNull(applicationName, "applicationName attribute is required");
+        this.applicationName = checkNotNull(applicationName, "applicationName attribute is required")
+                + (TRUE.equals(addHostNameToSubject) ? " @ " + getAsUnchecked(() -> InetAddress.getLocalHost().getHostName()) : "");
         authDataStorePath = authDataStoreRootDir == null ?
                 Paths.get(System.getProperty("user.home"))
-                        .resolve("." + applicationName)
-                        .resolve("googletokens") :
+                     .resolve("." + applicationName)
+                     .resolve("googletokens") :
                 Paths.get(authDataStoreRootDir);
     }
 
@@ -78,6 +86,7 @@ public final class GmailAppender extends AbstractAppender {
                                                @PluginAttribute("emailAddress") String emailAddress,
                                                @PluginAttribute("authDataStoreRootDir") String authDataStoreRootDir,
                                                @PluginAttribute("applicationName") String applicationName,
+                                               @PluginAttribute("addHostNameToSubject") Boolean addHostNameToSubject,
                                                @PluginAttribute("credentialsResourcePath") String credentialsResourcePath,
                                                @PluginElement("Layout") Layout<? extends Serializable> layout,
                                                @PluginElement("Filters") Filter filter) {
@@ -87,7 +96,16 @@ public final class GmailAppender extends AbstractAppender {
         if (layout == null) {
             layout = PatternLayout.createDefaultLayout();
         }
-        return new GmailAppender(name, filter, layout, ignoreExceptions, emailAddress, authDataStoreRootDir, applicationName, credentialsResourcePath, null);
+        return new GmailAppender(name,
+                                 filter,
+                                 layout,
+                                 ignoreExceptions,
+                                 emailAddress,
+                                 authDataStoreRootDir,
+                                 applicationName,
+                                 addHostNameToSubject,
+                                 credentialsResourcePath,
+                                 null);
     }
 
     @Override
@@ -112,11 +130,11 @@ public final class GmailAppender extends AbstractAppender {
             inLock(lock, () -> {
                 if (service == null) {
                     var googleAuthorization = GoogleAuthorization.builder()
-                            .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
-                            .setAuthDataStoreRootDir(authDataStorePath)
-                            .setCredentialsUrl(credentialsUrl)
-                            .addRequiredScope(GMAIL_SEND)
-                            .build();
+                                                                 .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
+                                                                 .setAuthDataStoreRootDir(authDataStorePath)
+                                                                 .setCredentialsUrl(credentialsUrl)
+                                                                 .addRequiredScope(GMAIL_SEND)
+                                                                 .build();
                     service = GmailProvider.createService(googleAuthorization);
                 }
                 return service;
