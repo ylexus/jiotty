@@ -27,13 +27,15 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
 
     private final Set<Closeable> scheduleHandles = Sets.newConcurrentHashSet();
     private final ScheduledExecutorService executor;
+    private final String threadNameBase;
 
     @Inject
     SingleThreadedSchedulingExecutor(@Assisted String threadNameBase) {
         executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-                .setNameFormat(threadNameBase + "-%s")
-                .setDaemon(true)
-                .build());
+                                                                      .setNameFormat(threadNameBase + "-%s")
+                                                                      .setDaemon(true)
+                                                                      .build());
+        this.threadNameBase = threadNameBase;
     }
 
     @Override
@@ -74,7 +76,7 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
     public void close() {
         Closeable.forCloseables(scheduleHandles).close();
         if (!MoreExecutors.shutdownAndAwaitTermination(executor, 10, SECONDS)) {
-            logger.warn("Was not able to gracefully stop executor in 10 seconds");
+            logger.warn("Was not able to gracefully stop executor '{}' in 10 seconds", threadNameBase);
         }
     }
 
