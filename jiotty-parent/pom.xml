@@ -9,7 +9,7 @@
     </parent>
     <artifactId>jiotty-parent</artifactId>
     <properties>
-        <org.junit-jupiter.version>5.9.2</org.junit-jupiter.version>
+        <org.junit-jupiter.version>5.11.0</org.junit-jupiter.version>
         <org.slf4j.version>1.7.36</org.slf4j.version> <!-- 2.0 is not compatible with log4j binding; TODO: remove slf4j layer completely -->
         <org.mockito.version>5.11.0</org.mockito.version>
     </properties>
@@ -39,6 +39,12 @@
             </dependency>
 
             <!-- testing -->
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>3.26.3</version>
+                <scope>test</scope>
+            </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-api</artifactId>

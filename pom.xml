@@ -322,8 +322,9 @@
         </profile>
     </profiles>
     <modules>
-        <module>jiotty-common</module>
         <module>jiotty-appliance</module>
+        <module>jiotty-bom</module>
+        <module>jiotty-common</module>
         <module>jiotty-connector-aws</module>
         <module>jiotty-connector-google</module>
         <module>jiotty-connector-ir</module>
@@ -333,11 +334,11 @@
         <module>jiotty-connector-rpi</module>
         <module>jiotty-connector-tplinksmartplug</module>
         <module>jiotty-connector-world</module>
-        <module>jiotty-bom</module>
         <module>jiotty-connector-owntracks</module>
         <module>jiotty-connector-fieldglass</module>
-        <module>jiotty-connector-webclient</module>
-        <module>jiotty-parent</module>
         <module>jiotty-connector-slide</module>
+        <module>jiotty-connector-webclient</module>
+        <module>jiotty-logging</module>
+        <module>jiotty-parent</module>
     </modules>
 </project>

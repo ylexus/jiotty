@@ -11,7 +11,7 @@
 
     <artifactId>jiotty-bom</artifactId>
     <properties>
-        <version.org.apache.logging.log4j>2.20.0</version.org.apache.logging.log4j>
+        <version.org.apache.logging.log4j>2.23.1</version.org.apache.logging.log4j>
         <org.immutables.version>2.9.3</org.immutables.version>
         <org.slf4j.version>1.7.36</org.slf4j.version> <!-- 2.0 is not compatible with log4j binding; TODO: remove slf4j layer completely -->
     </properties>
@@ -136,6 +136,11 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-slide</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-logging</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
