@@ -49,6 +49,10 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
         return this;
     }
 
+    public ZoneId getZoneId() {
+        return zoneId;
+    }
+
     public void tick() {
         // execute due tasks
         checkState(currentTaskTime == null, "ticking from inside a task is not supported");
