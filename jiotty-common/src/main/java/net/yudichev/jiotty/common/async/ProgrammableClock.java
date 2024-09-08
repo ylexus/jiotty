@@ -33,9 +33,15 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
     private Instant currentTaskTime;
     private ZoneId zoneId = ZoneOffset.UTC;
     private boolean taskSeeingTargetTime;
+    private boolean globalMdc;
 
     public ProgrammableClock withMdc() {
         mdc = true;
+        return this;
+    }
+
+    public ProgrammableClock withGlobalMdc(boolean globalMdc) {
+        this.globalMdc = globalMdc;
         return this;
     }
 
@@ -146,6 +152,9 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
         checkArgument(currentTime.isAfter(this.currentTime) || currentTime.equals(this.currentTime),
                 "time cannot go backward from %s to %s", this.currentTime, currentTime);
         this.currentTime = checkNotNull(currentTime);
+        if (globalMdc) {
+            MDC.put("current.time", currentTime.toString());
+        }
     }
 
     public void advanceTime(TemporalAmount increment) {
@@ -164,7 +173,9 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
         @Override
         public final void run() {
             checkState(due != null, "cannot run task %s - not scheduled", this);
+            String oldCurrentTimeAttr = null;
             if (mdc) {
+                oldCurrentTimeAttr = MDC.get("current.time");
                 MDC.put("thread", executor.getThreadNameBase());
                 MDC.put("task.due", due.toString());
                 MDC.put("current.time", currentInstant().toString());
@@ -175,7 +186,11 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
             } finally {
                 currentTaskTime = null;
                 if (mdc) {
-                    MDC.remove("current.time");
+                    if (oldCurrentTimeAttr == null) {
+                        MDC.remove("current.time");
+                    } else {
+                        MDC.put("current.time", oldCurrentTimeAttr);
+                    }
                     MDC.remove("task.due");
                     MDC.remove("thread");
                 }
