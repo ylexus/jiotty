@@ -2,29 +2,39 @@ package net.yudichev.jiotty.connector.ir.lirc;
 
 import net.yudichev.jiotty.common.async.backoff.BackOffConfig;
 import net.yudichev.jiotty.common.async.backoff.BackingOffExceptionHandlerModule;
+import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
+import java.lang.annotation.Annotation;
 import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.jiotty.common.inject.BindingSpec.*;
+import static net.yudichev.jiotty.common.inject.BindingSpec.boundTo;
+import static net.yudichev.jiotty.common.inject.BindingSpec.exposedBy;
+import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
 
 public final class LircClientModule extends BaseLifecycleComponentModule implements ExposedKeyModule<LircClient> {
     private final BindingSpec<String> addressSpec;
     private final BindingSpec<Integer> portSpec;
     private final BindingSpec<Duration> timeoutSpec;
-    private final BindingSpec<BackOffConfig> retryBackoffConfigSpec;
+    private final BindingSpec<BackOffConfig> heartbeatRetryBackoffConfigSpec;
+    private final BindingSpec<BackOffConfig> commandBackoffConfigSpec;
 
-    private LircClientModule(BindingSpec<String> addressSpec, BindingSpec<Integer> portSpec, BindingSpec<Duration> timeoutSpec, BindingSpec<BackOffConfig> retryBackoffConfigSpec) {
+    private LircClientModule(BindingSpec<String> addressSpec,
+                             BindingSpec<Integer> portSpec,
+                             BindingSpec<Duration> timeoutSpec,
+                             BindingSpec<BackOffConfig> heartbeatRetryBackoffConfigSpec,
+                             BindingSpec<BackOffConfig> commandBackoffConfigSpec) {
         this.addressSpec = checkNotNull(addressSpec);
         this.portSpec = checkNotNull(portSpec);
         this.timeoutSpec = checkNotNull(timeoutSpec);
-        this.retryBackoffConfigSpec = checkNotNull(retryBackoffConfigSpec);
+        this.heartbeatRetryBackoffConfigSpec = checkNotNull(heartbeatRetryBackoffConfigSpec);
+        this.commandBackoffConfigSpec = checkNotNull(commandBackoffConfigSpec);
     }
 
     public static Builder builder() {
@@ -34,34 +44,49 @@ public final class LircClientModule extends BaseLifecycleComponentModule impleme
     @Override
     protected void configure() {
         addressSpec.bind(String.class)
-                .annotatedWith(TcpLircClient.Address.class)
-                .installedBy(this::installLifecycleComponentModule);
+                   .annotatedWith(TcpLircClient.Address.class)
+                   .installedBy(this::installLifecycleComponentModule);
         portSpec.bind(Integer.class)
                 .annotatedWith(TcpLircClient.Port.class)
                 .installedBy(this::installLifecycleComponentModule);
         timeoutSpec.bind(Duration.class)
-                .annotatedWith(TcpLircClient.Timeout.class)
-                .installedBy(this::installLifecycleComponentModule);
-        installLifecycleComponentModule(RetryableOperationExecutorModule.builder()
-                .setBackingOffExceptionHandler(exposedBy(BackingOffExceptionHandlerModule.builder()
-                        .setRetryableExceptionPredicate(boundTo(LircRetryableExceptionPredicate.class))
-                        .withConfig(retryBackoffConfigSpec)
-                        .build()))
-                .withAnnotation(forAnnotation(TcpLircClient.Dependency.class))
-                .build());
+                   .annotatedWith(TcpLircClient.Timeout.class)
+                   .installedBy(this::installLifecycleComponentModule);
+        installLifecycleComponentModule(createRetryableOperationExecutorModule(TcpLircClient.Heartbeat.class, heartbeatRetryBackoffConfigSpec));
+        installLifecycleComponentModule(createRetryableOperationExecutorModule(TcpLircClient.Command.class, commandBackoffConfigSpec));
         bind(getExposedKey()).to(registerLifecycleComponent(TcpLircClient.class));
         expose(getExposedKey());
+    }
+
+    private static ExposedKeyModule<RetryableOperationExecutor> createRetryableOperationExecutorModule(Class<? extends Annotation> annotation,
+                                                                                                       BindingSpec<BackOffConfig> backoffSpec) {
+        return RetryableOperationExecutorModule
+                .builder()
+                .setBackingOffExceptionHandler(
+                        exposedBy(BackingOffExceptionHandlerModule.builder()
+                                                                  .setRetryableExceptionPredicate(boundTo(LircRetryableExceptionPredicate.class))
+                                                                  .withConfig(backoffSpec)
+                                                                  .build()))
+                .withAnnotation(forAnnotation(annotation))
+                .build();
     }
 
     public static final class Builder implements TypedBuilder<ExposedKeyModule<LircClient>> {
         private BindingSpec<String> addressSpec = literally("127.0.0.1");
         private BindingSpec<Integer> portSpec = literally(8765);
         private BindingSpec<Duration> timeoutSpec = literally(Duration.ofSeconds(5));
-        private BindingSpec<BackOffConfig> retryBackoffConfigSpec = literally(BackOffConfig.builder()
-                .setInitialInterval(Duration.ofMillis(10))
-                .setMaxInterval(Duration.ofMinutes(1))
-                .setMaxElapsedTime(Duration.ofDays(1))
-                .build());
+        private BindingSpec<BackOffConfig> heartbeatRetryBackoffConfigSpec =
+                literally(BackOffConfig.builder()
+                                       .setInitialInterval(Duration.ofMillis(10))
+                                       .setMaxInterval(Duration.ofMinutes(1))
+                                       .setMaxElapsedTime(Duration.ofDays(1))
+                                       .build());
+        private BindingSpec<BackOffConfig> commandBackoffConfigSpec =
+                literally(BackOffConfig.builder()
+                                       .setInitialInterval(Duration.ofMillis(10))
+                                       .setMaxInterval(Duration.ofSeconds(15))
+                                       .setMaxElapsedTime(Duration.ofMinutes(5))
+                                       .build());
 
         private Builder() {
         }
@@ -81,14 +106,19 @@ public final class LircClientModule extends BaseLifecycleComponentModule impleme
             return this;
         }
 
-        public Builder withRetryBackoffConfig(BindingSpec<BackOffConfig> retryBackoffConfigSpec) {
-            this.retryBackoffConfigSpec = checkNotNull(retryBackoffConfigSpec);
+        public Builder withHeartbeatRetryBackoffConfig(BindingSpec<BackOffConfig> heartbeatRetryBackoffConfigSpec) {
+            this.heartbeatRetryBackoffConfigSpec = checkNotNull(heartbeatRetryBackoffConfigSpec);
+            return this;
+        }
+
+        public Builder withCommandRetryBackoffConfig(BindingSpec<BackOffConfig> commandBackoffConfigSpec) {
+            this.commandBackoffConfigSpec = checkNotNull(commandBackoffConfigSpec);
             return this;
         }
 
         @Override
         public ExposedKeyModule<LircClient> build() {
-            return new LircClientModule(addressSpec, portSpec, timeoutSpec, retryBackoffConfigSpec);
+            return new LircClientModule(addressSpec, portSpec, timeoutSpec, heartbeatRetryBackoffConfigSpec, commandBackoffConfigSpec);
         }
     }
 }

@@ -35,7 +35,9 @@ import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.Math.toIntExact;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
@@ -45,18 +47,19 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class TcpLircClient extends BaseLircClient {
     public static final String DEFAULTLIRCIP = "127.0.0.1"; // localhost
     private final int port;
-    private Socket socket;
     private final InetAddress inetAddress;
     private final Duration timeout;
     private final String connectionName;
+    private Socket socket;
 
     @Inject
     TcpLircClient(ExecutorFactory executorFactory,
                   @Address String address,
                   @Port int port,
                   @Timeout Duration timeout,
-                  @Dependency RetryableOperationExecutor retryableOperationExecutor) {
-        super(executorFactory, retryableOperationExecutor);
+                  @Heartbeat RetryableOperationExecutor heartbeatRetryableOperationExecutor,
+                  @Command RetryableOperationExecutor commandRetryableOperationExecutor) {
+        super(executorFactory, heartbeatRetryableOperationExecutor, commandRetryableOperationExecutor);
         String lircServerIp = (address != null) ? address : DEFAULTLIRCIP;
         this.port = port;
         inetAddress = getAsUnchecked(() -> InetAddress.getByName(lircServerIp));
@@ -115,6 +118,12 @@ final class TcpLircClient extends BaseLircClient {
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    @interface Dependency {
+    @interface Heartbeat {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Command {
     }
 }

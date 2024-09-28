@@ -57,14 +57,18 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     private final ExecutorFactory executorFactory;
-    private final RetryableOperationExecutor retryableOperationExecutor;
+    private final RetryableOperationExecutor heartbeatRetryableOperationExecutor;
+    private final RetryableOperationExecutor commandRetryableOperationExecutor;
 
     private Streams streams;
     private SchedulingExecutor executor;
 
-    protected BaseLircClient(ExecutorFactory executorFactory, RetryableOperationExecutor retryableOperationExecutor) {
+    protected BaseLircClient(ExecutorFactory executorFactory,
+                             RetryableOperationExecutor heartbeatRetryableOperationExecutor,
+                             RetryableOperationExecutor commandRetryableOperationExecutor) {
         this.executorFactory = checkNotNull(executorFactory);
-        this.retryableOperationExecutor = checkNotNull(retryableOperationExecutor);
+        this.heartbeatRetryableOperationExecutor = checkNotNull(heartbeatRetryableOperationExecutor);
+        this.commandRetryableOperationExecutor = checkNotNull(commandRetryableOperationExecutor);
     }
 
     @Override
@@ -80,20 +84,20 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
     }
 
     private void heartbeat() {
-        retryableOperationExecutor.withBackOffAndRetry("heartbeat: getVersion",
-                () -> getVersion()
-                        .exceptionally(e -> {
-                            logger.info("heartbeat processing failed", e);
-                            closeSafelyIfNotNull(logger, streams);
-                            streams = connect();
-                            //noinspection ReturnOfNull
-                            return null;
-                        })
-                        .thenRun(this::scheduleNextHeartbeat))
-                .exceptionally(e -> {
-                    logger.error("Heartbeat failed", e);
-                    return null;
-                });
+        heartbeatRetryableOperationExecutor.withBackOffAndRetry("heartbeat: getVersion",
+                                                                () -> getVersion()
+                                                                        .exceptionally(e -> {
+                                                                            logger.info("heartbeat processing failed", e);
+                                                                            closeSafelyIfNotNull(logger, streams);
+                                                                            streams = connect();
+                                                                            //noinspection ReturnOfNull
+                                                                            return null;
+                                                                        })
+                                                                        .thenRun(this::scheduleNextHeartbeat))
+                                           .exceptionally(e -> {
+                                               logger.error("Heartbeat failed", e);
+                                               return null;
+                                           });
     }
 
     protected abstract Streams connect();
@@ -133,8 +137,8 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
     public CompletableFuture<List<String>> getCommands(String remote) {
         return sendCommand("LIST " + checkNotNull(remote))
                 .thenApply(commands -> commands.stream()
-                        .map(s -> COMMAND_LIST_CLEANUP_PATTERN.matcher(s).replaceAll(""))
-                        .collect(toImmutableList()));
+                                               .map(s -> COMMAND_LIST_CLEANUP_PATTERN.matcher(s).replaceAll(""))
+                                               .collect(toImmutableList()));
     }
 
     @Override
@@ -159,7 +163,7 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
                     if (result.isEmpty()) {
                         throw new LircServerException("VERSION command returned no lines");
                     }
-                    return result.get(0);
+                    return result.getFirst();
                 });
     }
 
@@ -188,7 +192,7 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
     @SuppressWarnings({"OverlyComplexMethod", "OverlyLongMethod", "NestedSwitchStatement"}) // reads OK
     private CompletableFuture<List<String>> sendCommand(String command) {
         checkStarted();
-        return supplyAsync(() -> {
+        return commandRetryableOperationExecutor.withBackOffAndRetry("lirc: " + command, () -> supplyAsync(() -> {
             logger.debug("Sending command `{}' to Lirc@{}", command, connectionName());
             streams.write(command + '\n');
 
@@ -206,49 +210,32 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
                     continue;
                 }
                 switch (state) {
-                    case BEGIN:
+                    case BEGIN -> {
                         if ("BEGIN".equals(line)) {
                             state = State.MESSAGE;
                         }
-                        break;
-                    case MESSAGE:
-                        state = line.trim().equalsIgnoreCase(command) ? State.STATUS : State.BEGIN;
-                        break;
-                    case STATUS:
-                        switch (line) {
-                            case "SUCCESS":
-                                state = State.DATA;
-                                break;
-                            case "END":
-                                state = State.DONE;
-                                break;
-                            case "ERROR":
-                                throw new LircServerException("command failed: " + command);
-                            default:
-                                throw new BadPacketException("unknown response: " + command);
-                        }
-                        break;
-                    case DATA:
-                        switch (line) {
-                            case "END":
-                                state = State.DONE;
-                                break;
-                            case "DATA":
-                                state = State.N;
-                                break;
-                            default:
-                                throw new BadPacketException("unknown response: " + command);
-                        }
-                        break;
-                    case N:
+                    }
+                    case MESSAGE -> state = line.trim().equalsIgnoreCase(command) ? State.STATUS : State.BEGIN;
+                    case STATUS -> state = switch (line) {
+                        case "SUCCESS" -> State.DATA;
+                        case "END" -> State.DONE;
+                        case "ERROR" -> throw new LircServerException("command failed: " + command);
+                        default -> throw new BadPacketException("unknown response: " + command);
+                    };
+                    case DATA -> state = switch (line) {
+                        case "END" -> State.DONE;
+                        case "DATA" -> State.N;
+                        default -> throw new BadPacketException("unknown response: " + command);
+                    };
+                    case N -> {
                         try {
                             linesExpected = Integer.parseInt(line);
                         } catch (NumberFormatException ignored) {
                             throw new BadPacketException("integer expected; got: " + command);
                         }
                         state = linesExpected == 0 ? State.END : State.DATA_N;
-                        break;
-                    case DATA_N:
+                    }
+                    case DATA_N -> {
                         if (resultBuilder == null) {
                             resultBuilder = ImmutableList.builderWithExpectedSize(8);
                         }
@@ -257,23 +244,23 @@ abstract class BaseLircClient extends BaseLifecycleComponent implements LircClie
                         if (linesReceived == linesExpected) {
                             state = State.END;
                         }
-                        break;
-                    case END:
+                    }
+                    case END -> {
                         if ("END".equals(line)) {
                             state = State.DONE;
                         } else {
                             throw new BadPacketException("\"END\" expected but \"" + line + "\" received");
                         }
-                        break;
-                    case DONE:
-                        break;
-                    default:
-                        throw new RuntimeException("Unhandled case (programming error)");
+                    }
+                    case DONE -> {
+                        // success, nothing to do
+                    }
+                    default -> throw new RuntimeException("Unhandled case (programming error)");
                 }
             }
             logger.debug("Lirc command succeeded.");
             return resultBuilder == null ? emptyList() : resultBuilder.build();
-        }, executor);
+        }, executor));
     }
 
     private enum State {
