@@ -2,7 +2,6 @@ package net.yudichev.jiotty.common.async;
 
 import net.yudichev.jiotty.common.lang.BaseIdempotentCloseable;
 import net.yudichev.jiotty.common.lang.Closeable;
-import net.yudichev.jiotty.common.lang.backoff.NanoClock;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.MDC;
 
@@ -25,7 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClock, ExecutorFactory {
+public final class ProgrammableClock implements CurrentDateTimeProvider, ExecutorFactory {
     private final NavigableMap<Instant, List<Task>> tasksByTriggerTime = new TreeMap<>();
     private Instant currentTime = Instant.EPOCH;
     private boolean mdc;
@@ -150,7 +149,7 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, NanoClo
 
     public void setTime(Instant currentTime) {
         checkArgument(currentTime.isAfter(this.currentTime) || currentTime.equals(this.currentTime),
-                "time cannot go backward from %s to %s", this.currentTime, currentTime);
+                      "time cannot go backward from %s to %s", this.currentTime, currentTime);
         this.currentTime = checkNotNull(currentTime);
         if (globalMdc) {
             MDC.put("current.time", currentTime.toString());

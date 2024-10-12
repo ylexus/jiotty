@@ -67,7 +67,7 @@ public class ExponentialBackOff implements BackOff {
     /**
      * The default initial interval value in milliseconds (0.5 seconds).
      */
-    public static final int DEFAULT_INITIAL_INTERVAL_MILLIS = 500;
+    public static final long DEFAULT_INITIAL_INTERVAL_MILLIS = 500;
 
     /**
      * The default randomization factor (0.5 which results in a random period ranging between 50%
@@ -83,16 +83,16 @@ public class ExponentialBackOff implements BackOff {
     /**
      * The default maximum back off time in milliseconds (1 minute).
      */
-    public static final int DEFAULT_MAX_INTERVAL_MILLIS = 60000;
+    public static final long DEFAULT_MAX_INTERVAL_MILLIS = 60000;
 
     /**
      * The default maximum elapsed time in milliseconds (15 minutes).
      */
-    public static final int DEFAULT_MAX_ELAPSED_TIME_MILLIS = 900000;
+    public static final long DEFAULT_MAX_ELAPSED_TIME_MILLIS = 900000;
     /**
      * The initial retry interval in milliseconds.
      */
-    private final int initialIntervalMillis;
+    private final long initialIntervalMillis;
     /**
      * The randomization factor to use for creating a range around the retry interval.
      *
@@ -108,12 +108,12 @@ public class ExponentialBackOff implements BackOff {
      * The maximum value of the back off period in milliseconds. Once the retry interval reaches this
      * value it stops increasing.
      */
-    private final int maxIntervalMillis;
+    private final long maxIntervalMillis;
     /**
      * The maximum elapsed time after instantiating {@link ExponentialBackOff} or calling {@link
      * #reset()} after which {@link #nextBackOffMillis()} returns {@link BackOff#STOP}.
      */
-    private final int maxElapsedTimeMillis;
+    private final long maxElapsedTimeMillis;
     /**
      * Nano clock.
      */
@@ -126,7 +126,7 @@ public class ExponentialBackOff implements BackOff {
     /**
      * The current retry interval in milliseconds.
      */
-    private int currentIntervalMillis;
+    private double currentIntervalMillis;
 
     /**
      * Creates an instance of ExponentialBackOffPolicy using default values.
@@ -186,7 +186,7 @@ public class ExponentialBackOff implements BackOff {
         if (getElapsedTimeMillis() > maxElapsedTimeMillis) {
             return STOP;
         }
-        int randomizedInterval =
+        long randomizedInterval =
                 getRandomValueFromInterval(randomizationFactor, Math.random(), currentIntervalMillis);
         incrementCurrentInterval();
         return randomizedInterval;
@@ -195,7 +195,7 @@ public class ExponentialBackOff implements BackOff {
     /**
      * Returns the initial retry interval in milliseconds.
      */
-    public final int getInitialIntervalMillis() {
+    public final long getInitialIntervalMillis() {
         return initialIntervalMillis;
     }
 
@@ -212,8 +212,9 @@ public class ExponentialBackOff implements BackOff {
     /**
      * Returns the current retry interval in milliseconds.
      */
-    public final int getCurrentIntervalMillis() {
-        return currentIntervalMillis;
+    public final long getCurrentIntervalMillis() {
+        //noinspection NumericCastThatLosesPrecision
+        return (long) currentIntervalMillis;
     }
 
     /**
@@ -227,7 +228,7 @@ public class ExponentialBackOff implements BackOff {
      * Returns the maximum value of the back off period in milliseconds. Once the current interval
      * reaches this value it stops increasing.
      */
-    public final int getMaxIntervalMillis() {
+    public final long getMaxIntervalMillis() {
         return maxIntervalMillis;
     }
 
@@ -238,7 +239,7 @@ public class ExponentialBackOff implements BackOff {
      * max_elapsed_time then the method {@link #nextBackOffMillis()} starts returning {@link
      * BackOff#STOP}. The elapsed time can be reset by calling {@link #reset()}.
      */
-    public final int getMaxElapsedTimeMillis() {
+    public final long getMaxElapsedTimeMillis() {
         return maxElapsedTimeMillis;
     }
 
@@ -256,15 +257,16 @@ public class ExponentialBackOff implements BackOff {
      * Returns a random value from the interval [randomizationFactor * currentInterval,
      * randomizationFactor * currentInterval].
      */
-    static int getRandomValueFromInterval(
-            double randomizationFactor, double random, int currentIntervalMillis) {
+    static long getRandomValueFromInterval(
+            double randomizationFactor, double random, double currentIntervalMillis) {
         double delta = randomizationFactor * currentIntervalMillis;
         double minInterval = currentIntervalMillis - delta;
         double maxInterval = currentIntervalMillis + delta;
         // Get a random value from the range [minInterval, maxInterval].
         // The formula used below has a +1 because if the minInterval is 1 and the maxInterval is 3 then
         // we want a 33% chance for selecting either 1, 2 or 3.
-        return (int) (minInterval + (random * (maxInterval - minInterval + 1)));
+        //noinspection NumericCastThatLosesPrecision
+        return (long) (minInterval + (random * (maxInterval - minInterval + 1)));
     }
 
     /**
@@ -282,14 +284,14 @@ public class ExponentialBackOff implements BackOff {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("initialIntervalMillis", initialIntervalMillis)
-                .add("randomizationFactor", randomizationFactor)
-                .add("multiplier", multiplier)
-                .add("maxIntervalMillis", maxIntervalMillis)
-                .add("maxElapsedTimeMillis", maxElapsedTimeMillis)
-                .add("startTimeNanos", startTimeNanos)
-                .add("currentIntervalMillis", currentIntervalMillis)
-                .toString();
+                          .add("initialIntervalMillis", initialIntervalMillis)
+                          .add("randomizationFactor", randomizationFactor)
+                          .add("multiplier", multiplier)
+                          .add("maxIntervalMillis", maxIntervalMillis)
+                          .add("maxElapsedTimeMillis", maxElapsedTimeMillis)
+                          .add("startTimeNanos", startTimeNanos)
+                          .add("currentIntervalMillis", currentIntervalMillis)
+                          .toString();
     }
 
     /**
@@ -302,7 +304,7 @@ public class ExponentialBackOff implements BackOff {
         /**
          * The initial retry interval in milliseconds.
          */
-        private int initialIntervalMillis = DEFAULT_INITIAL_INTERVAL_MILLIS;
+        private long initialIntervalMillis = DEFAULT_INITIAL_INTERVAL_MILLIS;
 
         /**
          * The randomization factor to use for creating a range around the retry interval.
@@ -321,14 +323,14 @@ public class ExponentialBackOff implements BackOff {
          * The maximum value of the back off period in milliseconds. Once the retry interval reaches
          * this value it stops increasing.
          */
-        private int maxIntervalMillis = DEFAULT_MAX_INTERVAL_MILLIS;
+        private long maxIntervalMillis = DEFAULT_MAX_INTERVAL_MILLIS;
 
         /**
          * The maximum elapsed time in milliseconds after instantiating {@link ExponentialBackOff} or
          * calling {@link #reset()} after which {@link #nextBackOffMillis()} returns {@link
          * BackOff#STOP}.
          */
-        private int maxElapsedTimeMillis = DEFAULT_MAX_ELAPSED_TIME_MILLIS;
+        private long maxElapsedTimeMillis = DEFAULT_MAX_ELAPSED_TIME_MILLIS;
 
         /**
          * Nano clock.
@@ -346,7 +348,7 @@ public class ExponentialBackOff implements BackOff {
          * Returns the initial retry interval in milliseconds. The default value is {@link
          * #DEFAULT_INITIAL_INTERVAL_MILLIS}.
          */
-        public final int getInitialIntervalMillis() {
+        public final long getInitialIntervalMillis() {
             return initialIntervalMillis;
         }
 
@@ -357,7 +359,7 @@ public class ExponentialBackOff implements BackOff {
          * <p>Overriding is only supported for the purpose of calling the super implementation and
          * changing the return type, but nothing else.
          */
-        public Builder setInitialIntervalMillis(int initialIntervalMillis) {
+        public Builder setInitialIntervalMillis(long initialIntervalMillis) {
             this.initialIntervalMillis = initialIntervalMillis;
             return this;
         }
@@ -417,7 +419,7 @@ public class ExponentialBackOff implements BackOff {
          * reaches this value it stops increasing. The default value is {@link
          * #DEFAULT_MAX_INTERVAL_MILLIS}. Must be {@code >= initialInterval}.
          */
-        public final int getMaxIntervalMillis() {
+        public final long getMaxIntervalMillis() {
             return maxIntervalMillis;
         }
 
@@ -429,7 +431,7 @@ public class ExponentialBackOff implements BackOff {
          * <p>Overriding is only supported for the purpose of calling the super implementation and
          * changing the return type, but nothing else.
          */
-        public Builder setMaxIntervalMillis(int maxIntervalMillis) {
+        public Builder setMaxIntervalMillis(long maxIntervalMillis) {
             this.maxIntervalMillis = maxIntervalMillis;
             return this;
         }
@@ -442,7 +444,7 @@ public class ExponentialBackOff implements BackOff {
          * max_elapsed_time then the method {@link #nextBackOffMillis()} starts returning {@link
          * BackOff#STOP}. The elapsed time can be reset by calling {@link #reset()}.
          */
-        public final int getMaxElapsedTimeMillis() {
+        public final long getMaxElapsedTimeMillis() {
             return maxElapsedTimeMillis;
         }
 
@@ -457,7 +459,7 @@ public class ExponentialBackOff implements BackOff {
          * <p>Overriding is only supported for the purpose of calling the super implementation and
          * changing the return type, but nothing else.
          */
-        public Builder setMaxElapsedTimeMillis(int maxElapsedTimeMillis) {
+        public Builder setMaxElapsedTimeMillis(long maxElapsedTimeMillis) {
             this.maxElapsedTimeMillis = maxElapsedTimeMillis;
             return this;
         }

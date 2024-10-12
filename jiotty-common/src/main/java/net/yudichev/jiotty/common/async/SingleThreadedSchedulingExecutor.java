@@ -22,7 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
+public final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SingleThreadedSchedulingExecutor.class);
 
     private final Set<Closeable> scheduleHandles = Sets.newConcurrentHashSet();
@@ -30,7 +30,7 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
     private final String threadNameBase;
 
     @Inject
-    SingleThreadedSchedulingExecutor(@Assisted String threadNameBase) {
+    public SingleThreadedSchedulingExecutor(@Assisted String threadNameBase) {
         executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
                                                                       .setNameFormat(threadNameBase + "-%s")
                                                                       .setDaemon(true)
@@ -39,7 +39,7 @@ final class SingleThreadedSchedulingExecutor implements SchedulingExecutor {
     }
 
     @Override
-    public <T> CompletableFuture<T> submit(Callable<T> task) {
+    public <T> CompletableFuture<T> submit(Callable<? extends T> task) {
         var resultFuture = new CompletableFuture<T>();
         executor.submit(() -> {
             try {

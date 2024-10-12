@@ -12,7 +12,7 @@ import static net.yudichev.jiotty.common.lang.Runnables.guarded;
 public interface TaskExecutor extends Executor {
     Logger logger = LoggerFactory.getLogger(TaskExecutor.class);
 
-    <T> CompletableFuture<T> submit(Callable<T> task);
+    <T> CompletableFuture<T> submit(Callable<? extends T> task);
 
     default CompletableFuture<Void> submit(Runnable command) {
         return submit(toCallable(command));

@@ -21,9 +21,8 @@ final class DeterministicExecutor extends BaseIdempotentCloseable implements Sch
     }
 
     @Override
-    public <T> CompletableFuture<T> submit(Callable<T> task) {
+    public <T> CompletableFuture<T> submit(Callable<? extends T> task) {
         var resultFuture = new CompletableFuture<T>();
-        //noinspection resource
         schedule(Duration.ZERO, () -> {
             try {
                 resultFuture.complete(task.call());

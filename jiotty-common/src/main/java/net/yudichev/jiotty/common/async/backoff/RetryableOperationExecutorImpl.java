@@ -18,7 +18,9 @@ import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 final class RetryableOperationExecutorImpl implements RetryableOperationExecutor {
@@ -39,26 +41,31 @@ final class RetryableOperationExecutorImpl implements RetryableOperationExecutor
         return doWithBackOffAndRetry(operationName, action, backoffEventConsumer, exceptionHandler);
     }
 
-    private <T> CompletableFuture<T> doWithBackOffAndRetry(String operationName,
-                                                           Supplier<? extends CompletableFuture<T>> action,
-                                                           LongConsumer backoffEventConsumer,
-                                                           BackingOffExceptionHandler exceptionHandler) {
+    private static <T> CompletableFuture<T> doWithBackOffAndRetry(String operationName,
+                                                                  Supplier<? extends CompletableFuture<T>> action,
+                                                                  LongConsumer backoffEventConsumer,
+                                                                  BackingOffExceptionHandler exceptionHandler) {
         return action.get()
-                .thenApply(Either::<T, RetryableFailure>left)
-                .exceptionally(exception -> {
-                    Optional<Long> backoffDelayMs = exceptionHandler.handle(operationName, exception);
-                    return Either.right(RetryableFailure.of(exception, backoffDelayMs));
-                })
-                .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
-                        CompletableFuture::completedFuture,
-                        retryableFailure -> retryableFailure.backoffDelayMs()
-                                .map(backoffDelayMs -> {
-                                    logger.debug("Retrying operation '{}' with backoff {}ms", operationName, retryableFailure.backoffDelayMs());
-                                    backoffEventConsumer.accept(backoffDelayMs);
-                                    return withBackOffAndRetry(operationName, action, backoffEventConsumer);
-                                })
-                                .orElseGet(() -> CompletableFutures.failure(retryableFailure.exception()))
-                ));
+                     .thenApply(Either::<T, RetryableFailure>left)
+                     .exceptionally(exception -> {
+                         Optional<Long> backoffDelayMs = exceptionHandler.handle(operationName, exception);
+                         return Either.right(RetryableFailure.of(exception, backoffDelayMs));
+                     })
+                     .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
+                             CompletableFuture::completedFuture,
+                             retryableFailure -> retryableFailure.backoffDelayMs()
+                                                                 .map(backoffDelayMs -> {
+                                                                     logger.debug("Retrying operation '{}' with backoff {}ms",
+                                                                                  operationName,
+                                                                                  retryableFailure.backoffDelayMs());
+                                                                     backoffEventConsumer.accept(backoffDelayMs);
+                                                                     return doWithBackOffAndRetry(operationName,
+                                                                                                  action,
+                                                                                                  backoffEventConsumer,
+                                                                                                  exceptionHandler);
+                                                                 })
+                                                                 .orElseGet(() -> CompletableFutures.failure(retryableFailure.exception()))
+                     ));
     }
 
     @BindingAnnotation

@@ -3,14 +3,17 @@ package net.yudichev.jiotty.common.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.reflect.TypeToken;
 import net.yudichev.jiotty.common.lang.Json;
-import okhttp3.*;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.ResponseBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -30,7 +33,6 @@ public final class RestClients {
     }
 
     public static OkHttpClient newClient(Consumer<? super OkHttpClient.Builder> customizer) {
-        AtomicReference<OkHttpClient> clientRef = new AtomicReference<>();
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .followRedirects(true)
                 .followSslRedirects(true)
@@ -39,9 +41,7 @@ public final class RestClients {
                 .readTimeout(DEFAULT_HTTP_TIMEOUT)
                 .writeTimeout(DEFAULT_HTTP_TIMEOUT);
         customizer.accept(builder);
-        OkHttpClient client = builder.build();
-        clientRef.set(client);
-        return client;
+        return builder.build();
     }
 
     public static <T> CompletableFuture<T> call(Request request, Class<? extends T> responseType) {
@@ -86,12 +86,33 @@ public final class RestClients {
 
             @Override
             public void onResponse(Call call, okhttp3.Response response) {
-                ResponseBody responseBody = requireNonNull(response.body());
-                try {
-                    String responseString = responseBody.string();
-                    future.complete(Json.parse(responseString, responseType));
-                } catch (RuntimeException | IOException e) {
-                    future.completeExceptionally(new RuntimeException("failed to parse response body to json: " + responseBody, e));
+                try (ResponseBody responseBody = response.body()) {
+                    try {
+                        if (response.isSuccessful()) {
+                            if (response.code() == 204) { // no body
+                                if (responseType.getType() == Void.class) {
+                                    future.complete(null);
+                                } else {
+                                    future.completeExceptionally(new RuntimeException(
+                                            "Response is successful but empty, however expected response type is " + responseType));
+                                }
+                            } else {
+                                String responseString = requireNonNull(responseBody).string();
+                                T responseData;
+                                try {
+                                    responseData = Json.parse(responseString, responseType);
+                                    future.complete(responseData);
+                                } catch (RuntimeException e) {
+                                    future.completeExceptionally(new RuntimeException("Failed parsing response " + responseString, e));
+                                }
+                            }
+                        } else {
+                            future.completeExceptionally(new RuntimeException(
+                                    "Response code " + response.code() + (responseBody == null ? "" : ", body: " + responseBody.string())));
+                        }
+                    } catch (RuntimeException | IOException e) {
+                        future.completeExceptionally(new RuntimeException("failed to process response body", e));
+                    }
                 }
             }
         });
@@ -101,7 +122,7 @@ public final class RestClients {
     public static JsonNode getRequiredNode(JsonNode parentNode, String nodeName) {
         JsonNode childNode = parentNode.get(nodeName);
         checkState(childNode != null,
-                "no '%s' node in response: %s", nodeName, parentNode);
+                   "no '%s' node in response: %s", nodeName, parentNode);
         return childNode;
     }
 

@@ -15,8 +15,11 @@ import java.util.function.Predicate;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Throwables.getCausalChain;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler {
@@ -33,17 +36,22 @@ final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler
     @Override
     public Optional<Long> handle(String operationName, Throwable exception) {
         return getCausalChain(exception).stream()
-                .filter(retryableExceptionPredicate)
-                .findFirst()
-                .map(throwable -> {
-                    long backOffMs = backOff.nextBackOffMillis();
-                    logger.debug("Operation '{}': backoff: {}", operationName, backOff);
-                    checkState(backOffMs != BackOff.STOP, "Operation %s is being retried for too long - giving up", operationName);
-                    logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms", operationName, backOffMs, throwable);
-                    asUnchecked(() -> Thread.sleep(backOffMs));
-                    return Optional.of(backOffMs);
-                })
-                .orElse(Optional.empty());
+                                        .filter(retryableExceptionPredicate)
+                                        .findFirst()
+                                        .map(throwable -> {
+                                            long backOffMs = backOff.nextBackOffMillis();
+                                            logger.debug("Operation '{}': backoff: {}", operationName, backOff);
+                                            checkState(backOffMs != BackOff.STOP,
+                                                       "Operation %s is being retried for too long - giving up, last error was: %s",
+                                                       operationName, humanReadableMessage(throwable));
+                                            logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms",
+                                                         operationName,
+                                                         backOffMs,
+                                                         throwable);
+                                            asUnchecked(() -> Thread.sleep(backOffMs));
+                                            return Optional.of(backOffMs);
+                                        })
+                                        .orElse(Optional.empty());
     }
 
     @Override
@@ -54,8 +62,8 @@ final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("backOff", backOff)
-                .toString();
+                          .add("backOff", backOff)
+                          .toString();
     }
 
     @BindingAnnotation
