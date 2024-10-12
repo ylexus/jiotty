@@ -127,10 +127,10 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
         // authorisation code based process, need to communicate with the user
         startRedirectHttpServer();
 
-        logger.error("Miele login required: {}/login?response_type=code&client_id={}&redirect_uri={}&scope=IDENTIFY_APPLIANCES",
-                     AUTH_BASE_URL, clientId,
-                     URLEncoder.encode("http://" + httpServer.getAddress().getHostName() + ':' + httpServer.getAddress().getPort() + "/logincallback"
-                             , US_ASCII));
+        logger.warn("Miele login required: {}/login?response_type=code&client_id={}&redirect_uri={}&scope=IDENTIFY_APPLIANCES",
+                    AUTH_BASE_URL, clientId,
+                    URLEncoder.encode("http://" + httpServer.getAddress().getHostName() + ':' + httpServer.getAddress().getPort() + "/logincallback"
+                            , US_ASCII));
     }
 
     private void startRedirectHttpServer() {
