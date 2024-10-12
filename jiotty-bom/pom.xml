@@ -95,12 +95,22 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-miele</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-mqtt</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-nest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-octopusenergy</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -131,6 +141,11 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-webclient</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-shelly</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

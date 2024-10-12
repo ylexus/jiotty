@@ -39,6 +39,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
@@ -116,7 +117,9 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
     @Override
     public CompletableFuture<List<MieleProgram>> getPrograms() {
-        return invokeGet("programs", new TypeToken<>() {});
+        return invokeGet("programs", new TypeToken<List<MieleProgram>>() {})
+                // Miele sends rubbish with repeated empty programs with id=0
+                .thenApply(programs -> programs.stream().filter(program -> program.id() != 0).collect(toImmutableList()));
     }
 
     @Override

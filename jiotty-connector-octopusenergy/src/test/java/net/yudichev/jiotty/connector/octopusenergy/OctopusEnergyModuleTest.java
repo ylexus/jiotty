@@ -10,8 +10,8 @@ class OctopusEnergyModuleTest {
     @Test
     void configure() {
         var module = OctopusEnergyModule.builder()
-                                        .setApiKeySpec(literally("apiKey"))
-                                        .setAccountIdSpec(literally("accountId"))
+                                        .setApiKey(literally("apiKey"))
+                                        .setAccountId(literally("accountId"))
                                         .build();
         Guice.createInjector(new TimeModule(), module).getBinding(module.getExposedKey());
     }

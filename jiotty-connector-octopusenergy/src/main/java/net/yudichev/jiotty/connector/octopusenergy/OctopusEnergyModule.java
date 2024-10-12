@@ -36,12 +36,12 @@ public final class OctopusEnergyModule extends BaseLifecycleComponentModule impl
         private BindingSpec<String> apiKeySpec;
         private BindingSpec<String> accountIdSpec;
 
-        public Builder setApiKeySpec(BindingSpec<String> apiKeySpec) {
+        public Builder setApiKey(BindingSpec<String> apiKeySpec) {
             this.apiKeySpec = checkNotNull(apiKeySpec);
             return this;
         }
 
-        public Builder setAccountIdSpec(BindingSpec<String> accountIdSpec) {
+        public Builder setAccountId(BindingSpec<String> accountIdSpec) {
             this.accountIdSpec = checkNotNull(accountIdSpec);
             return this;
         }
