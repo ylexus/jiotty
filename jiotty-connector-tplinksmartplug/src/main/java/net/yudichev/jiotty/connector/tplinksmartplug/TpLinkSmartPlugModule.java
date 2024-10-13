@@ -15,6 +15,7 @@ import net.yudichev.jiotty.common.lang.TypedBuilder;
 import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.inject.BindingSpec.boundTo;
 import static net.yudichev.jiotty.common.inject.BindingSpec.exposedBy;
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
@@ -70,7 +71,7 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
                         .setBackingOffExceptionHandler(
                                 exposedBy(BackingOffExceptionHandlerModule
                                                   .builder()
-                                                  .setRetryableExceptionPredicate(literally(throwable -> true))
+                                                  .setRetryableExceptionPredicate(boundTo(RetryableExceptionPredicate.class))
                                                   .withConfig(literally(BackOffConfig.builder().setInitialInterval(Duration.ofMillis(500))
                                                                                      .setMaxInterval(Duration.ofSeconds(30))
                                                                                      .setMaxElapsedTime(Duration.ofHours(3))

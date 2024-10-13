@@ -32,4 +32,8 @@ public final class Listeners<T> {
     public void notify(T value) {
         runForAll(listeners, listener -> listener.accept(value));
     }
+
+    public void clear() {
+        listeners.clear();
+    }
 }

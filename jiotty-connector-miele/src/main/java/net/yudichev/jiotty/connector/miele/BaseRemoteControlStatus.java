@@ -10,5 +10,5 @@ import org.immutables.value.Value.Immutable;
 @JsonDeserialize
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface BaseRemoteControlStatus extends MieleEvent {
-    boolean mobileStart();
+    boolean fullRemoteControl();
 }
