@@ -107,6 +107,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
     @Override
     public Closeable subscribeToEvents(Consumer<? super MieleEvent> eventHandler) {
         return whenStartedAndNotLifecycling(() -> {
+            logger.debug("[{}] Subscribing to events {}", deviceId, eventHandler);
             // TODO if this is ever used, make it start the stream on 1st subscription end close on last
             var eventStream = new EventStream();
             //noinspection resource as whole stream is closed
