@@ -3,6 +3,7 @@ package net.yudichev.jiotty.appliance;
 import com.google.common.collect.Maps;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
+import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.rest.RestServer;
 import net.yudichev.jiotty.common.rest.RestServers;
 import org.slf4j.Logger;
@@ -11,9 +12,12 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 final class ApplianceServer extends BaseLifecycleComponent {
@@ -43,15 +47,21 @@ final class ApplianceServer extends BaseLifecycleComponent {
             String url = "/appliance/" + applianceId + "/" + commandMeta.commandName().toLowerCase();
             logger.info("Registering {}", url);
             restServer.post(url,
-                    (request, response) -> {
-                        var paramValues = Maps.<String, CommandParamType, Object>transformEntries(commandMeta.parameterTypes(),
-                                (name, paramType) -> paramType.decode(request.queryParamsSafe(name)));
-                        Command<?> command = commandMeta.createCommand(paramValues);
-                        logger.info("{} executing {}", applianceId, command);
-                        Object responseData = RestServers.withErrorsHandledJson(url, response, appliance.execute(command));
-                        logger.info("{} executed {}", applianceId, command);
-                        return responseData;
-                    });
+                            (request, response) -> {
+                                CompletableFuture<?> result;
+                                try {
+                                    var paramValues = Maps.<String, CommandParamType, Object>transformEntries(
+                                            commandMeta.parameterTypes(),
+                                            (name, paramType) -> paramType.decode(request.queryParamsSafe(name)));
+                                    Command<?> command = commandMeta.createCommand(paramValues);
+                                    logger.info("{} executing {}", applianceId, command);
+                                    result = appliance.execute(command);
+                                    logger.info("{} executed {}", applianceId, command);
+                                } catch (RuntimeException e) {
+                                    result = CompletableFutures.failure(e);
+                                }
+                                return RestServers.withErrorsHandledJson(url, response, result);
+                            });
         });
     }
 
