@@ -11,9 +11,11 @@ import org.immutables.value.Value;
 @JsonDeserialize
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface BaseMieleProgram {
+    @Value.Parameter
     @JsonProperty("programId")
     int id();
 
+    @Value.Parameter
     @JsonProperty("program")
     String name();
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
+import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
 
 @Immutable
@@ -11,6 +12,7 @@ import org.immutables.value.Value.Immutable;
 @JsonDeserialize
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface BaseStateValue extends MieleEvent {
+    @Value.Parameter
     @JsonProperty("value_raw")
     int id();
 
@@ -21,6 +23,7 @@ interface BaseStateValue extends MieleEvent {
         return MieleStatus.forId(id());
     }
 
+    @Value.Parameter
     @JsonProperty("value_localized")
     String name();
 }
