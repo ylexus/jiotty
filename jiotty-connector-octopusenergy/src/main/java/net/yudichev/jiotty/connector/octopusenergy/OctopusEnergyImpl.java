@@ -28,6 +28,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 
+/**
+ * <a href="https://octopus.energy/blog/agile-smart-home-diy/">Guide 1</a>,
+ * <a href="https://www.guylipman.com/octopus/api_guide.html">Guide 2</a>
+ */
 public final class OctopusEnergyImpl extends BaseLifecycleComponent implements OctopusEnergy {
     private static final Logger logger = LoggerFactory.getLogger(OctopusEnergyImpl.class);
 

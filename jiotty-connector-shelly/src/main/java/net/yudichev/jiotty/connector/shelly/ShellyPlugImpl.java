@@ -39,6 +39,9 @@ import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 import static net.yudichev.jiotty.connector.shelly.ShellyPlugImpl.SampleAggregator.MAX_SAMPLE_COUNT;
 
+/**
+ * <a href="https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch">Guide</a>
+ */
 final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
     private static final Logger logger = LoggerFactory.getLogger(ShellyPlugImpl.class);
 

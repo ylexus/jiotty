@@ -52,6 +52,9 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 
+/**
+ * <a href="https://www.miele.com/developer/">Guide</a>
+ */
 final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleDishwasher {
     private static final String BASE_URL = "https://api.mcs3.miele.com/v1";
     private static final Logger logger = LoggerFactory.getLogger(MieleDishwasherImpl.class);
