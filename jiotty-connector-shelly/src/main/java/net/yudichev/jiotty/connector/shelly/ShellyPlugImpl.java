@@ -229,13 +229,13 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
 
         @SuppressWarnings("TypeMayBeWeakened")
         public boolean processResponse(SwitchEnergyStatus switchEnergyStatus) {
-            var timeSec = switchEnergyStatus.endOfNewestMinuteEpochTimeSec();
+            var startOfConsumptionMinuteSpochTimeSec = switchEnergyStatus.endOfNewestMinuteEpochTimeSec() - 60;
             for (Double consumption : switchEnergyStatus.mWHoursByMinute()) {
-                var previousValue = consumptionByEpochSec.putIfAbsent(timeSec, consumption);
+                var previousValue = consumptionByEpochSec.putIfAbsent(startOfConsumptionMinuteSpochTimeSec, consumption);
                 if (logger.isDebugEnabled() && previousValue == null) {
-                    logger.debug("Added sample {}->{}", Instant.ofEpochSecond(timeSec), consumption);
+                    logger.debug("Added sample {}->{}", Instant.ofEpochSecond(startOfConsumptionMinuteSpochTimeSec), consumption);
                 }
-                timeSec -= 60;
+                startOfConsumptionMinuteSpochTimeSec -= 60;
             }
             return consumptionByEpochSec.size() > MAX_SAMPLE_COUNT;
         }

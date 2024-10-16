@@ -21,11 +21,11 @@ class ShellyPlugImplTest {
         assertThat(a.processResponse(of(11 * 60, List.of(11.0, 10.0)))).isFalse(); // only 2 elements in array
 
         /*
-           time  -> 1 | | | 2 | | | 3 | | | 4 | | | 5 | | | 6 | | | 7 | | | 8 | | | 9  |  |  |  10  |  |  |  11
+           time  -> 0 | | | 1 | | | 2 | | | 3 | | | 4 | | | 5 | | | 6 | | | 7 | | | 8 | | | 9 | | | 10 | | | 11
            value -> 1       2       3       4                       7       8 8     9  9        10  10       11
          */
 
-        assertThat(a.generateConsumptionCurve()).hasValue(new ShellyPlug.ConsumptionCurve(Instant.ofEpochSecond(60), List.of(
+        assertThat(a.generateConsumptionCurve()).hasValue(new ShellyPlug.ConsumptionCurve(Instant.ofEpochSecond(0), List.of(
                 1.0, 2.0, 3.0, 4.0, 4.0, 7.0, 7.0, 8.0, 9.0, 10.0, 11.0
         )));
     }
