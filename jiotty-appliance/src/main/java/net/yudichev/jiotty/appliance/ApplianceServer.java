@@ -56,7 +56,7 @@ final class ApplianceServer extends BaseLifecycleComponent {
                                     Command<?> command = commandMeta.createCommand(paramValues);
                                     logger.info("{} executing {}", applianceId, command);
                                     result = appliance.execute(command);
-                                    logger.info("{} executed {}", applianceId, command);
+                                    result.whenComplete((r, throwable) -> logger.info("{} executed {}, result: {}", applianceId, command, r, throwable));
                                 } catch (RuntimeException e) {
                                     result = CompletableFutures.failure(e);
                                 }
