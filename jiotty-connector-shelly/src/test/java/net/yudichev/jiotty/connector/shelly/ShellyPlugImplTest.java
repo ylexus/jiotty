@@ -1,5 +1,7 @@
 package net.yudichev.jiotty.connector.shelly;
 
+import net.yudichev.jiotty.common.async.ProgrammableClock;
+import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -7,12 +9,14 @@ import java.util.List;
 
 import static net.yudichev.jiotty.connector.shelly.SwitchEnergyStatus.of;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 
 class ShellyPlugImplTest {
     @Test
     void sampleAggregator() {
-        var a = new ShellyPlugImpl.SampleAggregator();
+        var clock = new ProgrammableClock();
+        var a = new ShellyPlugImpl("host", clock, mock(RetryableOperationExecutor.class), clock).new SampleAggregator();
 
         assertThat(a.processResponse(of(3 * 60, List.of(3.0, 2.0, 1.0)))).isFalse();
         assertThat(a.processResponse(of(4 * 60, List.of(4.0, 3.0, 2.0)))).isFalse();

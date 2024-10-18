@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -49,7 +50,9 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
     private final String host;
     private final ExecutorFactory executorFactory;
     private final RetryableOperationExecutor retryableOperationExecutor;
-    private final String baseUrl;
+    private final Request requestPowerOn;
+    private final Request requestPowerOff;
+    private final Request requestGetStatus;
     private final CurrentDateTimeProvider timeProvider;
 
     private SchedulingExecutor executor;
@@ -66,7 +69,10 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
         this.executorFactory = checkNotNull(executorFactory);
         this.retryableOperationExecutor = checkNotNull(retryableOperationExecutor);
         this.timeProvider = checkNotNull(timeProvider);
-        baseUrl = "http://" + host;
+        String baseUrl = "http://" + host;
+        requestPowerOn = new Request.Builder().url(baseUrl + "/rpc/Switch.Set?id=0&on=true").get().build();
+        requestPowerOff = new Request.Builder().url(baseUrl + "/rpc/Switch.Set?id=0&on=false").get().build();
+        requestGetStatus = new Request.Builder().url(baseUrl + "/rpc/Switch.GetStatus?id=0").get().build();
     }
 
     @Override
@@ -80,11 +86,39 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
     }
 
     @Override
+    public CompletableFuture<Boolean> powerOn() {
+        return switchSet(requestPowerOn, "On");
+    }
+
+    @Override
+    public CompletableFuture<Boolean> powerOff() {
+        return switchSet(requestPowerOff, "Off");
+    }
+
+    @Override
+    public CompletableFuture<SwitchStatus> getStatus() {
+        return getSwitchStatus();
+    }
+
+    private CompletableFuture<Boolean> switchSet(Request request, String targetStateName) {
+        return whenStartedAndNotLifecycling(() -> retryableOperationExecutor
+                .withBackOffAndRetry(
+                        "Shelly-Switch.Set" + targetStateName + "-" + host,
+                        () -> call(httpClient.newCall(request), SwitchSetResponse.class)))
+                .thenApply(SwitchSetResponse::wasOn);
+    }
+
+    @Override
     public ConsumptionMeasurement startMeasuringConsumption(Consumer<String> errorHandler) {
         return whenStartedAndNotLifecycling(() -> {
             checkState(activeMeasurement == null, "Already started measuring consumption");
             return activeMeasurement = new ConsumptionMeasurementImpl(errorHandler);
         });
+    }
+
+    private CompletableFuture<SwitchStatus> getSwitchStatus() {
+        return retryableOperationExecutor.withBackOffAndRetry("Shelly-Switch.GetStatus-" + host,
+                                                              () -> call(httpClient.newCall(requestGetStatus), SwitchStatus.class));
     }
 
     @BindingAnnotation
@@ -103,7 +137,6 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
 
         private static final Duration SAMPLING_PERIOD = Duration.ofMinutes(1);
 
-        private final Request request = new Request.Builder().url(baseUrl + "/rpc/Switch.GetStatus?id=0").get().build();
         private final Consumer<String> errorHandler;
 
         private final Lock lock = new ReentrantLock();
@@ -118,13 +151,13 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
 
         public ConsumptionMeasurementImpl(Consumer<String> errorHandler) {
             this.errorHandler = checkNotNull(errorHandler);
-            logger.info("Starting sampling consumption");
+            logger.info("[{}] Starting sampling consumption", host);
             executor.execute(this::sample);
         }
 
         @Override
         public Optional<ConsumptionCurve> stop() {
-            logger.info("Stopping consumption sampling");
+            logger.info("[{}] Stopping consumption sampling", host);
             var curve = inLock(lock, () -> {
                 checkState(isRunning(), "Already stopped");
                 Optional<ConsumptionCurve> result = sampleAggregator.generateConsumptionCurve();
@@ -140,20 +173,19 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
 
         private void sample() {
             sampleStartTime = timeProvider.currentInstant();
-            retryableOperationExecutor.withBackOffAndRetry("Shelly-Switch.GetStatus-" + host,
-                                                           () -> call(httpClient.newCall(request), SwitchStatus.class))
-                                      .whenCompleteAsync((switchStatus, e) -> {
-                                          if (inLock(lock, this::isRunning)) {
-                                              processResponse(switchStatus, e);
-                                          } else {
-                                              logger.debug("Discarded response after stop: {}", switchStatus, e);
-                                          }
-                                      }, executor);
+            getSwitchStatus()
+                    .whenCompleteAsync((switchStatus, e) -> {
+                        if (inLock(lock, this::isRunning)) {
+                            processResponse(switchStatus, e);
+                        } else {
+                            logger.debug("[{}] Discarded response after stop: {}", host, switchStatus, e);
+                        }
+                    }, executor);
         }
 
         @SuppressWarnings("TypeMayBeWeakened")
         private void processResponse(SwitchStatus switchStatus, Throwable e) {
-            logger.debug("Processing response {}", switchStatus);
+            logger.debug("[{}] Processing response {}", host, switchStatus);
             if (e != null) {
                 inLock(lock, this::stopAndReleaseResources);
                 sendError(humanReadableMessage(e));
@@ -166,11 +198,11 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
                         if (delayUntilNextSample.isNegative()) {
                             delayUntilNextSample = Duration.ZERO;
                         }
-                        logger.debug("Processed, next sample in {}", delayUntilNextSample);
+                        logger.debug("[{}] Processed, next sample in {}", host, delayUntilNextSample);
                         nextSamplingSchedule = executor.schedule(delayUntilNextSample, this::sample);
                     }
                 } catch (RuntimeException ex) {
-                    logger.error("Consumption response processing failed", ex);
+                    logger.error("[{}] Consumption response processing failed", host, ex);
                 }
             }
         }
@@ -189,7 +221,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
                     }
                     return Outcome.OK;
                 } else {
-                    logger.info("Ignored response after stop: {}", switchEnergyStatus);
+                    logger.info("[{}] Ignored response after stop: {}", host, switchEnergyStatus);
                     return Outcome.ALREADY_STOPPED;
                 }
             });
@@ -207,7 +239,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
             try {
                 errorHandler.accept(errorMessage);
             } catch (RuntimeException ex) {
-                logger.error("Error handler failed", ex);
+                logger.error("[{}] Error handler failed", host, ex);
             }
         }
 
@@ -222,7 +254,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
         }
     }
 
-    static class SampleAggregator {
+    class SampleAggregator {
         public static final int MAX_SAMPLE_COUNT = 10_000;
 
         private final TreeMap<Long, Double> consumptionByEpochSec = new TreeMap<>();
@@ -233,7 +265,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
             for (Double consumption : switchEnergyStatus.mWHoursByMinute()) {
                 var previousValue = consumptionByEpochSec.putIfAbsent(startOfConsumptionMinuteSpochTimeSec, consumption);
                 if (logger.isDebugEnabled() && previousValue == null) {
-                    logger.debug("Added sample {}->{}", Instant.ofEpochSecond(startOfConsumptionMinuteSpochTimeSec), consumption);
+                    logger.debug("[{}] Added sample {}->{}", host, Instant.ofEpochSecond(startOfConsumptionMinuteSpochTimeSec), consumption);
                 }
                 startOfConsumptionMinuteSpochTimeSec -= 60;
             }
