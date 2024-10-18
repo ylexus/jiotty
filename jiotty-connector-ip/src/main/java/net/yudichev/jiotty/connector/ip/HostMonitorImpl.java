@@ -262,7 +262,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
             String osName = System.getProperty("os.name").toLowerCase();
             if (osName.contains("win")) {
                 os = OS.WINDOWS;
-            } else if (osName.contains("osx")) {
+            } else if (osName.contains("osx") || osName.contains("os x")) {
                 os = MACOS;
             } else if (osName.contains("nix") || osName.contains("aix") || osName.contains("nux")) {
                 os = LINUX;
