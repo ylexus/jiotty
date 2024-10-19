@@ -8,12 +8,14 @@ import net.yudichev.jiotty.common.rest.RestServer;
 import net.yudichev.jiotty.common.rest.RestServers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import spark.Request;
 
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.concurrent.CompletableFuture;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
@@ -50,10 +52,7 @@ final class ApplianceServer extends BaseLifecycleComponent {
                             (request, response) -> {
                                 CompletableFuture<?> result;
                                 try {
-                                    var paramValues = Maps.<String, CommandParamType, Object>transformEntries(
-                                            commandMeta.parameterTypes(),
-                                            (name, paramType) -> paramType.decode(request.queryParamsSafe(name)));
-                                    Command<?> command = commandMeta.createCommand(paramValues);
+                                    var command = createCommand(commandMeta, request);
                                     logger.info("{} executing {}", applianceId, command);
                                     result = appliance.execute(command);
                                     result.whenComplete((r, throwable) -> logger.info("{} executed {}, result: {}", applianceId, command, r, throwable));
@@ -63,6 +62,21 @@ final class ApplianceServer extends BaseLifecycleComponent {
                                 return RestServers.withErrorsHandledJson(url, response, result);
                             });
         });
+    }
+
+    private static Command<?> createCommand(CommandMeta<?> commandMeta, Request request) {
+        var paramValues = Maps.<String, CommandParamType, Object>transformEntries(
+                commandMeta.parameterTypes(),
+                (name, paramType) -> {
+                    try {
+                        var param = request.queryParams(name);
+                        checkArgument(param != null, "Missing required parameter '%s'", name);
+                        return paramType.decode(param);
+                    } catch (RuntimeException e) {
+                        throw new RuntimeException("Failed decoding parameter " + name, e);
+                    }
+                });
+        return commandMeta.createCommand(paramValues);
     }
 
     @Retention(RUNTIME)
