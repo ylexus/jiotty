@@ -35,6 +35,12 @@ final class Bindings {
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
+    @interface DeviceCode {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
     @interface SlideId {
     }
 

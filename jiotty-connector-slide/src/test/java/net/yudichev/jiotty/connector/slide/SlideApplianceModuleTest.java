@@ -25,9 +25,9 @@ class SlideApplianceModuleTest {
     @MethodSource
     void test(ExposedKeyModule<SlideService> slideServiceModule) {
         ExposedKeyModule<Appliance> applianceModule = SlideApplianceModule.builder()
-                .setSlideIdSpec(literally(1L))
-                .withRetries(literally(BackOffConfig.builder().build()))
-                .build();
+                                                                          .setSlideIdSpec(literally(1L))
+                                                                          .withRetries(literally(BackOffConfig.builder().build()))
+                                                                          .build();
         Injector injector = Guice.createInjector(
                 new TimeModule(),
                 new ExecutorModule(),
@@ -41,14 +41,13 @@ class SlideApplianceModuleTest {
     public static Stream<ExposedKeyModule<SlideService>> test() {
         return Stream.of(
                 SlideServiceModule.builder()
-                        .setEmail(literally("email"))
-                        .setPassword(literally("password"))
-                        .withPositionVerification()
-                        .build(),
+                                  .setCloutConnection(literally("email"), literally("password"))
+                                  .withPositionVerification()
+                                  .build(),
                 SlideServiceModule.builder()
-                        .setHost(literally("host"))
-                        .withPositionVerification()
-                        .build()
+                                  .setLocalConnection(literally("host"), literally("code"))
+                                  .withPositionVerification()
+                                  .build()
         );
     }
 }
