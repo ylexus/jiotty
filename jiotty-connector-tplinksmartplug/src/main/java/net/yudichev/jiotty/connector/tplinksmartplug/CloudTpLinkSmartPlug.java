@@ -52,9 +52,11 @@ import static net.yudichev.jiotty.common.rest.RestClients.getRequiredNode;
 import static net.yudichev.jiotty.common.rest.RestClients.getRequiredNodeInt;
 import static net.yudichev.jiotty.common.rest.RestClients.getRequiredNodeString;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.connector.tplinksmartplug.Bindings.Dependency;
+import static net.yudichev.jiotty.connector.tplinksmartplug.Bindings.Name;
 
-final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance {
-    private static final Logger logger = LoggerFactory.getLogger(TpLinkSmartPlug.class);
+final class CloudTpLinkSmartPlug extends BaseLifecycleComponent implements Appliance {
+    private static final Logger logger = LoggerFactory.getLogger(CloudTpLinkSmartPlug.class);
     private static final Duration TOKEN_REFRESH_PERIOD = ofDays(14);
     private static final Map<Command<?>, Integer> COMMAND_TO_STATE = ImmutableMap.of(
             ON, 1,
@@ -76,13 +78,13 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     private ScheduledExecutorService clientExecutor;
 
     @Inject
-    TpLinkSmartPlug(@Username String username,
-                    @Password String password,
-                    @TermId String termId,
-                    @DeviceId String deviceId,
-                    @Name String name,
-                    @Dependency RetryableOperationExecutor retryableOperationExecutor,
-                    ExecutorFactory executorFactory) {
+    CloudTpLinkSmartPlug(@Username String username,
+                         @Password String password,
+                         @TermId String termId,
+                         @DeviceId String deviceId,
+                         @Name String name,
+                         @Dependency RetryableOperationExecutor retryableOperationExecutor,
+                         ExecutorFactory executorFactory) {
         this.username = checkNotNull(username);
         this.password = checkNotNull(password);
         this.termId = checkNotNull(termId);
@@ -148,7 +150,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                                                                                    MediaType.get(CONTENT_TYPE_JSON)))
                                                           .build()),
                                JsonNode.class)
-                    .thenApply(TpLinkSmartPlug::verifyResponse)
+                    .thenApply(CloudTpLinkSmartPlug::verifyResponse)
                     .thenApply(resultJsonNode -> {
                         logger.info("Plug {}: obtained token", name);
                         return getRequiredNodeString(resultJsonNode, "token");
@@ -182,7 +184,7 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
                                                                                 .toString(),
                                                                         MediaType.get(CONTENT_TYPE_JSON)))
                                                .build()), JsonNode.class)
-                .thenAccept(TpLinkSmartPlug::verifyResponse);
+                .thenAccept(CloudTpLinkSmartPlug::verifyResponse);
     }
 
     private static JsonNode verifyResponse(JsonNode response) {
@@ -222,15 +224,4 @@ final class TpLinkSmartPlug extends BaseLifecycleComponent implements Appliance 
     @interface DeviceId {
     }
 
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Name {
-    }
-
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Dependency {
-    }
 }

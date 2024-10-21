@@ -21,53 +21,24 @@ import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotation;
 
-public final class TpLinkSmartPlugModule extends ApplianceModule {
-    private final BindingSpec<String> usernameSpec;
-    private final BindingSpec<String> passwordSpec;
-    private final BindingSpec<String> termIdSpec;
-    private final BindingSpec<String> deviceIdSpec;
+public abstract class TpLinkSmartPlugModule extends ApplianceModule {
+
     private final BindingSpec<String> nameSpec;
 
-    private TpLinkSmartPlugModule(BindingSpec<String> usernameSpec,
-                                  BindingSpec<String> passwordSpec,
-                                  BindingSpec<String> termIdSpec,
-                                  BindingSpec<String> deviceIdSpec,
-                                  BindingSpec<String> nameSpec,
-                                  SpecifiedAnnotation targetAnnotation) {
+    private TpLinkSmartPlugModule(SpecifiedAnnotation targetAnnotation, BindingSpec<String> nameSpec) {
         super(targetAnnotation);
-        this.usernameSpec = checkNotNull(usernameSpec);
-        this.passwordSpec = checkNotNull(passwordSpec);
-        this.termIdSpec = checkNotNull(termIdSpec);
-        this.deviceIdSpec = checkNotNull(deviceIdSpec);
         this.nameSpec = checkNotNull(nameSpec);
     }
 
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
     @Override
-    protected Key<? extends Appliance> configureDependencies() {
-        usernameSpec.bind(String.class)
-                    .annotatedWith(TpLinkSmartPlug.Username.class)
-                    .installedBy(this::installLifecycleComponentModule);
-        passwordSpec.bind(String.class)
-                    .annotatedWith(TpLinkSmartPlug.Password.class)
-                    .installedBy(this::installLifecycleComponentModule);
-        termIdSpec.bind(String.class)
-                  .annotatedWith(TpLinkSmartPlug.TermId.class)
-                  .installedBy(this::installLifecycleComponentModule);
-        deviceIdSpec.bind(String.class)
-                    .annotatedWith(TpLinkSmartPlug.DeviceId.class)
-                    .installedBy(this::installLifecycleComponentModule);
+    protected final Key<? extends Appliance> configureDependencies() {
         nameSpec.bind(String.class)
-                .annotatedWith(TpLinkSmartPlug.Name.class)
+                .annotatedWith(Bindings.Name.class)
                 .installedBy(this::installLifecycleComponentModule);
         installLifecycleComponentModule(
                 RetryableOperationExecutorModule
                         .builder()
-                        .withAnnotation(forAnnotation(TpLinkSmartPlug.Dependency.class))
+                        .withAnnotation(forAnnotation(Bindings.Dependency.class))
                         .setBackingOffExceptionHandler(
                                 exposedBy(BackingOffExceptionHandlerModule
                                                   .builder()
@@ -78,54 +49,155 @@ public final class TpLinkSmartPlugModule extends ApplianceModule {
                                                                                      .build()))
                                                   .build()))
                         .build());
-        return registerLifecycleComponent(TpLinkSmartPlug.class);
+        return doConfigureDependencies();
     }
 
-    public static class Builder implements TypedBuilder<ExposedKeyModule<Appliance>>, HasWithAnnotation {
+    protected abstract Key<? extends Appliance> doConfigureDependencies();
+
+    public static CloudBuilder cloudConnectionBuilder() {
+        return new CloudBuilder();
+    }
+
+    public static LocalBuilder localConnectionBuilder() {
+        return new LocalBuilder();
+    }
+
+    private static final class ClounTpLinkSmartPlugModule extends TpLinkSmartPlugModule {
+        private final BindingSpec<String> usernameSpec;
+        private final BindingSpec<String> passwordSpec;
+        private final BindingSpec<String> termIdSpec;
+        private final BindingSpec<String> deviceIdSpec;
+
+        private ClounTpLinkSmartPlugModule(BindingSpec<String> usernameSpec,
+                                           BindingSpec<String> passwordSpec,
+                                           BindingSpec<String> termIdSpec,
+                                           BindingSpec<String> deviceIdSpec,
+                                           BindingSpec<String> nameSpec,
+                                           SpecifiedAnnotation targetAnnotation) {
+            super(targetAnnotation, nameSpec);
+            this.usernameSpec = checkNotNull(usernameSpec);
+            this.passwordSpec = checkNotNull(passwordSpec);
+            this.termIdSpec = checkNotNull(termIdSpec);
+            this.deviceIdSpec = checkNotNull(deviceIdSpec);
+        }
+
+        @Override
+        protected Key<? extends Appliance> doConfigureDependencies() {
+            usernameSpec.bind(String.class)
+                        .annotatedWith(CloudTpLinkSmartPlug.Username.class)
+                        .installedBy(this::installLifecycleComponentModule);
+            passwordSpec.bind(String.class)
+                        .annotatedWith(CloudTpLinkSmartPlug.Password.class)
+                        .installedBy(this::installLifecycleComponentModule);
+            termIdSpec.bind(String.class)
+                      .annotatedWith(CloudTpLinkSmartPlug.TermId.class)
+                      .installedBy(this::installLifecycleComponentModule);
+            deviceIdSpec.bind(String.class)
+                        .annotatedWith(CloudTpLinkSmartPlug.DeviceId.class)
+                        .installedBy(this::installLifecycleComponentModule);
+            return registerLifecycleComponent(CloudTpLinkSmartPlug.class);
+        }
+    }
+
+    private static class LocalTpLinkSmartPlugModule extends TpLinkSmartPlugModule {
+        private final BindingSpec<String> hostSpec;
+
+        public LocalTpLinkSmartPlugModule(BindingSpec<String> nameSpec, BindingSpec<String> hostSpec, SpecifiedAnnotation specifiedAnnotation) {
+            super(specifiedAnnotation, nameSpec);
+            this.hostSpec = checkNotNull(hostSpec);
+        }
+
+        @Override
+        protected Key<? extends Appliance> doConfigureDependencies() {
+            hostSpec.bind(String.class)
+                    .annotatedWith(LocalTpLinkSmartPlug.Host.class)
+                    .installedBy(this::installLifecycleComponentModule);
+            return registerLifecycleComponent(LocalTpLinkSmartPlug.class);
+        }
+    }
+
+    public abstract static class Builder<T extends Builder<T>> implements TypedBuilder<ExposedKeyModule<Appliance>>, HasWithAnnotation {
+        protected BindingSpec<String> nameSpec;
+        protected SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
+
+        private Builder() {
+        }
+
+        protected abstract T thisBuilder();
+
+        public T withName(BindingSpec<String> nameSpec) {
+            this.nameSpec = checkNotNull(nameSpec);
+            return thisBuilder();
+        }
+
+        @Override
+        public T withAnnotation(SpecifiedAnnotation specifiedAnnotation) {
+            this.specifiedAnnotation = checkNotNull(specifiedAnnotation);
+            return thisBuilder();
+        }
+    }
+
+    @SuppressWarnings("UnnecessarySuperQualifier")// to prevent another inspection
+    public static class CloudBuilder extends Builder<CloudBuilder> {
         private BindingSpec<String> usernameSpec;
         private BindingSpec<String> passwordSpec;
         private BindingSpec<String> termIdSpec;
         private BindingSpec<String> deviceIdSpec;
-        private BindingSpec<String> nameSpec;
-        private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
 
-        public Builder setUsername(BindingSpec<String> usernameSpec) {
+        public CloudBuilder setUsername(BindingSpec<String> usernameSpec) {
             this.usernameSpec = checkNotNull(usernameSpec);
             return this;
         }
 
-        public Builder setPassword(BindingSpec<String> passwordSpec) {
+        public CloudBuilder setPassword(BindingSpec<String> passwordSpec) {
             this.passwordSpec = passwordSpec;
             return this;
         }
 
-        public Builder setTermId(BindingSpec<String> termIdSpec) {
+        public CloudBuilder setTermId(BindingSpec<String> termIdSpec) {
             this.termIdSpec = termIdSpec;
             return this;
         }
 
-        public Builder setDeviceId(BindingSpec<String> deviceIdSpec) {
+        public CloudBuilder setDeviceId(BindingSpec<String> deviceIdSpec) {
             this.deviceIdSpec = checkNotNull(deviceIdSpec);
             return this;
         }
 
-        public Builder withName(BindingSpec<String> nameSpec) {
-            this.nameSpec = checkNotNull(nameSpec);
-            return this;
-        }
-
         @Override
-        public Builder withAnnotation(SpecifiedAnnotation specifiedAnnotation) {
-            this.specifiedAnnotation = checkNotNull(specifiedAnnotation);
+        protected CloudBuilder thisBuilder() {
             return this;
         }
 
         @Override
         public ExposedKeyModule<Appliance> build() {
-            if (nameSpec == null) {
-                nameSpec = deviceIdSpec;
+            if (super.nameSpec == null) {
+                super.nameSpec = deviceIdSpec;
             }
-            return new TpLinkSmartPlugModule(usernameSpec, passwordSpec, termIdSpec, deviceIdSpec, nameSpec, specifiedAnnotation);
+            return new ClounTpLinkSmartPlugModule(usernameSpec, passwordSpec, termIdSpec, deviceIdSpec, super.nameSpec, specifiedAnnotation);
+        }
+    }
+
+    @SuppressWarnings("UnnecessarySuperQualifier") // to prevent another inspection
+    public static final class LocalBuilder extends Builder<LocalBuilder> {
+        private BindingSpec<String> hostSpec;
+
+        @Override
+        protected LocalBuilder thisBuilder() {
+            return this;
+        }
+
+        public LocalBuilder setHost(BindingSpec<String> hostSpec) {
+            this.hostSpec = checkNotNull(hostSpec);
+            return this;
+        }
+
+        @Override
+        public ExposedKeyModule<Appliance> build() {
+            if (super.nameSpec == null) {
+                super.nameSpec = hostSpec;
+            }
+            return new LocalTpLinkSmartPlugModule(super.nameSpec, hostSpec, specifiedAnnotation);
         }
     }
 }

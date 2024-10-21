@@ -17,20 +17,38 @@ import static org.hamcrest.Matchers.is;
 
 class TpLinkSmartPlugModuleTest {
     @Test
-    void testCreateInjector() {
+    void testCreateInjectorCloud() {
         Named annotation = Names.named("annotation");
-        ExposedKeyModule<Appliance> module = TpLinkSmartPlugModule.builder()
-                .setDeviceId(literally("did"))
-                .setTermId(literally("tid"))
-                .setUsername(literally("u"))
-                .setPassword(literally("p"))
-                .withAnnotation(forAnnotation(annotation))
-                .build();
+        ExposedKeyModule<Appliance> module = TpLinkSmartPlugModule.cloudConnectionBuilder()
+                                                                  .withName(literally("name"))
+                                                                  .setDeviceId(literally("did"))
+                                                                  .setTermId(literally("tid"))
+                                                                  .setUsername(literally("u"))
+                                                                  .setPassword(literally("p"))
+                                                                  .withAnnotation(forAnnotation(annotation))
+                                                                  .build();
 
         assertThat(module.getExposedKey(), is(Key.get(Appliance.class, annotation)));
 
         Injector injector = Guice.createInjector(module,
-                new ExecutorModule());
+                                                 new ExecutorModule());
+
+        injector.getBinding(module.getExposedKey());
+    }
+
+    @Test
+    void testCreateInjectorLocal() {
+        Named annotation = Names.named("annotation");
+        ExposedKeyModule<Appliance> module = TpLinkSmartPlugModule.localConnectionBuilder()
+                                                                  .withName(literally("name"))
+                                                                  .setHost(literally("host"))
+                                                                  .withAnnotation(forAnnotation(annotation))
+                                                                  .build();
+
+        assertThat(module.getExposedKey(), is(Key.get(Appliance.class, annotation)));
+
+        Injector injector = Guice.createInjector(module,
+                                                 new ExecutorModule());
 
         injector.getBinding(module.getExposedKey());
     }
