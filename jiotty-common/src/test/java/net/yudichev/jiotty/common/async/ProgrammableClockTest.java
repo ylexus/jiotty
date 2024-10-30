@@ -212,7 +212,7 @@ class ProgrammableClockTest {
                task 3 : RUN
          */
         executor.execute(() -> executor.scheduleAtFixedRate(Duration.ofSeconds(1),
-                () -> executor.execute(() -> executor.scheduleAtFixedRate(Duration.ofMillis(500), task))));
+                                                            () -> executor.execute(() -> executor.scheduleAtFixedRate(Duration.ofMillis(500), task))));
 
         clock.setTimeAndTick(Instant.ofEpochMilli(1000));
         verify(task, never()).run();
@@ -323,5 +323,20 @@ class ProgrammableClockTest {
                 verify(task).run();
             }
         };
+    }
+
+    @Test
+    void periodicTaskClosesScheduledTaskThatIsDueAtSameTime() {
+        new Object() {
+            private Closeable delayedSchedule;
+
+            {
+                executor.scheduleAtFixedRate(Duration.ofSeconds(1), () -> delayedSchedule.close());
+                delayedSchedule = executor.schedule(Duration.ofSeconds(1), task);
+            }
+        };
+
+        clock.advanceTimeAndTick(Duration.ofSeconds(1));
+        verify(task, never()).run();
     }
 }

@@ -137,7 +137,7 @@ public abstract class TpLinkSmartPlugModule extends ApplianceModule {
         }
     }
 
-    @SuppressWarnings("UnnecessarySuperQualifier")// to prevent another inspection
+    @SuppressWarnings("UnnecessarySuperQualifier") // to prevent another inspection
     public static class CloudBuilder extends Builder<CloudBuilder> {
         private BindingSpec<String> usernameSpec;
         private BindingSpec<String> passwordSpec;

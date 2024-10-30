@@ -108,10 +108,14 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
                 command.run();
                 unSchedule(); // one-time task
             }
+
+            @Override
+            public String toString() {
+                return "Delayed(" + delay + "): " + command;
+            }
         };
         task.schedule(currentInstant().plus(delay));
         return task;
-
     }
 
     Closeable scheduleAtFixedRate(DeterministicExecutor executor, TemporalAmount initialDelay, TemporalAmount period, Runnable command) {
@@ -125,6 +129,11 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
                 } else {
                     // task closed itself
                 }
+            }
+
+            @Override
+            public String toString() {
+                return "Periodic(" + initialDelay + "," + period + ": " + command;
             }
         };
         task.schedule(currentInstant().plus(initialDelay));
@@ -171,7 +180,10 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
 
         @Override
         public final void run() {
-            checkState(due != null, "cannot run task %s - not scheduled", this);
+            if (due == null) {
+                // un-scheduled
+                return;
+            }
             String oldCurrentTimeAttr = null;
             if (mdc) {
                 oldCurrentTimeAttr = MDC.get("current.time");
