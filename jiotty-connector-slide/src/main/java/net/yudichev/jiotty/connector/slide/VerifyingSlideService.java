@@ -19,7 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
@@ -122,7 +124,7 @@ final class VerifyingSlideService implements SlideService {
                             double currentPosition = slideInfo.position();
                             logger.debug("Slide {}: current pos {}, target pos {}", slideId, currentPosition, targetPosition);
                             if (withinTolerance(currentPosition, targetPosition)) {
-                                logger.debug("Side {} reached satisfiable position", slideId);
+                                logger.debug("Slide {} reached satisfiable position", slideId);
                                 result.complete(null);
                             } else if (currentDateTimeProvider.currentInstant().isAfter(deadline)) {
                                 result.completeExceptionally(new RuntimeException(
