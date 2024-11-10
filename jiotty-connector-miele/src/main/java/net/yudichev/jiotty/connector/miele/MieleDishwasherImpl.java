@@ -13,6 +13,7 @@ import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.lang.Listeners;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
+import net.yudichev.jiotty.common.lang.backoff.SynchronizedBackOff;
 import net.yudichev.jiotty.common.rest.ContentTypes;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import okhttp3.Call;
@@ -30,11 +31,14 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -47,6 +51,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.time.Duration.ZERO;
 import static java.time.Duration.ofMillis;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
@@ -104,7 +109,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
     @Override
     protected void doStop() {
-        Closeable.closeSafelyIfNotNull(logger, tokenSubscription, executor);
+        closeSafelyIfNotNull(logger, tokenSubscription, executor);
     }
 
     @Override
@@ -200,13 +205,15 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
     private class EventStream extends BaseIdempotentCloseable {
         private static final AtomicInteger streamIdGenerator = new AtomicInteger();
+        private static final Duration PING_AGE_BEFORE_RECONNECT = Duration.ofSeconds(20 * 6);
         public final Listeners<MieleEvent> listeners = new Listeners<>();
         private final Request request;
         private final BackOff reconnectBackoff;
-
+        private final AtomicReference<Closeable> pingMonitor = new AtomicReference<>();
         @Nullable
         private Call call;
         private volatile int streamId;
+        private Instant lastPingTime = dateTimeProvider.currentInstant();
 
         protected EventStream() {
             request = new Request.Builder()
@@ -214,12 +221,12 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     .header("Authorization", "Bearer " + accessToken)
                     .header("Accept", "text/event-stream")
                     .build();
-            reconnectBackoff = new ExponentialBackOff.Builder()
-                    .setInitialIntervalMillis(1)
-                    .setMaxIntervalMillis(10_000)
-                    .setMaxElapsedTimeMillis(TimeUnit.DAYS.toMillis(3))
-                    .setNanoClock(dateTimeProvider)
-                    .build();
+            reconnectBackoff = new SynchronizedBackOff(new ExponentialBackOff.Builder()
+                                                               .setInitialIntervalMillis(1)
+                                                               .setMaxIntervalMillis(10_000)
+                                                               .setMaxElapsedTimeMillis(TimeUnit.HOURS.toMillis(3))
+                                                               .setNanoClock(dateTimeProvider)
+                                                               .build());
             executor.submit(this::connect);
         }
 
@@ -255,6 +262,10 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                         if (responseBody == null) {
                             reconnect("response is empty");
                         } else {
+                            var pingCheckInterval = Duration.ofSeconds(20);
+                            logger.info("[{}][{}] starting ping check every {}", deviceId, streamId, pingCheckInterval);
+                            closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
+                            reconnectBackoff.reset();
                             readLoop(responseBody);
                         }
                     }
@@ -309,6 +320,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     switch (eventType) {
                         case "device" -> handle(Json.parse(data, MieleDevice.class));
                         case "actions" -> handle(Json.parse(data, new TypeToken<Map<String, MieleActions>>() {}).get(deviceId));
+                        case "ping" -> handlePing();
                         default -> logger.debug("[{}][{}] ignoring unknown event type {}", deviceId, streamId, eventType);
                     }
                 } catch (RuntimeException e) {
@@ -328,8 +340,21 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                 call.cancel();
                 logger.info("[{}][{}] SSE stream closed", deviceId, streamId);
             }
+            closeSafelyIfNotNull(logger, pingMonitor.getAndSet(null));
             call = null;
             streamId = -1;
+        }
+
+        private void checkPings() {
+            var pingAge = Duration.between(lastPingTime, dateTimeProvider.currentInstant());
+            logger.debug("[{}][{}] lastPingTime: {}, pingAge: {}", deviceId, streamId, lastPingTime, pingAge);
+            if (pingAge.compareTo(PING_AGE_BEFORE_RECONNECT) > 0) {
+                reconnect("last ping received " + pingAge + " ago (>" + PING_AGE_BEFORE_RECONNECT + ")");
+            }
+        }
+
+        private void handlePing() {
+            lastPingTime = dateTimeProvider.currentInstant();
         }
 
         private void handle(MieleEvent event) {
