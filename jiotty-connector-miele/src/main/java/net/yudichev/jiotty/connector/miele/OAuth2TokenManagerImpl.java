@@ -93,7 +93,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
         varStore.readValue(OauthAccessToken.class, varStoreKey)
                 .ifPresentOrElse(accessToken -> {
                                      if (isExpired(accessToken)) {
-                                         refreshAccessToken();
+                                         refreshAccessToken(accessToken.refreshToken());
                                      } else {
                                          setCurrentToken(accessToken);
                                      }
@@ -206,10 +206,10 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
 
     // Function to refresh the access token
 
-    private void refreshAccessToken() {
+    private void refreshAccessToken(String refreshToken) {
         requestToken(new FormBody.Builder()
                              .add("grant_type", "refresh_token")
-                             .add("refresh_token", currentToken.refreshToken())
+                             .add("refresh_token", refreshToken)
                              .add("client_id", clientId)
                              .add("client_secret", clientSecret)
                              .build());
@@ -255,7 +255,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     private void scheduleTokenRefresh() {
         var expiryDelay = Duration.between(currentDateTimeProvider.currentInstant(), currentToken.expiryTime());
         logger.info("[{}] will refresh token in {} ({})", clientId, expiryDelay, currentToken.expiryTime());
-        executor.schedule(expiryDelay, this::refreshAccessToken);
+        executor.schedule(expiryDelay, () -> refreshAccessToken(currentToken.refreshToken()));
     }
 
     @BindingAnnotation
