@@ -237,6 +237,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             call.enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
+                    logger.debug("[{}][{}] call {} failed", deviceId, streamId, call, e);
                     executor.submit(() -> {
                         if (call == EventStream.this.call) {
                             reconnect(humanReadableMessage(e));
@@ -280,6 +281,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             try {
                 @Nullable String eventType = null;
                 while ((line = responseBody.source().readUtf8Line()) != null) {
+                    reconnectBackoff.reset();
                     logger.debug("[{}][{}] event: {}", deviceId, streamId, line);
                     var eventPrefix = "event: ";
                     var dataPrefix = "data: ";
@@ -296,6 +298,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     }
                 }
             } catch (IOException e) {
+                logger.debug("[{}][{}] read loop failed", deviceId, streamId, e);
                 if (!isClosed()) {
                     executor.submit(() -> reconnect(humanReadableMessage(e)));
                 }
