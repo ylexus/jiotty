@@ -13,4 +13,7 @@ import org.immutables.value.Value.Immutable;
 interface BaseRemoteControlStatus extends MieleEvent {
     @Value.Parameter
     boolean fullRemoteControl();
+
+    @Value.Parameter
+    boolean mobileStart();
 }
