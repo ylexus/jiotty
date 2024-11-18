@@ -16,7 +16,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.appliance.PowerCommand.ON;
 import static net.yudichev.jiotty.connector.slide.Bindings.SlideId;
@@ -26,9 +28,9 @@ final class SlideAsAppliance implements Appliance {
     private static final Logger logger = LoggerFactory.getLogger(SlideAsAppliance.class);
 
     private static final ImmutableSet<CommandMeta<?>> SUPPORTED_COMMANDS = ImmutableSet.<CommandMeta<?>>builder()
-            .addAll(PowerCommand.allPowerCommandMetas())
-            .addAll(allSetCurtainPositionCommandMetas())
-            .build();
+                                                                                       .addAll(PowerCommand.allPowerCommandMetas())
+                                                                                       .addAll(allSetCurtainPositionCommandMetas())
+                                                                                       .build();
 
     private final SlideService slideService;
     private final long slideId;
@@ -46,12 +48,17 @@ final class SlideAsAppliance implements Appliance {
     @Override
     public CompletableFuture<?> execute(Command<?> command) {
         return command.accept((PowerCommand.Visitor<CompletableFuture<?>>) powerCommand -> setPosition(powerCommand == ON ? 1.0 : 0.0))
-                .orElseGet(() -> command.acceptOrFail((SetCurtainPositionCommand.Visitor<CompletableFuture<?>>) posCommand -> setPosition(posCommand.getPosition())))
-                .thenRun(() -> logger.info("Slide {}: executed {}", name, command));
+                      .orElseGet(() -> command.acceptOrFail((SetCurtainPositionCommand.Visitor<CompletableFuture<?>>) posCommand -> setPosition(posCommand.getPosition())))
+                      .thenRun(() -> logger.info("Slide {}: executed {}", name, command));
     }
 
     private CompletableFuture<Void> setPosition(double targetPosition) {
         return slideService.setSlidePosition(slideId, targetPosition);
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override

@@ -10,7 +10,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 public final class RetryingAppliance implements Appliance {
@@ -29,6 +31,11 @@ public final class RetryingAppliance implements Appliance {
         return retryableOperationExecutor.withBackOffAndRetry(
                 "execute " + command + " on " + delegate,
                 () -> delegate.execute(command));
+    }
+
+    @Override
+    public String name() {
+        return delegate.name();
     }
 
     @Override
