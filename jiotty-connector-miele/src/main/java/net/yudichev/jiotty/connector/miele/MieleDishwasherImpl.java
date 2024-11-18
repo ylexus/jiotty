@@ -222,7 +222,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     .header("Accept", "text/event-stream")
                     .build();
             reconnectBackoff = new SynchronizedBackOff(new ExponentialBackOff.Builder()
-                                                               .setInitialIntervalMillis(1)
+                                                               .setInitialIntervalMillis(10)
                                                                .setMaxIntervalMillis(10_000)
                                                                .setMaxElapsedTimeMillis(TimeUnit.HOURS.toMillis(3))
                                                                .setNanoClock(dateTimeProvider)
@@ -230,20 +230,27 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             executor.submit(this::connect);
         }
 
+        /**
+         * @implNote executor thread
+         */
         private void connect() {
             streamId = streamIdGenerator.incrementAndGet();
             logger.info("[{}][{}] connecting to SSE stream", deviceId, streamId);
             call = eventingClient.newCall(request);
+            logger.debug("[{}][{}] new call is {}", deviceId, streamId, call);
             call.enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     logger.debug("[{}][{}] call {} failed", deviceId, streamId, call, e);
                     executor.submit(() -> {
-                        if (call == EventStream.this.call) {
+                        var activeCall = EventStream.this.call;
+                        if (call == activeCall) {
                             reconnect(humanReadableMessage(e));
                         } else {
-                            logger.warn("[{}] got failure callback for call {} while active call is {} and active streamId is {}",
-                                        deviceId, call, EventStream.this.call, streamId);
+                            logger.debug("""
+                                         [{}] got failure callback for call {} while active call is {} and active streamId is {},
+                                          likely a previous call failure -> ignored""",
+                                         deviceId, call, activeCall, streamId);
                         }
                     });
                 }
@@ -265,6 +272,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                         } else {
                             var pingCheckInterval = Duration.ofSeconds(20);
                             logger.info("[{}][{}] starting ping check every {}", deviceId, streamId, pingCheckInterval);
+                            // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
+                            executor.submit(() -> lastPingTime = dateTimeProvider.currentInstant());
                             closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
                             reconnectBackoff.reset();
                             readLoop(responseBody);
@@ -298,8 +307,10 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     }
                 }
             } catch (IOException e) {
-                logger.debug("[{}][{}] read loop failed", deviceId, streamId, e);
-                if (!isClosed()) {
+                if (isClosed()) {
+                    logger.debug("[{}][{}] read loop failed while closed: this is expected", deviceId, streamId, e);
+                } else {
+                    logger.info("[{}][{}] read loop failed unexpectedly, will re-connect", deviceId, streamId, e);
                     executor.submit(() -> reconnect(humanReadableMessage(e)));
                 }
             }
@@ -352,7 +363,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             var pingAge = Duration.between(lastPingTime, dateTimeProvider.currentInstant());
             logger.debug("[{}][{}] lastPingTime: {}, pingAge: {}", deviceId, streamId, lastPingTime, pingAge);
             if (pingAge.compareTo(PING_AGE_BEFORE_RECONNECT) > 0) {
-                reconnect("last ping received " + pingAge + " ago (>" + PING_AGE_BEFORE_RECONNECT + ")");
+                reconnect("re-connected or last ping received " + pingAge + " ago (>" + PING_AGE_BEFORE_RECONNECT + ")");
             }
         }
 
