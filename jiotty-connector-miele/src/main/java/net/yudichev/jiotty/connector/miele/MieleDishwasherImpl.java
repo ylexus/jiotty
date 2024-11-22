@@ -256,28 +256,34 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) throws IOException {
+                public void onResponse(Call call, Response response) {
                     // ! HTTP thread !
                     try (ResponseBody responseBody = response.body()) {
                         if (!response.isSuccessful()) {
-                            logger.warn("[{}] failed to open SSE stream: response code {}{}",
-                                        deviceId, response.code(), (responseBody == null ? "" : ", body: " + responseBody.string()));
+                            executor.execute(() -> {
+                                String responseBodyStr;
+                                try {
+                                    responseBodyStr = responseBody == null ? "" : ", body: " + responseBody.string();
+                                } catch (IOException e) {
+                                    responseBodyStr = "(failed getting response body: " + humanReadableMessage(e) + ")";
+                                }
+                                reconnect("failed to open SSE stream: response code " + response.code() + responseBodyStr);
+                            });
                             return;
                         }
 
-                        logger.info("[{}][{}] connected to SSE stream", deviceId, streamId);
-
                         if (responseBody == null) {
-                            reconnect("response is empty");
-                        } else {
-                            var pingCheckInterval = Duration.ofSeconds(20);
-                            logger.info("[{}][{}] starting ping check every {}", deviceId, streamId, pingCheckInterval);
-                            // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
-                            executor.submit(() -> lastPingTime = dateTimeProvider.currentInstant());
-                            closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
-                            reconnectBackoff.reset();
-                            readLoop(responseBody);
+                            executor.execute(() -> reconnect("failed to open SSE stream: response is empty"));
+                            return;
                         }
+
+                        var pingCheckInterval = Duration.ofSeconds(20);
+                        logger.info("[{}][{}] connected to SSE stream, starting ping check every {}", deviceId, streamId, pingCheckInterval);
+                        // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
+                        executor.submit(() -> lastPingTime = dateTimeProvider.currentInstant());
+                        closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
+                        reconnectBackoff.reset();
+                        readLoop(responseBody);
                     }
                 }
             });
