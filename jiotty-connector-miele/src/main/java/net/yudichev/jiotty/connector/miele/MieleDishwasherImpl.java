@@ -264,7 +264,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                                 String responseBodyStr;
                                 try {
                                     responseBodyStr = responseBody == null ? "" : ", body: " + responseBody.string();
-                                } catch (IOException e) {
+                                } catch (IOException | RuntimeException e) {
                                     responseBodyStr = "(failed getting response body: " + humanReadableMessage(e) + ")";
                                 }
                                 reconnect("failed to open SSE stream: response code " + response.code() + responseBodyStr);
