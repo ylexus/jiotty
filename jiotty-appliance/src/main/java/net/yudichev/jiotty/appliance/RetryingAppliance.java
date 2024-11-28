@@ -29,7 +29,7 @@ public final class RetryingAppliance implements Appliance {
     @Override
     public CompletableFuture<?> execute(Command<?> command) {
         return retryableOperationExecutor.withBackOffAndRetry(
-                "execute " + command + " on " + delegate,
+                "execute " + command + " on " + delegate.name(),
                 () -> delegate.execute(command));
     }
 
