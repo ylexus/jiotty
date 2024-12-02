@@ -27,9 +27,16 @@ public final class SynchronizedBackOff implements BackOff {
     }
 
     @Override
+    public long getMaxElapsedTimeMillis() {
+        synchronized (lock) {
+            return delegate.getMaxElapsedTimeMillis();
+        }
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("delegate", delegate)
-                .toString();
+                          .add("delegate", delegate)
+                          .toString();
     }
 }

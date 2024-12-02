@@ -232,13 +232,7 @@ public class ExponentialBackOff implements BackOff {
         return maxIntervalMillis;
     }
 
-    /**
-     * Returns the maximum elapsed time in milliseconds.
-     *
-     * <p>If the time elapsed since an {@link ExponentialBackOff} instance is created goes past the
-     * max_elapsed_time then the method {@link #nextBackOffMillis()} starts returning {@link
-     * BackOff#STOP}. The elapsed time can be reset by calling {@link #reset()}.
-     */
+    @Override
     public final long getMaxElapsedTimeMillis() {
         return maxElapsedTimeMillis;
     }

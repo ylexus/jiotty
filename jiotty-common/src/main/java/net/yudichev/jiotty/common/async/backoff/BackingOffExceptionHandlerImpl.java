@@ -42,8 +42,8 @@ final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler
                                             long backOffMs = backOff.nextBackOffMillis();
                                             logger.debug("Operation '{}': backoff: {}", operationName, backOff);
                                             checkState(backOffMs != BackOff.STOP,
-                                                       "Operation %s is being retried for too long - giving up, last error was: %s",
-                                                       operationName, humanReadableMessage(throwable));
+                                                       "Operation %s is being retried for too long (%sms) - giving up, last error was: %s",
+                                                       operationName, backOff.getMaxElapsedTimeMillis(), humanReadableMessage(throwable));
                                             logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms",
                                                          operationName,
                                                          backOffMs,

@@ -25,37 +25,6 @@ public interface BackOff {
      * Indicates that no more retries should be made for use in {@link #nextBackOffMillis()}.
      */
     long STOP = -1L;
-    /**
-     * Fixed back-off policy whose back-off time is always zero, meaning that the operation is retried
-     * immediately without waiting.
-     */
-    BackOff ZERO_BACKOFF =
-            new BackOff() {
-
-                @Override
-                public void reset() {
-                }
-
-                @Override
-                public long nextBackOffMillis() {
-                    return 0;
-                }
-            };
-    /**
-     * Fixed back-off policy that always returns {@code #STOP} for {@link #nextBackOffMillis()},
-     * meaning that the operation should not be retried.
-     */
-    BackOff STOP_BACKOFF =
-            new BackOff() {
-                @Override
-                public void reset() {
-                }
-
-                @Override
-                public long nextBackOffMillis() {
-                    return STOP;
-                }
-            };
 
     /**
      * Reset to initial state.
@@ -78,4 +47,13 @@ public interface BackOff {
      * </pre>
      */
     long nextBackOffMillis();
+
+    /**
+     * Returns the maximum elapsed time in milliseconds.
+     *
+     * <p>If the time elapsed since this instance is created or {@link #reset() reset} goes past the
+     * this value then the method {@link #nextBackOffMillis()} starts returning {@link
+     * BackOff#STOP}.
+     */
+    long getMaxElapsedTimeMillis();
 }
