@@ -178,7 +178,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             }).add(callback);
         });
 
-        return idempotent(() -> executor.submit(guarded(logger, "unsubscribe", () ->
+        return idempotent(() -> executor.execute(guarded(logger, "unsubscribe", () ->
                 subscriptionsByFilter.computeIfPresent(topicFilter, (filter, callbacks) -> {
                     callbacks.remove(callback);
                     if (callbacks.isEmpty()) {
@@ -280,7 +280,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         }
 
         private void restoreSubscriptions() {
-            executor.submit(() -> {
+            executor.execute(() -> {
                 logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
                 try {
                     subscriptionsByFilter.forEach((topicFilter, callbacks) ->
@@ -297,7 +297,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         @Override
         public void connectionLost(Throwable cause) {
             logger.info("{} lost connection to {}", client.getClientId(), client.getServerURI(), cause);
-            executor.submit(() -> {
+            executor.execute(() -> {
                 subRetryTimerHandle.close();
                 throttledErrorLogger.accept(cause);
             });
@@ -305,7 +305,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
 
         @Override
         public void messageArrived(String topic, MqttMessage message) {
-            executor.submit(() -> {
+            executor.execute(() -> {
                 logger.debug("messageArrived: {}->{}", topic, message);
                 lastReceivedMessageByTopic.put(topic, message);
             });

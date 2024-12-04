@@ -51,6 +51,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.time.Duration.ZERO;
 import static java.time.Duration.ofMillis;
+import static java.time.Duration.ofSeconds;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
@@ -205,7 +206,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
     private class EventStream extends BaseIdempotentCloseable {
         private static final AtomicInteger streamIdGenerator = new AtomicInteger();
-        private static final Duration PING_AGE_BEFORE_RECONNECT = Duration.ofSeconds(20 * 6);
+        private static final Duration PING_AGE_BEFORE_RECONNECT = ofSeconds(20 * 6);
         public final Listeners<MieleEvent> listeners = new Listeners<>();
         private final Request request;
         private final BackOff reconnectBackoff;
@@ -227,7 +228,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                                                                .setMaxElapsedTimeMillis(TimeUnit.HOURS.toMillis(3))
                                                                .setNanoClock(dateTimeProvider)
                                                                .build());
-            executor.submit(this::connect);
+            executor.execute(this::connect);
         }
 
         /**
@@ -242,7 +243,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                 @Override
                 public void onFailure(Call call, IOException e) {
                     logger.debug("[{}][{}] call {} failed", deviceId, streamId, call, e);
-                    executor.submit(() -> {
+                    executor.execute(() -> {
                         var activeCall = EventStream.this.call;
                         if (call == activeCall) {
                             reconnect(humanReadableMessage(e));
@@ -258,6 +259,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                 @Override
                 public void onResponse(Call call, Response response) {
                     // ! HTTP thread !
+                    logger.debug("[{}][{}] call {} succeeded, response code {}", deviceId, streamId, call, response.code());
                     try (ResponseBody responseBody = response.body()) {
                         if (!response.isSuccessful()) {
                             executor.execute(() -> {
@@ -277,10 +279,10 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                             return;
                         }
 
-                        var pingCheckInterval = Duration.ofSeconds(20);
+                        var pingCheckInterval = ofSeconds(20);
                         logger.info("[{}][{}] connected to SSE stream, starting ping check every {}", deviceId, streamId, pingCheckInterval);
                         // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
-                        executor.submit(() -> lastPingTime = dateTimeProvider.currentInstant());
+                        executor.execute(() -> lastPingTime = dateTimeProvider.currentInstant());
                         closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
                         reconnectBackoff.reset();
                         readLoop(responseBody);
@@ -313,12 +315,16 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     }
                 }
             } catch (IOException e) {
-                if (isClosed()) {
-                    logger.debug("[{}][{}] read loop failed while closed: this is expected", deviceId, streamId, e);
-                } else {
-                    logger.info("[{}][{}] read loop failed unexpectedly, will re-connect", deviceId, streamId, e);
-                    executor.submit(() -> reconnect(humanReadableMessage(e)));
-                }
+                executor.execute(() -> handleReadLoopFailure(e));
+            }
+        }
+
+        private void handleReadLoopFailure(IOException e) {
+            if (call == null) {
+                logger.debug("[{}][{}] read loop failed while call or stream is closed : this is expected", deviceId, streamId, e);
+            } else {
+                logger.info("[{}][{}] read loop failed unexpectedly on call {}, will re-connect", deviceId, streamId, call, e);
+                reconnect(humanReadableMessage(e));
             }
         }
 
@@ -335,7 +341,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
         }
 
         private void handleEvent(String eventType, String data) {
-            executor.submit(() -> {
+            executor.execute(() -> {
                 try {
                     switch (eventType) {
                         case "device" -> handle(Json.parse(data, MieleDevice.class));
@@ -351,18 +357,23 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
         @Override
         protected final void doClose() {
-            executor.submit(this::closeStream);
+            executor.execute(this::closeStream);
         }
 
         private void closeStream() {
+            Call callToCancel = null;
             if (call != null) {
-                logger.info("[{}][{}] closing SSE stream", deviceId, streamId);
-                call.cancel();
-                logger.info("[{}][{}] SSE stream closed", deviceId, streamId);
+                callToCancel = call;
+                call = null;
             }
             closeSafelyIfNotNull(logger, pingMonitor.getAndSet(null));
-            call = null;
             streamId = -1;
+            if (callToCancel != null) {
+                logger.info("[{}][{}] closing SSE stream", deviceId, streamId);
+                // this will fail the read loop
+                callToCancel.cancel();
+                logger.info("[{}][{}] SSE stream closed", deviceId, streamId);
+            }
         }
 
         private void checkPings() {
