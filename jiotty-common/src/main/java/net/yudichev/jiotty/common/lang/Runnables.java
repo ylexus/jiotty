@@ -11,11 +11,19 @@ public final class Runnables {
     public static Runnable guarded(Logger logger, String taskDescription, Runnable delegate) {
         checkNotNull(logger);
         checkNotNull(delegate);
-        return () -> {
-            try {
-                delegate.run();
-            } catch (Throwable e) {
-                logger.error("Failed while {}", taskDescription, e);
+        return new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    delegate.run();
+                } catch (Throwable e) {
+                    logger.error("Failed while {}", taskDescription, e);
+                }
+            }
+
+            @Override
+            public String toString() {
+                return "Task '" + taskDescription + "' -> " + delegate;
             }
         };
     }
