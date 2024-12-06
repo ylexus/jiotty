@@ -15,7 +15,7 @@ public final class SunriseSunsetTimesModule extends BaseLifecycleComponentModule
 
     @Override
     protected void configure() {
-        bind(getExposedKey()).to(SunriseSunsetTimesImpl.class);
+        bind(getExposedKey()).to(registerLifecycleComponent(SunriseSunsetTimesImpl.class));
         expose(getExposedKey());
     }
 

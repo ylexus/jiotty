@@ -7,7 +7,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.assistedinject.Assisted;
 import net.yudichev.jiotty.common.rest.RestClients;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
-import okhttp3.*;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.ResponseBody;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -41,56 +46,58 @@ final class InternalGoogleSpreadsheet implements GoogleSpreadsheet {
     @Override
     public CompletableFuture<Void> updateRange(String range, Object value) {
         return supplyAsync(() -> getAsUnchecked(() -> sheets.spreadsheets().values()
-                .update(spreadsheet.getSpreadsheetId(), range, new ValueRange().setValues(ImmutableList.of(ImmutableList.of(value))))
-                .setValueInputOption("USER_ENTERED")
-                .execute()))
+                                                            .update(spreadsheet.getSpreadsheetId(),
+                                                                    range,
+                                                                    new ValueRange().setValues(ImmutableList.of(ImmutableList.of(value))))
+                                                            .setValueInputOption("USER_ENTERED")
+                                                            .execute()))
                 .thenApply(response -> null);
     }
 
     @Override
     public CompletableFuture<List<List<Object>>> getRangeValues(String range) {
         return supplyAsync(() -> getAsUnchecked(() -> sheets.spreadsheets().values()
-                .get(spreadsheet.getSpreadsheetId(), range)
-                .execute()))
+                                                            .get(spreadsheet.getSpreadsheetId(), range)
+                                                            .execute()))
                 .thenApply(ValueRange::getValues);
     }
 
     @Override
     public CompletableFuture<byte[]> export(String sheetName) {
         Integer sheetId = spreadsheet.getSheets().stream()
-                .filter(sheet -> sheet.getProperties().getTitle().equals(sheetName))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No sheet with title " + sheetName))
-                .getProperties()
-                .getSheetId();
+                                     .filter(sheet -> sheet.getProperties().getTitle().equals(sheetName))
+                                     .findFirst()
+                                     .orElseThrow(() -> new IllegalArgumentException("No sheet with title " + sheetName))
+                                     .getProperties()
+                                     .getSheetId();
         checkState(sheetId != null);
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         httpClient.newCall(new Request.Builder()
-                .url(HttpUrl.get("https://docs.google.com/spreadsheets/d/" + spreadsheet.getSpreadsheetId() + "/export").newBuilder()
-                        .addQueryParameter("format", "pdf")
-                        .addQueryParameter("gid", sheetId.toString())
-                        .addQueryParameter("size", "7")
-                        .addQueryParameter("portrait", "true")
-                        .build())
-                .header("authorization", "Bearer " + googleAuthorizationProvider.get().getCredential().getAccessToken())
-                .get()
-                .build())
-                .enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        future.completeExceptionally(e);
-                    }
+                                   .url(HttpUrl.get("https://docs.google.com/spreadsheets/d/" + spreadsheet.getSpreadsheetId() + "/export").newBuilder()
+                                               .addQueryParameter("format", "pdf")
+                                               .addQueryParameter("gid", sheetId.toString())
+                                               .addQueryParameter("size", "7")
+                                               .addQueryParameter("portrait", "true")
+                                               .build())
+                                   .header("authorization", "Bearer " + googleAuthorizationProvider.get().getCredential().getAccessToken())
+                                   .get()
+                                   .build())
+                  .enqueue(new Callback() {
+                      @Override
+                      public void onFailure(Call call, IOException e) {
+                          future.completeExceptionally(e);
+                      }
 
-                    @Override
-                    public void onResponse(Call call, okhttp3.Response response) {
-                        ResponseBody responseBody = checkNotNull(response.body());
-                        try {
-                            future.complete(responseBody.bytes());
-                        } catch (RuntimeException | IOException e) {
-                            future.completeExceptionally(new RuntimeException("failed to get response body", e));
-                        }
-                    }
-                });
+                      @Override
+                      public void onResponse(Call call, okhttp3.Response response) {
+                          ResponseBody responseBody = checkNotNull(response.body());
+                          try {
+                              future.complete(responseBody.bytes());
+                          } catch (RuntimeException | IOException e) {
+                              future.completeExceptionally(new RuntimeException("failed to get response body", e));
+                          }
+                      }
+                  });
         return future;
     }
 }

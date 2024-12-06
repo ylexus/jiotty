@@ -29,8 +29,8 @@ public interface Closeable extends AutoCloseable {
     static Closeable forCloseables(Collection<? extends AutoCloseable> closeables) {
         //noinspection Convert2MethodRef getting weird compiler error
         return forActions(closeables.stream()
-                .<Runnable>map(closeable -> () -> asUnchecked(() -> closeable.close()))
-                .collect(toImmutableList()));
+                                    .<Runnable>map(closeable -> () -> asUnchecked(() -> closeable.close()))
+                                    .collect(toImmutableList()));
     }
 
     static Closeable forActions(Collection<? extends Runnable> actions) {
@@ -85,6 +85,12 @@ public interface Closeable extends AutoCloseable {
     }
 
     static void closeSafelyIfNotNull(Logger logger, AutoCloseable... closeables) {
+        for (AutoCloseable closeable : closeables) {
+            closeSafelyIfNotNull(logger, closeable);
+        }
+    }
+
+    static void closeSafelyIfNotNull(Logger logger, Iterable<? extends AutoCloseable> closeables) {
         for (AutoCloseable closeable : closeables) {
             closeSafelyIfNotNull(logger, closeable);
         }

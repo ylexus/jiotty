@@ -33,8 +33,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,6 +59,7 @@ import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.huma
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 
 /**
  * <a href="https://www.miele.com/developer/">Guide</a>
@@ -65,14 +68,14 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
     private static final String BASE_URL = "https://api.mcs3.miele.com/v1";
     private static final Logger logger = LoggerFactory.getLogger(MieleDishwasherImpl.class);
 
-    private final OkHttpClient eventingClient = newClient(builder -> builder.readTimeout(ZERO).callTimeout(ZERO).writeTimeout(ZERO));
-    private final OkHttpClient commandClient = newClient();
     private final String deviceId;
     private final OAuth2TokenManager tokenManager;
     private final ExecutorFactory executorFactory;
     private final CurrentDateTimeProvider dateTimeProvider;
     private final RetryableOperationExecutor retryableOperationExecutor;
-
+    private final Set<EventStream> activeEventStreams = new HashSet<>();
+    private OkHttpClient eventingClient;
+    private OkHttpClient commandClient;
     private volatile String accessToken;
     private SchedulingExecutor executor;
     private Closeable tokenSubscription;
@@ -93,6 +96,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
     @Override
     protected void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("MieleDishwasher");
+        eventingClient = newClient(builder -> builder.readTimeout(ZERO).callTimeout(ZERO).writeTimeout(ZERO));
+        commandClient = newClient();
         CompletableFuture<Void> firstToken = new CompletableFuture<>();
         tokenSubscription = tokenManager.subscribeToAccessToken(token -> {
             boolean firstTime = accessToken == null;
@@ -110,7 +115,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
     @Override
     protected void doStop() {
-        closeSafelyIfNotNull(logger, tokenSubscription, executor);
+        closeSafelyIfNotNull(logger, activeEventStreams);
+        closeSafelyIfNotNull(logger, tokenSubscription, () -> shutdown(eventingClient), () -> shutdown(commandClient), executor);
     }
 
     @Override
@@ -119,6 +125,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             logger.debug("[{}] Subscribing to events {}", deviceId, eventHandler);
             // TODO if this is ever used, make it start the stream on 1st subscription end close on last
             var eventStream = new EventStream();
+            activeEventStreams.add(eventStream);
             //noinspection resource as whole stream is closed
             eventStream.listeners.addListener(eventHandler);
             return eventStream;
@@ -374,6 +381,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                 callToCancel.cancel();
                 logger.info("[{}][{}] SSE stream closed", deviceId, streamId);
             }
+            activeEventStreams.remove(this);
         }
 
         private void checkPings() {

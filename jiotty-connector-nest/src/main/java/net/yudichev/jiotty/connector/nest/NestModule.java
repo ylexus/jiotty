@@ -23,7 +23,7 @@ public final class NestModule extends BaseLifecycleComponentModule implements Ex
     protected void configure() {
         bindConstant().annotatedWith(NestThermostatImpl.AccessToken.class).to(accessToken);
         bindConstant().annotatedWith(NestThermostatImpl.DeviceId.class).to(deviceId);
-        bind(getExposedKey()).to(NestThermostatImpl.class);
+        bind(getExposedKey()).to(registerLifecycleComponent(NestThermostatImpl.class));
         expose(getExposedKey());
     }
 

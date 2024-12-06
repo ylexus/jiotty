@@ -48,6 +48,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 
 public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OAuth2TokenManager {
     private static final Logger logger = LoggerFactory.getLogger(OAuth2TokenManagerImpl.class);
@@ -56,7 +57,6 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     private static final String TOKEN_URL = AUTH_BASE_URL + "/token";
     private static final Duration REFRESH_ADVANCE_PERIOD = Duration.ofDays(3);
 
-    private final OkHttpClient httpClient = newClient();
     private final ExecutorFactory executorFactory;
     private final VarStore varStore;
     private final String clientId;
@@ -64,6 +64,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final Listeners<String> listeners = new Listeners<>();
     private final String varStoreKey;
+    private OkHttpClient httpClient;
 
     private OauthAccessToken currentToken;
     private SchedulingExecutor executor;
@@ -89,6 +90,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
 
     @Override
     protected void doStart() {
+        httpClient = newClient();
         executor = executorFactory.createSingleThreadedSchedulingExecutor("MieleOauth2");
         varStore.readValue(OauthAccessToken.class, varStoreKey)
                 .ifPresentOrElse(accessToken -> {
@@ -108,7 +110,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
 
     @Override
     protected void doStop() {
-        Closeable.closeSafelyIfNotNull(logger, executor);
+        Closeable.closeSafelyIfNotNull(logger, executor, () -> shutdown(httpClient));
     }
 
     @Override

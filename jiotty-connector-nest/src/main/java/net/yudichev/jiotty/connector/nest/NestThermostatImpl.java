@@ -1,12 +1,15 @@
 package net.yudichev.jiotty.connector.nest;
 
 import com.google.inject.BindingAnnotation;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.rest.ContentTypes;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
@@ -15,35 +18,50 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.net.HttpHeaders.AUTHORIZATION;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 
-final class NestThermostatImpl implements NestThermostat {
+final class NestThermostatImpl extends BaseLifecycleComponent implements NestThermostat {
+    private static final Logger logger = LoggerFactory.getLogger(NestThermostatImpl.class);
+
     private final String hvacModeUrl;
-    private final OkHttpClient client;
     private final String authorization;
+    private OkHttpClient client;
 
     @Inject
     NestThermostatImpl(String accessToken, String deviceId) {
         authorization = "Bearer " + accessToken;
+        hvacModeUrl = "https://developer-api.nest.com/devices/thermostats/" + deviceId + "/hvac_mode";
+    }
+
+    @Override
+    protected void doStart() {
         client = newClient(builder -> builder
                 .authenticator((route, response) -> response.request().newBuilder()
-                        .header(AUTHORIZATION, authorization)
-                        .build())
+                                                            .header(AUTHORIZATION, authorization)
+                                                            .build())
                 .build());
-        hvacModeUrl = "https://developer-api.nest.com/devices/thermostats/" + deviceId + "/hvac_mode";
+    }
+
+    @Override
+    protected void doStop() {
+        closeSafelyIfNotNull(logger, () -> shutdown(client));
     }
 
     @Override
     public CompletableFuture<Mode> currentMode() {
         return call(client.newCall(new Request.Builder()
-                .url(hvacModeUrl)
-                .get()
-                .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
+                                           .url(hvacModeUrl)
+                                           .get()
+                                           .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
 //                .addHeader(AUTHORIZATION, "Bearer " + accessToken)
-                .build()), Mode.class);
+                                           .build()), Mode.class);
     }
 
     @Override

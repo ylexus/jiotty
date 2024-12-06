@@ -23,8 +23,8 @@ public final class GoogleSheetsModule extends BaseGoogleServiceModule implements
         bind(Sheets.class).annotatedWith(Bindings.Internal.class).toProvider(SheetsProvider.class).in(Singleton.class);
 
         install(new FactoryModuleBuilder()
-                .implement(GoogleSpreadsheet.class, InternalGoogleSpreadsheet.class)
-                .build(GoogleSpreadsheetFactory.class));
+                        .implement(GoogleSpreadsheet.class, InternalGoogleSpreadsheet.class)
+                        .build(GoogleSpreadsheetFactory.class));
         bind(getExposedKey()).to(GoogleSheetsClientImpl.class);
         expose(getExposedKey());
     }

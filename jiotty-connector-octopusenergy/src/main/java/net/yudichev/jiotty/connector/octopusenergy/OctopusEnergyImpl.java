@@ -25,8 +25,10 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 
 /**
  * <a href="https://octopus.energy/blog/agile-smart-home-diy/">Guide 1</a>,
@@ -37,10 +39,10 @@ public final class OctopusEnergyImpl extends BaseLifecycleComponent implements O
 
     private static final String BASE_URL = "https://api.octopus.energy/v1";
 
-    private final OkHttpClient client = newClient();
     private final String apiKey;
     private final String accountId;
     private final CurrentDateTimeProvider currentDateTimeProvider;
+    private OkHttpClient client;
     private CompletableFuture<OctopusAccount> account;
 
     @Inject
@@ -52,6 +54,7 @@ public final class OctopusEnergyImpl extends BaseLifecycleComponent implements O
 
     @Override
     protected void doStart() {
+        client = newClient();
         account = call(client.newCall(new Request.Builder()
                                               .url(BASE_URL + "/accounts/" + accountId)
                                               .header("Authorization", "Basic " + base64().encode(apiKey.getBytes(StandardCharsets.US_ASCII)))
@@ -59,6 +62,11 @@ public final class OctopusEnergyImpl extends BaseLifecycleComponent implements O
                                               .build()),
                        new TypeToken<>() {});
         account.whenComplete(CompletableFutures.logErrorOnFailure(logger, "Failed to retrieve account info"));
+    }
+
+    @Override
+    protected void doStop() {
+        closeSafelyIfNotNull(logger, () -> shutdown(client));
     }
 
     @Override

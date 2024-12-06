@@ -2,6 +2,7 @@ package net.yudichev.jiotty.common.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.reflect.TypeToken;
+import com.google.common.util.concurrent.MoreExecutors;
 import net.yudichev.jiotty.common.lang.Json;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -18,6 +19,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 
 public final class RestClients {
     private static final Logger logger = LoggerFactory.getLogger(RestClients.class);
@@ -142,5 +144,20 @@ public final class RestClients {
         JsonNode childNode = getRequiredNode(parentNode, nodeName);
         checkState(childNode.isLong(), "node '%s' is not a long in %s", nodeName, parentNode);
         return childNode.asLong();
+    }
+
+    public static void shutdown(OkHttpClient client) {
+        shutdown(client, Duration.ofSeconds(10));
+    }
+
+    public static void shutdown(OkHttpClient client, Duration timeout) {
+        try {
+            logger.debug("Shutting down {}", client);
+            MoreExecutors.shutdownAndAwaitTermination(client.dispatcher().executorService(), timeout);
+            client.connectionPool().evictAll();
+            closeSafelyIfNotNull(logger, client.cache());
+        } catch (RuntimeException e) {
+            logger.warn("Failed to gracefully shut down client {} in {}", client, timeout, e);
+        }
     }
 }

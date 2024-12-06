@@ -6,6 +6,7 @@ import com.burgstaller.okhttp.digest.CachingAuthenticator;
 import com.burgstaller.okhttp.digest.Credentials;
 import com.burgstaller.okhttp.digest.DigestAuthenticator;
 import com.google.common.reflect.TypeToken;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -20,30 +21,44 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.Json.object;
 import static net.yudichev.jiotty.common.rest.ContentTypes.CONTENT_TYPE_JSON;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 import static net.yudichev.jiotty.connector.slide.Bindings.DeviceCode;
 import static net.yudichev.jiotty.connector.slide.Bindings.DeviceHost;
 
-final class LocalSlideService implements SlideService {
+final class LocalSlideService extends BaseLifecycleComponent implements SlideService {
     private static final Logger logger = LoggerFactory.getLogger(LocalSlideService.class);
 
-    private final OkHttpClient client;
     private final String getInfoUrl;
     private final String setPostUrl;
+    private final String deviceCode;
+    private OkHttpClient client;
 
     @Inject
     LocalSlideService(@DeviceHost String deviceHost, @DeviceCode String deviceCode) {
         getInfoUrl = "http://" + deviceHost + "/rpc/Slide.GetInfo";
         setPostUrl = "http://" + deviceHost + "/rpc/Slide.SetPos";
+        this.deviceCode = checkNotNull(deviceCode);
+    }
+
+    @Override
+    protected void doStart() {
         Map<String, CachingAuthenticator> authCache = new ConcurrentHashMap<>();
         var authenticator = new DigestAuthenticator(new Credentials("user", deviceCode));
         client = newClient(builder -> builder
                 .authenticator(new CachingAuthenticatorDecorator(authenticator, authCache))
                 .addInterceptor(new AuthenticationCacheInterceptor(authCache))
                 .build());
+    }
+
+    @Override
+    protected void doStop() {
+        closeSafelyIfNotNull(logger, () -> shutdown(client));
     }
 
     @Override

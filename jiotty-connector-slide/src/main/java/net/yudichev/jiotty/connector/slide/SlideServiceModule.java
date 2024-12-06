@@ -23,6 +23,7 @@ import static net.yudichev.jiotty.connector.slide.Bindings.Email;
 import static net.yudichev.jiotty.connector.slide.Bindings.Password;
 import static net.yudichev.jiotty.connector.slide.Bindings.ServiceExecutor;
 
+@SuppressWarnings("OverlyCoupledClass") // module
 public final class SlideServiceModule extends BaseLifecycleComponentModule implements ExposedKeyModule<SlideService> {
     private final BindingSpec<String> hostSpec;
     private final BindingSpec<String> deviceCodeSpec;
@@ -67,7 +68,7 @@ public final class SlideServiceModule extends BaseLifecycleComponentModule imple
             deviceCodeSpec.bind(String.class)
                           .annotatedWith(DeviceCode.class)
                           .installedBy(this::installLifecycleComponentModule);
-            serivceImplKeySupplier = () -> Key.get(LocalSlideService.class);
+            serivceImplKeySupplier = () -> registerLifecycleComponent(LocalSlideService.class);
         } else {
             emailSpec.bind(String.class)
                      .annotatedWith(Email.class)

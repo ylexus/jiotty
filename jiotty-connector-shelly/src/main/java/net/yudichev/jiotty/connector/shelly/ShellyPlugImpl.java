@@ -38,6 +38,7 @@ import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.huma
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
+import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 import static net.yudichev.jiotty.connector.shelly.ShellyPlugImpl.SampleAggregator.MAX_SAMPLE_COUNT;
 
 /**
@@ -46,7 +47,6 @@ import static net.yudichev.jiotty.connector.shelly.ShellyPlugImpl.SampleAggregat
 final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
     private static final Logger logger = LoggerFactory.getLogger(ShellyPlugImpl.class);
 
-    private final OkHttpClient httpClient = newClient();
     private final String host;
     private final ExecutorFactory executorFactory;
     private final RetryableOperationExecutor retryableOperationExecutor;
@@ -54,6 +54,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
     private final Request requestPowerOff;
     private final Request requestGetStatus;
     private final CurrentDateTimeProvider timeProvider;
+    private OkHttpClient httpClient;
 
     private SchedulingExecutor executor;
 
@@ -78,11 +79,12 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
     @Override
     protected void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("ShellyPlug-" + host);
+        httpClient = newClient();
     }
 
     @Override
     protected void doStop() {
-        closeSafelyIfNotNull(logger, executor);
+        closeSafelyIfNotNull(logger, () -> shutdown(httpClient), executor);
     }
 
     @Override
