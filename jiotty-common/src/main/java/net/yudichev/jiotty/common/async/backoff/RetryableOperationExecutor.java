@@ -5,6 +5,16 @@ import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 public interface RetryableOperationExecutor {
+
+    RetryableOperationExecutor NO_RETRIES = new RetryableOperationExecutor() {
+        @Override
+        public <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
+                                                            Supplier<? extends CompletableFuture<T>> action,
+                                                            LongConsumer backoffEventConsumer) {
+            return action.get();
+        }
+    };
+
     default <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
                                                          Supplier<? extends CompletableFuture<T>> action) {
         return withBackOffAndRetry(operationName, action, value -> {});
@@ -14,4 +24,8 @@ public interface RetryableOperationExecutor {
     <T> CompletableFuture<T> withBackOffAndRetry(String operationName,
                                                  Supplier<? extends CompletableFuture<T>> action,
                                                  LongConsumer backoffEventConsumer);
+
+    static RetryableOperationExecutor noRetries() {
+        return NO_RETRIES;
+    }
 }

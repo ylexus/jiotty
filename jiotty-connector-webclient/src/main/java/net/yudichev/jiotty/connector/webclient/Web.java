@@ -1,13 +1,13 @@
 package net.yudichev.jiotty.connector.webclient;
 
-import com.gargoylesoftware.htmlunit.ElementNotFoundException;
-import com.gargoylesoftware.htmlunit.IncorrectnessListener;
-import com.gargoylesoftware.htmlunit.ScriptException;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.parser.HTMLParserListener;
-import com.gargoylesoftware.htmlunit.javascript.JavaScriptErrorListener;
 import com.google.common.collect.ImmutableList;
+import org.htmlunit.ElementNotFoundException;
+import org.htmlunit.IncorrectnessListener;
+import org.htmlunit.ScriptException;
+import org.htmlunit.WebClient;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.parser.HTMLParserListener;
+import org.htmlunit.javascript.JavaScriptErrorListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,13 +63,13 @@ public final class Web {
         @Override
         public void error(String message, URL url, String html, int line, int column, String key) {
             problemBuilder.add(new Problem("HTML error on {} at {}:{}, key {}, snippet: {}: {}",
-                    url, line, column, key, html, message));
+                                           url, line, column, key, html, message));
         }
 
         @Override
         public void warning(String message, URL url, String html, int line, int column, String key) {
             problemBuilder.add(new Problem("HTML warning on {} at {}:{}, key {}, snippet: {}: {}",
-                    url, line, column, key, html, message));
+                                           url, line, column, key, html, message));
         }
 
         @Override
@@ -95,7 +95,7 @@ public final class Web {
         @Override
         public void warn(String message, String sourceName, int line, String lineSource, int lineOffset) {
             problemBuilder.add(new Problem("Script warning source {}, line {}, line source {}, line offset: {}",
-                    sourceName, line, lineSource, lineOffset, message));
+                                           sourceName, line, lineSource, lineOffset, message));
         }
 
         void log() {

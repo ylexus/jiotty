@@ -6,7 +6,7 @@
     <parent>
         <groupId>net.yudichev.jiotty</groupId>
         <artifactId>jiotty</artifactId>
-        <version>2.5.0-SNAPSHOT</version>
+        <version>2.6.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>jiotty-bom</artifactId>
@@ -191,9 +191,9 @@
                 <version>33.3.0-jre</version>
             </dependency>
             <dependency>
-                <groupId>com.sparkjava</groupId>
-                <artifactId>spark-core</artifactId>
-                <version>2.9.4</version>
+                <groupId>io.javalin</groupId>
+                <artifactId>javalin</artifactId>
+                <version>6.3.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.mob41.blapi</groupId>
@@ -219,6 +219,11 @@
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
                 <version>3.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.toolchain</groupId>
+                <artifactId>jetty-jakarta-servlet-api</artifactId>
+                <version>5.0.2</version>
             </dependency>
             <dependency>
                 <groupId>org.immutables</groupId>
@@ -249,8 +254,8 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-bom</artifactId>
-                <!-- WARNING: do not upgrade to a new major ver without ensuring spark supports it -->
-                <version>9.4.54.v20240208</version>
+                <!-- WARNING: do not upgrade to a new major ver without ensuring javalin supports it -->
+                <version>11.0.23</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -373,9 +378,9 @@
                 <version>2.3.2</version>
             </dependency>
             <dependency>
-                <groupId>net.sourceforge.htmlunit</groupId>
+                <groupId>org.htmlunit</groupId>
                 <artifactId>htmlunit</artifactId>
-                <version>2.70.0</version>
+                <version>4.7.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>

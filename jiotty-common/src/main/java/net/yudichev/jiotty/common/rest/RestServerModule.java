@@ -6,7 +6,7 @@ import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 public final class RestServerModule extends BaseLifecycleComponentModule implements ExposedKeyModule<RestServer> {
     @Override
     protected void configure() {
-        bind(getExposedKey()).to(registerLifecycleComponent(SparkRestServer.class));
+        bind(getExposedKey()).to(registerLifecycleComponent(JavalinRestServer.class));
         expose(getExposedKey());
     }
 }

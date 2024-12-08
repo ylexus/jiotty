@@ -2,13 +2,13 @@ package net.yudichev.jiotty.appliance;
 
 import com.google.common.collect.Maps;
 import com.google.inject.BindingAnnotation;
+import jakarta.servlet.http.HttpServletRequest;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.rest.RestServer;
 import net.yudichev.jiotty.common.rest.RestServers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import spark.Request;
 
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
@@ -49,27 +49,27 @@ final class ApplianceServer extends BaseLifecycleComponent {
             String url = "/appliance/" + applianceId + "/" + commandMeta.commandName().toLowerCase();
             logger.info("Registering {}", url);
             restServer.post(url,
-                            (request, response) -> {
+                            context -> {
                                 CompletableFuture<?> result;
                                 try {
-                                    var command = createCommand(commandMeta, request);
+                                    var command = createCommand(commandMeta, context.req());
                                     logger.info("{} executing {}", applianceId, command);
                                     result = appliance.execute(command);
                                     result.whenComplete((r, throwable) -> logger.info("{} executed {}, result: {}", applianceId, command, r, throwable));
                                 } catch (RuntimeException e) {
                                     result = CompletableFutures.failure(e);
                                 }
-                                return RestServers.withErrorsHandledJson(url, response, result);
+                                context.result(RestServers.withErrorsHandledJson(url, context.res(), result));
                             });
         });
     }
 
-    private static Command<?> createCommand(CommandMeta<?> commandMeta, Request request) {
+    private static Command<?> createCommand(CommandMeta<?> commandMeta, HttpServletRequest request) {
         var paramValues = Maps.<String, CommandParamType, Object>transformEntries(
                 commandMeta.parameterTypes(),
                 (name, paramType) -> {
                     try {
-                        var param = request.queryParams(name);
+                        var param = request.getParameter(name);
                         checkArgument(param != null, "Missing required parameter '%s'", name);
                         return paramType.decode(param);
                     } catch (RuntimeException e) {

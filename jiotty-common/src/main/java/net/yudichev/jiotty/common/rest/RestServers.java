@@ -2,11 +2,11 @@ package net.yudichev.jiotty.common.rest;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Throwables;
+import jakarta.servlet.http.HttpServletResponse;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import spark.Response;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -20,8 +20,8 @@ public final class RestServers {
     private RestServers() {
     }
 
-    public static Object withErrorsHandledJson(String handlerName, Response response, CompletableFuture<?> handler) {
-        response.header("Content-Type", "application/json");
+    public static String withErrorsHandledJson(String handlerName, HttpServletResponse response, CompletableFuture<?> handler) {
+        response.addHeader("Content-Type", "application/json");
         return withErrorsHandled(handlerName,
                                  handler,
                                  responseObj -> {
@@ -35,10 +35,10 @@ public final class RestServers {
                                                 .toString());
     }
 
-    private static Object withErrorsHandled(String handlerName,
+    private static String withErrorsHandled(String handlerName,
                                             CompletableFuture<?> handler,
-                                            Function<Optional<Object>, Object> successFactory,
-                                            Function<String, Object> errorFactory) {
+                                            Function<Optional<Object>, String> successFactory,
+                                            Function<String, String> errorFactory) {
         try {
             @Nullable Object response = MoreThrowables.getAsUnchecked(() -> handler.get(3, TimeUnit.MINUTES));
             return successFactory.apply(Optional.ofNullable(response));
