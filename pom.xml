@@ -40,8 +40,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <io.grpc.version>1.66.0</io.grpc.version>
-        <com.google.protobuf.version>3.22.2</com.google.protobuf.version>
+        <io.grpc.version>1.69.0</io.grpc.version>
+        <com.google.protobuf.version>4.29.2</com.google.protobuf.version>
     </properties>
 
     <build>
@@ -327,6 +327,7 @@
         <module>jiotty-common</module>
         <module>jiotty-connector-aws</module>
         <module>jiotty-connector-google</module>
+        <module>jiotty-connector-home-assistant</module>
         <module>jiotty-connector-ir</module>
         <module>jiotty-connector-ip</module>
         <module>jiotty-connector-miele</module>
