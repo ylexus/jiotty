@@ -12,6 +12,8 @@ public interface HomeAssistantClient {
 
     Button button();
 
+    Domain sensor();
+
     interface Domain {
         CompletableFuture<HAState> getState(String domainlessEntityId);
     }

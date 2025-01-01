@@ -37,6 +37,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final Switch theSwitch = new SwitchImpl();
     private final Number number = new NumberImpl();
     private final Button button = new ButtonImpl();
+    private final Domain sensor = new BaseDomain("sensor");
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
     private OkHttpClient client;
@@ -75,6 +76,11 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     @Override
     public Button button() {
         return button;
+    }
+
+    @Override
+    public Domain sensor() {
+        return sensor;
     }
 
     @BindingAnnotation
