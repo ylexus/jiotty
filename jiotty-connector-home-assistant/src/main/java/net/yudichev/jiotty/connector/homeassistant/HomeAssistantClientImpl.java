@@ -34,6 +34,8 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final String baseUrl;
     private final String accessToken;
     private final Climate climate = new ClimateImpl();
+    private final Switch theSwitch = new SwitchImpl();
+    private final Number number = new NumberImpl();
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
     private OkHttpClient client;
@@ -59,6 +61,16 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         return climate;
     }
 
+    @Override
+    public Switch aSwitch() {
+        return theSwitch;
+    }
+
+    @Override
+    public Number number() {
+        return number;
+    }
+
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
@@ -71,47 +83,81 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     @interface AccessToken {
     }
 
-    public class ClimateImpl implements Climate {
+    private class BaseDomain {
+        protected final String domainId;
 
-        @Override
-        public CompletableFuture<List<HAState>> setTemperature(String entityId, String hvacMode, double temperature) {
-            long requestId = requestIdGenerator.incrementAndGet();
-            logger.debug("[{}] Invoking POST setTemperature({}, {}, {})", requestId, entityId, hvacMode, temperature);
-            return invokePost(requestId, "set_temperature", HAClimateSetTemperatureServiceData.builder()
-                                                                                              .setEntityId(entityId)
-                                                                                              .setHvacMode(hvacMode)
-                                                                                              .setTemperature(temperature)
-                                                                                              .build());
+        protected BaseDomain(String domainId) {
+            this.domainId = checkNotNull(domainId);
         }
 
-        @Override
-        public CompletableFuture<List<HAState>> turnOn(String entityId) {
-            long requestId = requestIdGenerator.incrementAndGet();
-            logger.debug("[{}] invoking POST turnOn({})", requestId, entityId);
-            return invokePost(requestId, "turn_on", HAServiceData.of(entityId));
+        protected CompletableFuture<List<HAState>> callAndLogResponse(Request request, long requestId) {
+            return whenStartedAndNotLifecycling(
+                    () -> RestClients.<List<HAState>>call(request, new TypeToken<>() {})
+                                     .whenComplete((o, throwable) -> logger.debug("[{}] Response {}", requestId, o, throwable)));
         }
 
-        @Override
-        public CompletableFuture<List<HAState>> turnOff(String entityId) {
+        protected CompletableFuture<List<HAState>> invokePost(String service, Object body) {
             long requestId = requestIdGenerator.incrementAndGet();
-            logger.debug("[{}] invoking POST turnOff({})", requestId, entityId);
-            return invokePost(requestId, "turn_off", HAServiceData.of(entityId));
-        }
-
-        private CompletableFuture<List<HAState>> invokePost(long requestId, String service, Object body) {
+            logger.debug("[{}] Invoking POST {}.{}({})", requestId, domainId, service, body);
             var request = new Request.Builder()
-                    .url(baseUrl + "/services/climate/" + service)
+                    .url(baseUrl + "/services/" + domainId + "/" + service)
                     .header("Authorization", "Bearer " + accessToken)
                     .post(RequestBody.create(Json.stringify(body), MediaType.get(ContentTypes.CONTENT_TYPE_JSON)))
                     .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
                     .build();
             return callAndLogResponse(request, requestId);
         }
+    }
 
-        private CompletableFuture<List<HAState>> callAndLogResponse(Request request, long requestId) {
-            return whenStartedAndNotLifecycling(
-                    () -> RestClients.<List<HAState>>call(request, new TypeToken<>() {})
-                                     .whenComplete((o, throwable) -> logger.debug("[{}] Response {}", requestId, o, throwable)));
+    private class ClimateImpl extends BaseDomain implements Climate {
+        public ClimateImpl() {
+            super("climate");
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> setTemperature(String entityId, String hvacMode, double temperature) {
+            return invokePost("set_temperature", HAClimateSetTemperatureServiceData.builder()
+                                                                                   .setEntityId(entityId)
+                                                                                   .setHvacMode(hvacMode)
+                                                                                   .setTemperature(temperature)
+                                                                                   .build());
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> turnOn(String entityId) {
+            return invokePost("turn_on", HAServiceData.of(entityId));
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> turnOff(String entityId) {
+            return invokePost("turn_off", HAServiceData.of(entityId));
+        }
+    }
+
+    private class SwitchImpl extends BaseDomain implements Switch {
+        public SwitchImpl() {
+            super("switch");
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> turnOn(String entityId) {
+            return invokePost("turn_on", HAServiceData.of(entityId));
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> turnOff(String entityId) {
+            return invokePost("turn_off", HAServiceData.of(entityId));
+        }
+    }
+
+    private class NumberImpl extends BaseDomain implements Number {
+        public NumberImpl() {
+            super("number");
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> setValue(String entityId, double value) {
+            return invokePost("set_value", HANumberSetValueServiceData.of(entityId, value));
         }
     }
 }

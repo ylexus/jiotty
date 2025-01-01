@@ -7,16 +7,14 @@ import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class HomeAssistantClientLocalRunner {
-    private static String entityId;
-
     public static void main(String[] args) {
-        entityId = args[2];
         Application.builder()
                    .addModule(() -> HomeAssistantClientModule
                            .builder()
@@ -34,6 +32,8 @@ final class HomeAssistantClientLocalRunner {
     }
 
     static class Runner extends BaseLifecycleComponent {
+        public static final Pattern PATTERN = Pattern.compile(
+                "^\\s*(\\S+)\\s+(\\S+)\\s+(\\S+)(?:\\s+(\\S+))?(?:\\s+(\\S+))?(?:\\s+(\\S+))?(?:\\s+(\\S+))?(?:\\s+(\\S+))?(?:\\s+(\\S+))?(?:\\s+(\\S+))?(?:\\s+(\\S+))?\\s*$");
         private final HomeAssistantClient client;
         private Thread thread;
 
@@ -42,18 +42,47 @@ final class HomeAssistantClientLocalRunner {
             this.client = checkNotNull(client);
         }
 
-        @SuppressWarnings("UseOfSystemOutOrSystemErr")
+        @SuppressWarnings({"NestedSwitchStatement", "UseOfSystemOutOrSystemErr", "ThrowCaughtLocally", "OverlyBroadCatchBlock", "OverlyComplexMethod",
+                "OverlyLongMethod", "SwitchStatementWithTooFewBranches", "OverlyNestedMethod"})
         @Override
         protected void doStart() {
             thread = new Thread(() -> {
                 var reader = new BufferedReader(new InputStreamReader(System.in));
                 String line;
                 while ((line = getAsUnchecked(reader::readLine)) != null) {
-                    line = line.trim();
-                    switch (line) {
-                        case "on" -> client.climate().turnOn("climate.thermostat");
-                        case "off" -> client.climate().turnOff(entityId);
-                        default -> System.err.println("Unknown command: " + line);
+                    var matcher = PATTERN.matcher(line);
+                    if (matcher.matches()) {
+                        var domain = matcher.group(1);
+                        var command = matcher.group(2);
+                        var entity = matcher.group(3);
+                        try {
+                            var result = switch (domain) {
+                                case "climate" -> switch (command) {
+                                    case "on" -> client.climate().turnOn("climate." + entity);
+                                    case "off" -> client.climate().turnOff("climate." + entity);
+                                    default -> throw new IllegalArgumentException("Unrecognised climate command: " + command);
+                                };
+                                case "number" -> {
+                                    double value = Double.parseDouble(matcher.group(4));
+                                    yield switch (command) {
+                                        case "set" -> client.number().setValue("number." + entity, value);
+                                        default -> throw new IllegalArgumentException("Unrecognised number command: " + command);
+                                    };
+                                }
+                                case "switch" -> switch (command) {
+                                    case "on" -> client.aSwitch().turnOn("switch." + entity);
+                                    case "off" -> client.aSwitch().turnOff("switch." + entity);
+                                    default -> throw new IllegalArgumentException("Unrecognised switch command: " + command);
+                                };
+                                default -> throw new IllegalArgumentException("Unrecognised domain: " + domain);
+                            };
+                            System.out.println("Awaiting Result...");
+                            System.out.println("Result: " + getAsUnchecked(result::get));
+                        } catch (RuntimeException e) {
+                            System.err.println("Failed: " + e.getMessage());
+                        }
+                    } else {
+                        System.err.println("Unparseable command: " + line);
                     }
                 }
             });
