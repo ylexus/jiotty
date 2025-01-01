@@ -7,6 +7,7 @@ import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -56,26 +57,41 @@ final class HomeAssistantClientLocalRunner {
                         var command = matcher.group(2);
                         var entity = matcher.group(3);
                         try {
-                            var result = switch (domain) {
-                                case "climate" -> switch (command) {
-                                    case "on" -> client.climate().turnOn("climate." + entity);
-                                    case "off" -> client.climate().turnOff("climate." + entity);
-                                    default -> throw new IllegalArgumentException("Unrecognised climate command: " + command);
-                                };
-                                case "number" -> {
-                                    double value = Double.parseDouble(matcher.group(4));
-                                    yield switch (command) {
-                                        case "set" -> client.number().setValue("number." + entity, value);
-                                        default -> throw new IllegalArgumentException("Unrecognised number command: " + command);
+                            CompletableFuture<?> result;
+                            if ("get".equals(command)) {
+                                result = (switch (domain) {
+                                    case "climate" -> client.climate();
+                                    case "number" -> client.number();
+                                    case "switch" -> client.aSwitch();
+                                    case "button" -> client.button();
+                                    default -> throw new IllegalArgumentException("Unrecognised domain: " + domain);
+                                }).getState(entity);
+                            } else {
+                                result = switch (domain) {
+                                    case "climate" -> switch (command) {
+                                        case "on" -> client.climate().turnOn("climate." + entity);
+                                        case "off" -> client.climate().turnOff("climate." + entity);
+                                        default -> throw new IllegalArgumentException("Unrecognised climate command: " + command);
                                     };
-                                }
-                                case "switch" -> switch (command) {
-                                    case "on" -> client.aSwitch().turnOn("switch." + entity);
-                                    case "off" -> client.aSwitch().turnOff("switch." + entity);
-                                    default -> throw new IllegalArgumentException("Unrecognised switch command: " + command);
+                                    case "number" -> {
+                                        double value = Double.parseDouble(matcher.group(4));
+                                        yield switch (command) {
+                                            case "set" -> client.number().setValue("number." + entity, value);
+                                            default -> throw new IllegalArgumentException("Unrecognised number command: " + command);
+                                        };
+                                    }
+                                    case "switch" -> switch (command) {
+                                        case "on" -> client.aSwitch().turnOn("switch." + entity);
+                                        case "off" -> client.aSwitch().turnOff("switch." + entity);
+                                        default -> throw new IllegalArgumentException("Unrecognised switch command: " + command);
+                                    };
+                                    case "button" -> switch (command) {
+                                        case "press" -> client.button().press("switch." + entity);
+                                        default -> throw new IllegalArgumentException("Unrecognised switch command: " + command);
+                                    };
+                                    default -> throw new IllegalArgumentException("Unrecognised domain: " + domain);
                                 };
-                                default -> throw new IllegalArgumentException("Unrecognised domain: " + domain);
-                            };
+                            }
                             System.out.println("Awaiting Result...");
                             System.out.println("Result: " + getAsUnchecked(result::get));
                         } catch (RuntimeException e) {

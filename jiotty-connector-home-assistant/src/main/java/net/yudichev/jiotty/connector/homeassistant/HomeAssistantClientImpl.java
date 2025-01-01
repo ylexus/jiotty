@@ -36,6 +36,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final Climate climate = new ClimateImpl();
     private final Switch theSwitch = new SwitchImpl();
     private final Number number = new NumberImpl();
+    private final Button button = new ButtonImpl();
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
     private OkHttpClient client;
@@ -71,6 +72,11 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         return number;
     }
 
+    @Override
+    public Button button() {
+        return button;
+    }
+
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
@@ -83,29 +89,43 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     @interface AccessToken {
     }
 
-    private class BaseDomain {
+    private class BaseDomain implements Domain {
         protected final String domainId;
 
         protected BaseDomain(String domainId) {
             this.domainId = checkNotNull(domainId);
         }
 
-        protected CompletableFuture<List<HAState>> callAndLogResponse(Request request, long requestId) {
+        @Override
+        public CompletableFuture<HAState> getState(String domainlessEntityId) {
+            return invokeGetState(domainlessEntityId);
+        }
+
+        protected <T> CompletableFuture<T> callAndLogResponse(Request request, long requestId, TypeToken<T> responseType) {
             return whenStartedAndNotLifecycling(
-                    () -> RestClients.<List<HAState>>call(request, new TypeToken<>() {})
+                    () -> RestClients.<T>call(request, responseType)
                                      .whenComplete((o, throwable) -> logger.debug("[{}] Response {}", requestId, o, throwable)));
         }
 
-        protected CompletableFuture<List<HAState>> invokePost(String service, Object body) {
+        protected CompletableFuture<List<HAState>> invokePostServices(String service, Object body) {
             long requestId = requestIdGenerator.incrementAndGet();
             logger.debug("[{}] Invoking POST {}.{}({})", requestId, domainId, service, body);
-            var request = new Request.Builder()
-                    .url(baseUrl + "/services/" + domainId + "/" + service)
-                    .header("Authorization", "Bearer " + accessToken)
-                    .post(RequestBody.create(Json.stringify(body), MediaType.get(ContentTypes.CONTENT_TYPE_JSON)))
-                    .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
-                    .build();
-            return callAndLogResponse(request, requestId);
+            var request = new Request.Builder().url(baseUrl + "/services/" + domainId + "/" + service)
+                                               .header("Authorization", "Bearer " + accessToken)
+                                               .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
+                                               .post(RequestBody.create(Json.stringify(body), MediaType.get(ContentTypes.CONTENT_TYPE_JSON)))
+                                               .build();
+            return callAndLogResponse(request, requestId, new TypeToken<>() {});
+        }
+
+        protected CompletableFuture<HAState> invokeGetState(String domainlessEntityId) {
+            long requestId = requestIdGenerator.incrementAndGet();
+            logger.debug("[{}] Invoking GET {}.{}", requestId, domainId, domainlessEntityId);
+            var request = new Request.Builder().url(baseUrl + "/states/" + domainId + '.' + domainlessEntityId)
+                                               .header("Authorization", "Bearer " + accessToken)
+                                               .get()
+                                               .build();
+            return callAndLogResponse(request, requestId, new TypeToken<>() {});
         }
     }
 
@@ -116,21 +136,21 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
 
         @Override
         public CompletableFuture<List<HAState>> setTemperature(String entityId, String hvacMode, double temperature) {
-            return invokePost("set_temperature", HAClimateSetTemperatureServiceData.builder()
-                                                                                   .setEntityId(entityId)
-                                                                                   .setHvacMode(hvacMode)
-                                                                                   .setTemperature(temperature)
-                                                                                   .build());
+            return invokePostServices("set_temperature", HAClimateSetTemperatureServiceData.builder()
+                                                                                           .setEntityId(entityId)
+                                                                                           .setHvacMode(hvacMode)
+                                                                                           .setTemperature(temperature)
+                                                                                           .build());
         }
 
         @Override
         public CompletableFuture<List<HAState>> turnOn(String entityId) {
-            return invokePost("turn_on", HAServiceData.of(entityId));
+            return invokePostServices("turn_on", HAServiceData.of(entityId));
         }
 
         @Override
         public CompletableFuture<List<HAState>> turnOff(String entityId) {
-            return invokePost("turn_off", HAServiceData.of(entityId));
+            return invokePostServices("turn_off", HAServiceData.of(entityId));
         }
     }
 
@@ -141,12 +161,12 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
 
         @Override
         public CompletableFuture<List<HAState>> turnOn(String entityId) {
-            return invokePost("turn_on", HAServiceData.of(entityId));
+            return invokePostServices("turn_on", HAServiceData.of(entityId));
         }
 
         @Override
         public CompletableFuture<List<HAState>> turnOff(String entityId) {
-            return invokePost("turn_off", HAServiceData.of(entityId));
+            return invokePostServices("turn_off", HAServiceData.of(entityId));
         }
     }
 
@@ -157,7 +177,18 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
 
         @Override
         public CompletableFuture<List<HAState>> setValue(String entityId, double value) {
-            return invokePost("set_value", HANumberSetValueServiceData.of(entityId, value));
+            return invokePostServices("set_value", HANumberSetValueServiceData.of(entityId, value));
+        }
+    }
+
+    private class ButtonImpl extends BaseDomain implements Button {
+        public ButtonImpl() {
+            super("button");
+        }
+
+        @Override
+        public CompletableFuture<List<HAState>> press(String entityId) {
+            return invokePostServices("press", HAServiceData.of(entityId));
         }
     }
 }
