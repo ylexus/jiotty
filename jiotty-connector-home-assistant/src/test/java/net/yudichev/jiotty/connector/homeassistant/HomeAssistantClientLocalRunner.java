@@ -60,12 +60,14 @@ final class HomeAssistantClientLocalRunner {
                             CompletableFuture<?> result;
                             if ("get".equals(command)) {
                                 result = (switch (domain) {
-                                    case "climate" -> client.climate();
-                                    case "number" -> client.number();
-                                    case "switch" -> client.aSwitch();
-                                    case "button" -> client.button();
+                                    case "climate" -> client.climate().getState(entity);
+                                    case "number" -> client.number().getState(entity);
+                                    case "switch" -> client.aSwitch().getState(entity);
+                                    case "button" -> client.button().getState(entity);
+                                    case "sensor" -> client.sensor().getState(entity);
+                                    case "bsensor" -> client.binarySensor().getBinaryState(entity);
                                     default -> throw new IllegalArgumentException("Unrecognised domain: " + domain);
-                                }).getState(entity);
+                                });
                             } else {
                                 result = switch (domain) {
                                     case "climate" -> switch (command) {

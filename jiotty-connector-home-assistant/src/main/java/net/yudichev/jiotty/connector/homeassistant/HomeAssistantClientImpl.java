@@ -38,6 +38,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final Number number = new NumberImpl();
     private final Button button = new ButtonImpl();
     private final Domain sensor = new BaseDomain("sensor");
+    private final BinarySensor binarySensor = new BinarySensorImpl();
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
     private OkHttpClient client;
@@ -81,6 +82,11 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     @Override
     public Domain sensor() {
         return sensor;
+    }
+
+    @Override
+    public BinarySensor binarySensor() {
+        return binarySensor;
     }
 
     @BindingAnnotation
@@ -195,6 +201,12 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         @Override
         public CompletableFuture<List<HAState>> press(String entityId) {
             return invokePostServices("press", HAServiceData.of(entityId));
+        }
+    }
+
+    private class BinarySensorImpl extends BaseDomain implements BinarySensor {
+        public BinarySensorImpl() {
+            super("binary_sensor");
         }
     }
 }

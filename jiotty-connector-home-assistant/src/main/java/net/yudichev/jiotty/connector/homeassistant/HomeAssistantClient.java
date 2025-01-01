@@ -14,6 +14,8 @@ public interface HomeAssistantClient {
 
     Domain sensor();
 
+    BinarySensor binarySensor();
+
     interface Domain {
         CompletableFuture<HAState> getState(String domainlessEntityId);
     }
@@ -38,5 +40,15 @@ public interface HomeAssistantClient {
 
     interface Button extends Domain {
         CompletableFuture<List<HAState>> press(String entityId);
+    }
+
+    interface BinarySensor extends Domain {
+        default CompletableFuture<BinaryState> getBinaryState(String domainlessEntityId) {
+            return getState(domainlessEntityId).thenApply(haState -> BinaryState.valueOf(haState.state().toUpperCase()));
+        }
+
+        enum BinaryState {
+            ON, OFF, UNAVAILABLE, UNKNOWN
+        }
     }
 }
