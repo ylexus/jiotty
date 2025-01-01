@@ -16,7 +16,10 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.net.URLEncoder;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -26,6 +29,7 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 
 public final class HomeAssistantClientImpl extends BaseLifecycleComponent implements HomeAssistantClient {
@@ -38,6 +42,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final Number number = new NumberImpl();
     private final Button button = new ButtonImpl();
     private final Domain sensor = new BaseDomain("sensor");
+    private final LogBook logBook = new LogBookImpl();
     private final BinarySensor binarySensor = new BinarySensorImpl();
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
@@ -85,20 +90,44 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     }
 
     @Override
+    public LogBook logBook() {
+        return logBook;
+    }
+
+    @Override
     public BinarySensor binarySensor() {
         return binarySensor;
     }
+
+    private <T> CompletableFuture<T> invokeGet(String path, TypeToken<T> responseType) {
+        long requestId = requestIdGenerator.incrementAndGet();
+        logger.debug("[{}] Invoking GET {}", requestId, path);
+        var request = new Request.Builder().url(baseUrl + '/' + path)
+                                           .header("Authorization", "Bearer " + accessToken)
+                                           .get()
+                                           .build();
+        return callAndLogResponse(request, requestId, responseType);
+    }
+
+    private <T> CompletableFuture<T> callAndLogResponse(Request request, long requestId, TypeToken<T> responseType) {
+        return whenStartedAndNotLifecycling(
+                () -> RestClients.<T>call(request, responseType)
+                                 .whenComplete((o, throwable) -> logger.debug("[{}] Response {}", requestId, o, throwable)));
+    }
+
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface BaseUrl {
+
     }
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface AccessToken {
+
     }
 
     private class BaseDomain implements Domain {
@@ -113,12 +142,6 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
             return invokeGetState(domainlessEntityId);
         }
 
-        protected <T> CompletableFuture<T> callAndLogResponse(Request request, long requestId, TypeToken<T> responseType) {
-            return whenStartedAndNotLifecycling(
-                    () -> RestClients.<T>call(request, responseType)
-                                     .whenComplete((o, throwable) -> logger.debug("[{}] Response {}", requestId, o, throwable)));
-        }
-
         protected CompletableFuture<List<HAState>> invokePostServices(String service, Object body) {
             long requestId = requestIdGenerator.incrementAndGet();
             logger.debug("[{}] Invoking POST {}.{}({})", requestId, domainId, service, body);
@@ -131,13 +154,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
 
         protected CompletableFuture<HAState> invokeGetState(String domainlessEntityId) {
-            long requestId = requestIdGenerator.incrementAndGet();
-            logger.debug("[{}] Invoking GET {}.{}", requestId, domainId, domainlessEntityId);
-            var request = new Request.Builder().url(baseUrl + "/states/" + domainId + '.' + domainlessEntityId)
-                                               .header("Authorization", "Bearer " + accessToken)
-                                               .get()
-                                               .build();
-            return callAndLogResponse(request, requestId, new TypeToken<>() {});
+            return invokeGet("states/" + domainId + '.' + domainlessEntityId, new TypeToken<>() {});
         }
     }
 
@@ -207,6 +224,17 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private class BinarySensorImpl extends BaseDomain implements BinarySensor {
         public BinarySensorImpl() {
             super("binary_sensor");
+        }
+    }
+
+    private class LogBookImpl implements LogBook {
+
+        @Override
+        public CompletableFuture<List<HALogbookEntry>> get(String entityId, Optional<Instant> from, Optional<Instant> to) {
+            return invokeGet("logbook" + from.map(t -> "/" + t).orElse("")
+                                     + "?entity=" + URLEncoder.encode(entityId, UTF_8)
+                                     + to.map(t -> "&end_time=" + t).orElse(""),
+                             new TypeToken<>() {});
         }
     }
 }

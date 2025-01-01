@@ -1,6 +1,8 @@
 package net.yudichev.jiotty.connector.homeassistant;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public interface HomeAssistantClient {
@@ -13,6 +15,8 @@ public interface HomeAssistantClient {
     Button button();
 
     Domain sensor();
+
+    LogBook logBook();
 
     BinarySensor binarySensor();
 
@@ -50,5 +54,9 @@ public interface HomeAssistantClient {
         enum BinaryState {
             ON, OFF, UNAVAILABLE, UNKNOWN
         }
+    }
+
+    interface LogBook {
+        CompletableFuture<List<HALogbookEntry>> get(String entityId, Optional<Instant> from, Optional<Instant> to);
     }
 }
