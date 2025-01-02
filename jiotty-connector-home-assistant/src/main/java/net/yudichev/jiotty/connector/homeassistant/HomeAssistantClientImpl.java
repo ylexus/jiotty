@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.homeassistant;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -19,10 +20,12 @@ import java.lang.annotation.Target;
 import java.net.URLEncoder;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static java.lang.annotation.ElementType.FIELD;
@@ -43,6 +46,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final Button button = new ButtonImpl();
     private final Domain sensor = new BaseDomain("sensor");
     private final LogBook logBook = new LogBookImpl();
+    private final History history = new HistoryImpl();
     private final BinarySensor binarySensor = new BinarySensorImpl();
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
@@ -92,6 +96,11 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     @Override
     public LogBook logBook() {
         return logBook;
+    }
+
+    @Override
+    public History history() {
+        return history;
     }
 
     @Override
@@ -235,6 +244,33 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
                                      + "?entity=" + URLEncoder.encode(entityId, UTF_8)
                                      + to.map(t -> "&end_time=" + t).orElse(""),
                              new TypeToken<>() {});
+        }
+    }
+
+    private class HistoryImpl implements History {
+
+        @Override
+        public CompletableFuture<Map<String, List<HAHistoryEntry>>> get(List<String> entityIds, Optional<Instant> from, Optional<Instant> to) {
+            checkArgument(!entityIds.isEmpty(), "entityIds mus not be empty");
+            return invokeGet("history/period" + from.map(t -> "/" + t).orElse("")
+                                     + "?filter_entity_id=" + URLEncoder.encode(String.join(",", entityIds), UTF_8)
+                                     + "&minimal_response&no_attributes"
+                                     + to.map(t -> "&end_time=" + t).orElse(""),
+                             new TypeToken<List<List<HAHistoryEntry>>>() {})
+                    .thenApply(lists -> {
+                        var resultBuilder = ImmutableMap.<String, List<HAHistoryEntry>>builderWithExpectedSize(lists.size());
+                        for (List<HAHistoryEntry> entityList : lists) {
+                            String entityId = entityList.isEmpty()
+                                    ? null
+                                    : entityList.getFirst()
+                                                .entityId()
+                                                .orElseThrow(() -> new RuntimeException("Unexpectedly missing entityId on the first history element"));
+                            if (entityId != null) {
+                                resultBuilder.put(entityId, entityList);
+                            }
+                        }
+                        return resultBuilder.build();
+                    });
         }
     }
 }

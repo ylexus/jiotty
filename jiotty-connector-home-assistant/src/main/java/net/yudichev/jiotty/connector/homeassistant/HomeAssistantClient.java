@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.homeassistant;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,6 +18,8 @@ public interface HomeAssistantClient {
     Domain sensor();
 
     LogBook logBook();
+
+    History history();
 
     BinarySensor binarySensor();
 
@@ -58,5 +61,9 @@ public interface HomeAssistantClient {
 
     interface LogBook {
         CompletableFuture<List<HALogbookEntry>> get(String entityId, Optional<Instant> from, Optional<Instant> to);
+    }
+
+    interface History {
+        CompletableFuture<Map<String, List<HAHistoryEntry>>> get(List<String> entityIds, Optional<Instant> from, Optional<Instant> to);
     }
 }

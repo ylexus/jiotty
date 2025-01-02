@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.MatchResult;
@@ -63,6 +64,8 @@ final class HomeAssistantClientLocalRunner {
                             CompletableFuture<?> result;
                             if ("log".equals(arg1)) {
                                 result = handleLog(arg2, matcher.group(3));
+                            } else if ("hist".equals(arg1)) {
+                                result = handleHistory(arg2, matcher.group(3));
                             } else {
                                 var entity = matcher.group(3);
                                 if ("get".equals(arg2)) {
@@ -85,6 +88,16 @@ final class HomeAssistantClientLocalRunner {
         }
 
         private CompletableFuture<?> handleLog(String entityId, @Nullable String fromTo) {
+            var fromAndTo = parseFromAndTo(fromTo);
+            return client.logBook().get(entityId, fromAndTo.from(), fromAndTo.to());
+        }
+
+        private CompletableFuture<?> handleHistory(String entityId, @Nullable String fromTo) {
+            var fromAndTo = parseFromAndTo(fromTo);
+            return client.history().get(Arrays.asList(entityId.split(",")), fromAndTo.from(), fromAndTo.to());
+        }
+
+        private static FromAndTo parseFromAndTo(@Nullable String fromTo) {
             Optional<Instant> from = Optional.empty();
             Optional<Instant> to = Optional.empty();
             if (fromTo != null) {
@@ -97,7 +110,7 @@ final class HomeAssistantClientLocalRunner {
                     to = Optional.of(Instant.parse(fromToArray[1]));
                 }
             }
-            return client.logBook().get(entityId, from, to);
+            return new FromAndTo(from, to);
         }
 
         @SuppressWarnings({"OverlyComplexMethod", "OverlyLongMethod", "NestedSwitchStatement", "SwitchStatementWithTooFewBranches"})
@@ -150,5 +163,7 @@ final class HomeAssistantClientLocalRunner {
                 thread.interrupt();
             }
         }
+
+        private record FromAndTo(Optional<Instant> from, Optional<Instant> to) {}
     }
 }
