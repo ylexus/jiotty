@@ -120,6 +120,7 @@ final class HomeAssistantClientLocalRunner {
                 case "climate" -> switch (command) {
                     case "on" -> client.climate().turnOn("climate." + entity);
                     case "off" -> client.climate().turnOff("climate." + entity);
+                    case "hvac" -> client.climate().setHvacMode("climate." + entity, matcher.group(4));
                     default -> throw new IllegalArgumentException("Unrecognised climate command: " + command);
                 };
                 case "number" -> {

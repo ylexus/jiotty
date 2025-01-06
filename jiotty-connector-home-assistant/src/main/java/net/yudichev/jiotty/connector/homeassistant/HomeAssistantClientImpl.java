@@ -182,6 +182,14 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
 
         @Override
+        public CompletableFuture<List<HAState>> setHvacMode(String entityId, String hvacMode) {
+            return invokePostServices("set_hvac_mode", HAClimateSetHvacModeServiceData.builder()
+                                                                                      .setEntityId(entityId)
+                                                                                      .setHvacMode(hvacMode)
+                                                                                      .build());
+        }
+
+        @Override
         public CompletableFuture<List<HAState>> turnOn(String entityId) {
             return invokePostServices("turn_on", HAServiceData.of(entityId));
         }

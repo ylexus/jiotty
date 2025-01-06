@@ -30,6 +30,8 @@ public interface HomeAssistantClient {
     interface Climate extends Domain {
         CompletableFuture<List<HAState>> setTemperature(String entityId, String hvacMode, double temperature);
 
+        CompletableFuture<List<HAState>> setHvacMode(String entityId, String hvacMode);
+
         CompletableFuture<List<HAState>> turnOn(String entityId);
 
         CompletableFuture<List<HAState>> turnOff(String entityId);
