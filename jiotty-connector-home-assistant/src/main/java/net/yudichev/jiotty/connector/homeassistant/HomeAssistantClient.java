@@ -28,27 +28,27 @@ public interface HomeAssistantClient {
     }
 
     interface Climate extends Domain {
-        CompletableFuture<List<HAState>> setTemperature(String entityId, String hvacMode, double temperature);
+        CompletableFuture<List<HAState>> setTemperature(String domainlessEntityId, String hvacMode, double temperature);
 
-        CompletableFuture<List<HAState>> setHvacMode(String entityId, String hvacMode);
+        CompletableFuture<List<HAState>> setHvacMode(String domainlessEntityId, String hvacMode);
 
-        CompletableFuture<List<HAState>> turnOn(String entityId);
+        CompletableFuture<List<HAState>> turnOn(String domainlessEntityId);
 
-        CompletableFuture<List<HAState>> turnOff(String entityId);
+        CompletableFuture<List<HAState>> turnOff(String domainlessEntityId);
     }
 
     interface Switch extends Domain {
-        CompletableFuture<List<HAState>> turnOn(String entityId);
+        CompletableFuture<List<HAState>> turnOn(String domainlessEntityId);
 
-        CompletableFuture<List<HAState>> turnOff(String entityId);
+        CompletableFuture<List<HAState>> turnOff(String domainlessEntityId);
     }
 
     interface Number extends Domain {
-        CompletableFuture<List<HAState>> setValue(String entityId, double value);
+        CompletableFuture<List<HAState>> setValue(String domainlessEntityId, double value);
     }
 
     interface Button extends Domain {
-        CompletableFuture<List<HAState>> press(String entityId);
+        CompletableFuture<List<HAState>> press(String domainlessEntityId);
     }
 
     interface BinarySensor extends Domain {
