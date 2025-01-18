@@ -2,7 +2,6 @@ package net.yudichev.jiotty.connector.miele;
 
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
-import com.google.inject.Inject;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
@@ -28,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -254,6 +254,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
     private class EventStream extends BaseIdempotentCloseable {
         private static final AtomicInteger streamIdGenerator = new AtomicInteger();
         private static final Duration PING_AGE_BEFORE_RECONNECT = ofSeconds(20 * 6);
+        private static final long MAX_RECONNECT_TIME_BEFORE_GIVING_UP = TimeUnit.DAYS.toMillis(7);
         public final Listeners<MieleEvent> listeners = new Listeners<>();
         private final Request request;
         private final BackOff reconnectBackoff;
@@ -272,7 +273,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             reconnectBackoff = new SynchronizedBackOff(new ExponentialBackOff.Builder()
                                                                .setInitialIntervalMillis(10)
                                                                .setMaxIntervalMillis(10_000)
-                                                               .setMaxElapsedTimeMillis(TimeUnit.HOURS.toMillis(3))
+                                                               .setMaxElapsedTimeMillis(MAX_RECONNECT_TIME_BEFORE_GIVING_UP)
                                                                .setNanoClock(dateTimeProvider)
                                                                .build());
             executor.execute(this::connect);
@@ -378,7 +379,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
         private void reconnect(String failureReason) {
             var nextBackOffMillis = reconnectBackoff.nextBackOffMillis();
             if (nextBackOffMillis == BackOff.STOP) {
-                logger.error("[{}][{}] stream failure: {}, will not re-connect", deviceId, streamId, failureReason);
+                logger.error("[{}][{}] stream failure: {}, been happening for {}, will not re-connect",
+                             deviceId, streamId, failureReason, MAX_RECONNECT_TIME_BEFORE_GIVING_UP);
                 closeStream();
             } else {
                 logger.info("[{}][{}] stream failure: {}, will close and re-connect in {}ms", deviceId, streamId, failureReason, nextBackOffMillis);

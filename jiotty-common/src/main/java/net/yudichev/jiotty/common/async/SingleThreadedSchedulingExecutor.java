@@ -85,9 +85,11 @@ public final class SingleThreadedSchedulingExecutor implements SchedulingExecuto
     }
 
     private final class ScheduledHandle extends BaseIdempotentCloseable {
+        private final Future<?> scheduledFuture;
         private final Closeable executorHandle;
 
         private ScheduledHandle(Future<?> scheduledFuture) {
+            this.scheduledFuture = scheduledFuture;
             executorHandle = () -> scheduledFuture.cancel(false);
         }
 
@@ -95,6 +97,11 @@ public final class SingleThreadedSchedulingExecutor implements SchedulingExecuto
         protected void doClose() {
             executorHandle.close();
             scheduleHandles.remove(this);
+        }
+
+        @Override
+        public String toString() {
+            return scheduledFuture.toString();
         }
     }
 }
