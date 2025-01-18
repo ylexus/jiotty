@@ -12,7 +12,6 @@ import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.lang.Listeners;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
-import net.yudichev.jiotty.common.lang.backoff.SynchronizedBackOff;
 import net.yudichev.jiotty.common.rest.ContentTypes;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import okhttp3.Call;
@@ -59,6 +58,8 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
+import static net.yudichev.jiotty.connector.miele.MieleStreamConnected.STREAM_CONNECTED;
+import static net.yudichev.jiotty.connector.miele.MieleStreamDisconnected.STREAM_DISCONNECTED;
 
 /**
  * <a href="https://www.miele.com/developer/">Guide</a>
@@ -250,7 +251,6 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
     @interface Dependency {
     }
 
-
     private class EventStream extends BaseIdempotentCloseable {
         private static final AtomicInteger streamIdGenerator = new AtomicInteger();
         private static final Duration PING_AGE_BEFORE_RECONNECT = ofSeconds(20 * 6);
@@ -261,6 +261,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
         private final AtomicReference<Closeable> pingMonitor = new AtomicReference<>();
         @Nullable
         private Call call;
+        private boolean connected;
         private volatile int streamId;
         private Instant lastPingTime = dateTimeProvider.currentInstant();
 
@@ -270,12 +271,11 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     .header("Authorization", "Bearer " + accessToken)
                     .header("Accept", "text/event-stream")
                     .build();
-            reconnectBackoff = new SynchronizedBackOff(new ExponentialBackOff.Builder()
-                                                               .setInitialIntervalMillis(10)
+            reconnectBackoff = new ExponentialBackOff.Builder().setInitialIntervalMillis(10)
                                                                .setMaxIntervalMillis(10_000)
                                                                .setMaxElapsedTimeMillis(MAX_RECONNECT_TIME_BEFORE_GIVING_UP)
                                                                .setNanoClock(dateTimeProvider)
-                                                               .build());
+                                                               .build();
             executor.execute(this::connect);
         }
 
@@ -294,7 +294,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     executor.execute(() -> {
                         var activeCall = EventStream.this.call;
                         if (call == activeCall) {
-                            reconnect(humanReadableMessage(e));
+                            handleFailure(humanReadableMessage(e));
                         } else {
                             logger.debug("""
                                          [{}] got failure callback for call {} while active call is {} and active streamId is {},
@@ -317,13 +317,13 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                                 } catch (IOException | RuntimeException e) {
                                     responseBodyStr = "(failed getting response body: " + humanReadableMessage(e) + ")";
                                 }
-                                reconnect("failed to open SSE stream: response code " + response.code() + responseBodyStr);
+                                handleFailure("failed to open SSE stream: response code " + response.code() + responseBodyStr);
                             });
                             return;
                         }
 
                         if (responseBody == null) {
-                            executor.execute(() -> reconnect("failed to open SSE stream: response is empty"));
+                            executor.execute(() -> handleFailure("failed to open SSE stream: response is empty"));
                             return;
                         }
 
@@ -332,7 +332,6 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                         // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
                         executor.execute(() -> lastPingTime = dateTimeProvider.currentInstant());
                         closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
-                        reconnectBackoff.reset();
                         readLoop(responseBody);
                     }
                 }
@@ -346,7 +345,13 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             try {
                 @Nullable String eventType = null;
                 while ((line = responseBody.source().readUtf8Line()) != null) {
-                    reconnectBackoff.reset();
+                    executor.execute(() -> {
+                        reconnectBackoff.reset();
+                        if (!connected) {
+                            connected = true;
+                            handleSafely(STREAM_CONNECTED);
+                        }
+                    });
                     logger.debug("[{}][{}] event: {}", deviceId, streamId, line);
                     var eventPrefix = "event: ";
                     var dataPrefix = "data: ";
@@ -367,16 +372,26 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             }
         }
 
+        /**
+         * @implSpec executor thread
+         */
         private void handleReadLoopFailure(IOException e) {
             if (call == null) {
                 logger.debug("[{}][{}] read loop failed while call or stream is closed : this is expected", deviceId, streamId, e);
             } else {
                 logger.info("[{}][{}] read loop failed unexpectedly on call {}, will re-connect", deviceId, streamId, call, e);
-                reconnect(humanReadableMessage(e));
+                handleFailure(humanReadableMessage(e));
             }
         }
 
-        private void reconnect(String failureReason) {
+        /**
+         * @implSpec executor thread
+         */
+        private void handleFailure(String failureReason) {
+            if (connected) {
+                connected = false;
+                handleSafely(STREAM_DISCONNECTED);
+            }
             var nextBackOffMillis = reconnectBackoff.nextBackOffMillis();
             if (nextBackOffMillis == BackOff.STOP) {
                 logger.error("[{}][{}] stream failure: {}, been happening for {}, will not re-connect",
@@ -409,6 +424,9 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             executor.execute(this::closeStream);
         }
 
+        /**
+         * @implSpec executor thread
+         */
         private void closeStream() {
             Call callToCancel = null;
             if (call != null) {
@@ -425,11 +443,14 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             }
         }
 
+        /**
+         * @implSpec executor thread
+         */
         private void checkPings() {
             var pingAge = Duration.between(lastPingTime, dateTimeProvider.currentInstant());
             logger.debug("[{}][{}] lastPingTime: {}, pingAge: {}", deviceId, streamId, lastPingTime, pingAge);
             if (pingAge.compareTo(PING_AGE_BEFORE_RECONNECT) > 0) {
-                reconnect("re-connected or last ping received " + pingAge + " ago (>" + PING_AGE_BEFORE_RECONNECT + ")");
+                handleFailure("re-connected or last ping received " + pingAge + " ago (>" + PING_AGE_BEFORE_RECONNECT + ")");
             }
         }
 
@@ -439,6 +460,17 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
         private void handle(MieleEvent event) {
             listeners.notify(event);
+        }
+
+        /**
+         * @implSpec executor thread
+         */
+        private void handleSafely(MieleEvent event) {
+            try {
+                listeners.notify(event);
+            } catch (RuntimeException e) {
+                logger.warn("[{}][{}] event handler failed", deviceId, streamId, e);
+            }
         }
     }
 }
