@@ -15,7 +15,7 @@ public interface HomeAssistantClient {
 
     Button button();
 
-    Domain sensor();
+    Domain<Void> sensor();
 
     LogBook logBook();
 
@@ -23,35 +23,37 @@ public interface HomeAssistantClient {
 
     BinarySensor binarySensor();
 
-    interface Domain {
-        CompletableFuture<HAState> getState(String domainlessEntityId);
+    Domain<HADeviceLocationAttributes> deviceTracker();
+
+    interface Domain<A> {
+        CompletableFuture<HAState<A>> getState(String domainlessEntityId);
     }
 
-    interface Climate extends Domain {
-        CompletableFuture<List<HAState>> setTemperature(String domainlessEntityId, String hvacMode, double temperature);
+    interface Climate extends Domain<Void> {
+        CompletableFuture<List<HAState<Void>>> setTemperature(String domainlessEntityId, String hvacMode, double temperature);
 
-        CompletableFuture<List<HAState>> setHvacMode(String domainlessEntityId, String hvacMode);
+        CompletableFuture<List<HAState<Void>>> setHvacMode(String domainlessEntityId, String hvacMode);
 
-        CompletableFuture<List<HAState>> turnOn(String domainlessEntityId);
+        CompletableFuture<List<HAState<Void>>> turnOn(String domainlessEntityId);
 
-        CompletableFuture<List<HAState>> turnOff(String domainlessEntityId);
+        CompletableFuture<List<HAState<Void>>> turnOff(String domainlessEntityId);
     }
 
-    interface Switch extends Domain {
-        CompletableFuture<List<HAState>> turnOn(String domainlessEntityId);
+    interface Switch extends Domain<Void> {
+        CompletableFuture<List<HAState<Void>>> turnOn(String domainlessEntityId);
 
-        CompletableFuture<List<HAState>> turnOff(String domainlessEntityId);
+        CompletableFuture<List<HAState<Void>>> turnOff(String domainlessEntityId);
     }
 
-    interface Number extends Domain {
-        CompletableFuture<List<HAState>> setValue(String domainlessEntityId, double value);
+    interface Number extends Domain<Void> {
+        CompletableFuture<List<HAState<Void>>> setValue(String domainlessEntityId, double value);
     }
 
-    interface Button extends Domain {
-        CompletableFuture<List<HAState>> press(String domainlessEntityId);
+    interface Button extends Domain<Void> {
+        CompletableFuture<List<HAState<Void>>> press(String domainlessEntityId);
     }
 
-    interface BinarySensor extends Domain {
+    interface BinarySensor extends Domain<Void> {
         default CompletableFuture<BinaryState> getBinaryState(String domainlessEntityId) {
             return getState(domainlessEntityId).thenApply(haState -> BinaryState.valueOf(haState.state().toUpperCase()));
         }

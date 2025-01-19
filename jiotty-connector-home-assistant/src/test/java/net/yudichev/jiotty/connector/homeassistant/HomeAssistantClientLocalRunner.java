@@ -49,7 +49,7 @@ final class HomeAssistantClientLocalRunner {
             this.client = checkNotNull(client);
         }
 
-        @SuppressWarnings({"UseOfSystemOutOrSystemErr", "OverlyNestedMethod"})
+        @SuppressWarnings({"UseOfSystemOutOrSystemErr", "OverlyNestedMethod", "CallToPrintStackTrace"})
         @Override
         protected void doStart() {
             thread = new Thread(() -> {
@@ -77,7 +77,7 @@ final class HomeAssistantClientLocalRunner {
                             System.out.println("Awaiting Result...");
                             System.out.println("Result: " + getAsUnchecked(result::get));
                         } catch (RuntimeException e) {
-                            System.err.println("Failed: " + e.getMessage());
+                            e.printStackTrace();
                         }
                     } else {
                         System.err.println("Unparseable command: " + line);
@@ -153,6 +153,7 @@ final class HomeAssistantClientLocalRunner {
                 case "button" -> client.button().getState(entity);
                 case "sensor" -> client.sensor().getState(entity);
                 case "bsensor" -> client.binarySensor().getBinaryState(entity);
+                case "loc" -> client.deviceTracker().getState(entity);
                 default -> throw new IllegalArgumentException("Unrecognised domain: " + domain);
             });
             return result;

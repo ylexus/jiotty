@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.homeassistant;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.reflect.TypeParameter;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -44,10 +45,12 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     private final Switch theSwitch = new SwitchImpl();
     private final Number number = new NumberImpl();
     private final Button button = new ButtonImpl();
-    private final Domain sensor = new BaseDomain("sensor");
+    private final Domain<Void> sensor = new BaseDomain<>("sensor") {};
     private final LogBook logBook = new LogBookImpl();
     private final History history = new HistoryImpl();
     private final BinarySensor binarySensor = new BinarySensorImpl();
+    private final Domain<HADeviceLocationAttributes> deviceTracker = new BaseDomain<>("device_tracker") {};
+
     private final AtomicLong requestIdGenerator = new AtomicLong();
 
     private OkHttpClient client;
@@ -89,7 +92,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     }
 
     @Override
-    public Domain sensor() {
+    public Domain<Void> sensor() {
         return sensor;
     }
 
@@ -106,6 +109,11 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
     @Override
     public BinarySensor binarySensor() {
         return binarySensor;
+    }
+
+    @Override
+    public Domain<HADeviceLocationAttributes> deviceTracker() {
+        return deviceTracker;
     }
 
     private <T> CompletableFuture<T> invokeGet(String path, TypeToken<T> responseType) {
@@ -139,19 +147,21 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
 
     }
 
-    private class BaseDomain implements Domain {
+    private class BaseDomain<A> implements Domain<A> {
         protected final String domainId;
+        private final TypeToken<A> attrType;
 
         protected BaseDomain(String domainId) {
             this.domainId = checkNotNull(domainId);
+            attrType = new TypeToken<>(getClass()) {};
         }
 
         @Override
-        public CompletableFuture<HAState> getState(String domainlessEntityId) {
+        public CompletableFuture<HAState<A>> getState(String domainlessEntityId) {
             return invokeGetState(domainlessEntityId);
         }
 
-        protected CompletableFuture<List<HAState>> invokePostServices(String service, Object body) {
+        protected CompletableFuture<List<HAState<A>>> invokePostServices(String service, Object body) {
             long requestId = requestIdGenerator.incrementAndGet();
             logger.debug("[{}] Invoking POST {}.{}({})", requestId, domainId, service, body);
             var request = new Request.Builder().url(baseUrl + "/services/" + domainId + "/" + service)
@@ -159,21 +169,25 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
                                                .addHeader(CONTENT_TYPE, ContentTypes.CONTENT_TYPE_JSON)
                                                .post(RequestBody.create(Json.stringify(body), MediaType.get(ContentTypes.CONTENT_TYPE_JSON)))
                                                .build();
-            return callAndLogResponse(request, requestId, new TypeToken<>() {});
+            return callAndLogResponse(request, requestId,
+                                      new TypeToken<List<HAState<A>>>() {}
+                                              .where(new TypeParameter<>() {}, attrType));
         }
 
-        protected CompletableFuture<HAState> invokeGetState(String domainlessEntityId) {
-            return invokeGet("states/" + domainId + '.' + domainlessEntityId, new TypeToken<>() {});
+        protected CompletableFuture<HAState<A>> invokeGetState(String domainlessEntityId) {
+            return invokeGet("states/" + domainId + '.' + domainlessEntityId,
+                             new TypeToken<HAState<A>>() {}
+                                     .where(new TypeParameter<>() {}, attrType));
         }
     }
 
-    private class ClimateImpl extends BaseDomain implements Climate {
+    private class ClimateImpl extends BaseDomain<Void> implements Climate {
         public ClimateImpl() {
             super("climate");
         }
 
         @Override
-        public CompletableFuture<List<HAState>> setTemperature(String domainlessEntityId, String hvacMode, double temperature) {
+        public CompletableFuture<List<HAState<Void>>> setTemperature(String domainlessEntityId, String hvacMode, double temperature) {
             return invokePostServices("set_temperature", HAClimateSetTemperatureServiceData.builder()
                                                                                            .setEntityId(domainId + '.' + domainlessEntityId)
                                                                                            .setHvacMode(hvacMode)
@@ -182,7 +196,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
 
         @Override
-        public CompletableFuture<List<HAState>> setHvacMode(String domainlessEntityId, String hvacMode) {
+        public CompletableFuture<List<HAState<Void>>> setHvacMode(String domainlessEntityId, String hvacMode) {
             return invokePostServices("set_hvac_mode", HAClimateSetHvacModeServiceData.builder()
                                                                                       .setEntityId(domainId + '.' + domainlessEntityId)
                                                                                       .setHvacMode(hvacMode)
@@ -190,55 +204,55 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
 
         @Override
-        public CompletableFuture<List<HAState>> turnOn(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<Void>>> turnOn(String domainlessEntityId) {
             return invokePostServices("turn_on", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
 
         @Override
-        public CompletableFuture<List<HAState>> turnOff(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<Void>>> turnOff(String domainlessEntityId) {
             return invokePostServices("turn_off", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
     }
 
-    private class SwitchImpl extends BaseDomain implements Switch {
+    private class SwitchImpl extends BaseDomain<Void> implements Switch {
         public SwitchImpl() {
             super("switch");
         }
 
         @Override
-        public CompletableFuture<List<HAState>> turnOn(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<Void>>> turnOn(String domainlessEntityId) {
             return invokePostServices("turn_on", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
 
         @Override
-        public CompletableFuture<List<HAState>> turnOff(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<Void>>> turnOff(String domainlessEntityId) {
             return invokePostServices("turn_off", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
     }
 
-    private class NumberImpl extends BaseDomain implements Number {
+    private class NumberImpl extends BaseDomain<Void> implements Number {
         public NumberImpl() {
             super("number");
         }
 
         @Override
-        public CompletableFuture<List<HAState>> setValue(String domainlessEntityId, double value) {
+        public CompletableFuture<List<HAState<Void>>> setValue(String domainlessEntityId, double value) {
             return invokePostServices("set_value", HANumberSetValueServiceData.of(domainId + '.' + domainlessEntityId, value));
         }
     }
 
-    private class ButtonImpl extends BaseDomain implements Button {
+    private class ButtonImpl extends BaseDomain<Void> implements Button {
         public ButtonImpl() {
             super("button");
         }
 
         @Override
-        public CompletableFuture<List<HAState>> press(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<Void>>> press(String domainlessEntityId) {
             return invokePostServices("press", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
     }
 
-    private class BinarySensorImpl extends BaseDomain implements BinarySensor {
+    private class BinarySensorImpl extends BaseDomain<Void> implements BinarySensor {
         public BinarySensorImpl() {
             super("binary_sensor");
         }
