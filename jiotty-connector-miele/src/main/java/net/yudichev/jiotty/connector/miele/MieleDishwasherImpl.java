@@ -50,7 +50,6 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.time.Duration.ZERO;
 import static java.time.Duration.ofMillis;
-import static java.time.Duration.ofSeconds;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
@@ -253,7 +252,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
     private class EventStream extends BaseIdempotentCloseable {
         private static final AtomicInteger streamIdGenerator = new AtomicInteger();
-        private static final Duration PING_AGE_BEFORE_RECONNECT = ofSeconds(20 * 6);
+        private static final Duration PING_AGE_BEFORE_RECONNECT = Duration.ofSeconds(20 * 6);
         private static final long MAX_RECONNECT_TIME_BEFORE_GIVING_UP = TimeUnit.DAYS.toMillis(7);
         public final Listeners<MieleEvent> listeners = new Listeners<>();
         private final Request request;
@@ -284,9 +283,11 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
          */
         private void connect() {
             streamId = streamIdGenerator.incrementAndGet();
-            logger.info("[{}][{}] connecting to SSE stream", deviceId, streamId);
+            var pingCheckInterval = Duration.ofSeconds(20);
+            logger.info("[{}][{}] connecting to SSE stream and starting ping check every {}", deviceId, streamId, pingCheckInterval);
             call = eventingClient.newCall(request);
             logger.debug("[{}][{}] new call is {}", deviceId, streamId, call);
+            closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, this::checkPings)));
             call.enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
@@ -327,11 +328,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                             return;
                         }
 
-                        var pingCheckInterval = ofSeconds(20);
-                        logger.info("[{}][{}] connected to SSE stream, starting ping check every {}", deviceId, streamId, pingCheckInterval);
                         // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
                         executor.execute(() -> lastPingTime = dateTimeProvider.currentInstant());
-                        closeSafelyIfNotNull(logger, pingMonitor.getAndSet(executor.scheduleAtFixedRate(pingCheckInterval, EventStream.this::checkPings)));
                         readLoop(responseBody);
                     }
                 }
