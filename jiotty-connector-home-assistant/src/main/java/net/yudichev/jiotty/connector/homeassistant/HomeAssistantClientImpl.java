@@ -128,10 +128,9 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
 
     private <T> CompletableFuture<T> callAndLogResponse(Request request, long requestId, TypeToken<T> responseType) {
         return whenStartedAndNotLifecycling(
-                () -> RestClients.<T>call(request, responseType)
+                () -> RestClients.<T>call(client.newCall(request), responseType)
                                  .whenComplete((o, throwable) -> logger.debug("[{}] Response {}", requestId, o, throwable)));
     }
-
 
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})

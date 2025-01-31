@@ -7,7 +7,6 @@ import net.yudichev.jiotty.common.lang.Json;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.ResponseBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,14 +43,6 @@ public final class RestClients {
                 .writeTimeout(DEFAULT_HTTP_TIMEOUT);
         customizer.accept(builder);
         return builder.build();
-    }
-
-    public static <T> CompletableFuture<T> call(Request request, Class<? extends T> responseType) {
-        return call(newClient().newCall(request), responseType);
-    }
-
-    public static <T> CompletableFuture<T> call(Request request, TypeToken<? extends T> responseType) {
-        return call(newClient().newCall(request), responseType);
     }
 
     public static <T> CompletableFuture<T> call(Call theCall, Class<? extends T> responseType) {
