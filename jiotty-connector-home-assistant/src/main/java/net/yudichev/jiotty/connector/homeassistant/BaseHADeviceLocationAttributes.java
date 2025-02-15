@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;
 
+import java.util.Optional;
+
 @Value.Immutable
 @PublicImmutablesStyle
 @JsonDeserialize
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface BaseHADeviceLocationAttributes {
-    double latitude();
+    Optional<Double> latitude();
 
-    double longitude();
+    Optional<Double> longitude();
 }
