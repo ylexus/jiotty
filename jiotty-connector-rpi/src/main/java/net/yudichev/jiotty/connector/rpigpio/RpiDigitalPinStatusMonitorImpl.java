@@ -8,6 +8,8 @@ import com.pi4j.io.gpio.digital.DigitalState;
 import com.pi4j.io.gpio.digital.PullResistance;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -26,6 +28,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.CompositeException.runForAll;
 
 final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implements RpiDigitalPinStatusMonitor {
+    private static final Logger logger = LoggerFactory.getLogger(RpiDigitalPinStatusMonitorImpl.class);
+
     private final Provider<Context> pi4jContextProvider;
     private final Integer pin;
     private final PullResistance pullResistance;
@@ -57,10 +61,13 @@ final class RpiDigitalPinStatusMonitorImpl extends BaseLifecycleComponent implem
         Context pi4jContext = pi4jContextProvider.get();
         DigitalInputProvider digitalInputProvider = pi4jContext.provider("gpiod-digital-input");
         input = digitalInputProvider.create(DigitalInput.newConfigBuilder(pi4jContext)
-                .address(pin)
-                .pull(pullResistance)
-                .build());
-        input.addListener(event -> onListenerStateChange(event.state()));
+                                                        .address(pin)
+                                                        .pull(pullResistance)
+                                                        .build());
+        input.addListener(event -> {
+            logger.info("{}", event);
+            onListenerStateChange(event.state());
+        });
         closeable = Closeable.idempotent(() -> input.shutdown(pi4jContext));
     }
 
