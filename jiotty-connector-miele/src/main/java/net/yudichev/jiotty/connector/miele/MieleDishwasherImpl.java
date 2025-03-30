@@ -22,6 +22,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -311,15 +312,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
                     logger.debug("[{}][{}] call {} succeeded, response code {}", deviceId, streamId, call, response.code());
                     try (ResponseBody responseBody = response.body()) {
                         if (!response.isSuccessful()) {
-                            executor.execute(() -> {
-                                String responseBodyStr;
-                                try {
-                                    responseBodyStr = responseBody == null ? "" : ", body: " + responseBody.string();
-                                } catch (IOException | RuntimeException e) {
-                                    responseBodyStr = "(failed getting response body: " + humanReadableMessage(e) + ")";
-                                }
-                                handleFailure("failed to open SSE stream: response code " + response.code() + responseBodyStr);
-                            });
+                            executor.execute(() -> handleFailure(
+                                    "failed to open SSE stream: response code " + response.code() + ", body " + getResponseBodyStr(responseBody)));
                             return;
                         }
 
@@ -330,10 +324,23 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
                         // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
                         executor.execute(() -> lastPingTime = dateTimeProvider.currentInstant());
+                        logger.info("[{}][{}] successfully connected to SSE stream ({}: {}), starting read loop",
+                                    deviceId, streamId, response.code(), getResponseBodyStr(responseBody));
                         readLoop(responseBody);
                     }
                 }
             });
+        }
+
+        @NotNull
+        private static String getResponseBodyStr(ResponseBody responseBody) {
+            String responseBodyStr;
+            try {
+                responseBodyStr = responseBody == null ? "" : "body: " + responseBody.string();
+            } catch (IOException | RuntimeException e) {
+                responseBodyStr = "failed getting response body: " + humanReadableMessage(e);
+            }
+            return responseBodyStr;
         }
 
         private void readLoop(ResponseBody responseBody) {
