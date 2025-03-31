@@ -323,8 +323,8 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
 
                         // reset lastPingTime: treat successful re-connection as ping, so that the connection is given another PING_AGE_BEFORE_RECONNECT
                         executor.execute(() -> lastPingTime = dateTimeProvider.currentInstant());
-                        logger.info("[{}][{}] successfully connected to SSE stream ({}: {}), starting read loop",
-                                    deviceId, streamId, response.code(), getResponseBodyStr(responseBody));
+                        logger.info("[{}][{}] successfully connected to SSE stream ({}), starting read loop",
+                                    deviceId, streamId, response.code());
                         readLoop(responseBody);
                     }
                 }
