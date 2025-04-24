@@ -44,7 +44,7 @@ import static net.yudichev.jiotty.connector.shelly.ShellyPlugImpl.SampleAggregat
 /**
  * <a href="https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch">Guide</a>
  */
-final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
+class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
     private static final Logger logger = LoggerFactory.getLogger(ShellyPlugImpl.class);
 
     private final String host;
@@ -79,7 +79,14 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
     @Override
     protected void doStart() {
         executor = executorFactory.createSingleThreadedSchedulingExecutor("ShellyPlug-" + host);
-        httpClient = newClient();
+        httpClient = createHttpClient();
+    }
+
+    /**
+     * for tests
+     */
+    OkHttpClient createHttpClient() {
+        return newClient();
     }
 
     @Override
@@ -106,7 +113,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
         return whenStartedAndNotLifecycling(() -> retryableOperationExecutor
                 .withBackOffAndRetry(
                         "Shelly-Switch.Set" + targetStateName + "-" + host,
-                        () -> call(httpClient.newCall(request), SwitchSetResponse.class)))
+                        () -> call(httpClient.newCall(request), SwitchSetResponse.class, 0)))
                 .thenApply(SwitchSetResponse::wasOn);
     }
 
@@ -120,7 +127,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
 
     private CompletableFuture<SwitchStatus> getSwitchStatus() {
         return retryableOperationExecutor.withBackOffAndRetry("Shelly-Switch.GetStatus-" + host,
-                                                              () -> call(httpClient.newCall(requestGetStatus), SwitchStatus.class));
+                                                              () -> call(httpClient.newCall(requestGetStatus), SwitchStatus.class, 0));
     }
 
     @BindingAnnotation
@@ -159,18 +166,13 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
 
         @Override
         public Optional<ConsumptionCurve> stop() {
-            logger.info("[{}] Stopping consumption sampling", host);
-            var curve = inLock(lock, () -> {
-                checkState(isRunning(), "Already stopped");
+            return inLock(lock, () -> {
+                checkState(isRunning(), "Consumption sampling already stopped or failed earlier");
+                logger.info("[{}] Stopping consumption sampling", host);
                 Optional<ConsumptionCurve> result = sampleAggregator.generateConsumptionCurve();
                 stopAndReleaseResources();
                 return result;
             });
-            // allow starting new measurements
-            whenStartedAndNotLifecycling(() -> {
-                activeMeasurement = null;
-            });
-            return curve;
         }
 
         private void sample() {
@@ -190,7 +192,7 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
             logger.debug("[{}] Processing response {}", host, switchStatus);
             if (e != null) {
                 inLock(lock, this::stopAndReleaseResources);
-                sendError(humanReadableMessage(e));
+                onFailure(humanReadableMessage(e));
             } else {
                 try {
                     boolean canProceed = processResponse(switchStatus.energyStatus());
@@ -230,16 +232,17 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
             return switch (outcome) {
                 case OK -> true;
                 case EXCEEDED_MAX_SIZE -> {
-                    sendError("Sample count exceeded max size " + MAX_SAMPLE_COUNT);
+                    onFailure("Sample count exceeded max size " + MAX_SAMPLE_COUNT);
                     yield false;
                 }
                 case ALREADY_STOPPED -> false;
             };
         }
 
-        private void sendError(String errorMessage) {
+        private void onFailure(String errorMessage) {
             try {
                 errorHandler.accept(errorMessage);
+                stopAndReleaseResources();
             } catch (RuntimeException ex) {
                 logger.error("[{}] Error handler failed", host, ex);
             }
@@ -253,6 +256,10 @@ final class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug 
             closeSafelyIfNotNull(logger, nextSamplingSchedule);
             nextSamplingSchedule = null;
             sampleAggregator = null;
+            // allow starting new measurements
+            whenStartedAndNotLifecycling(() -> {
+                activeMeasurement = null;
+            });
         }
     }
 
