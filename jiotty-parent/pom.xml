@@ -14,6 +14,7 @@
         <org.mockito.version>5.11.0</org.mockito.version>
     </properties>
     <modelVersion>4.0.0</modelVersion>
+    <name>${project.groupId}:${project.artifactId}</name>
     <packaging>pom</packaging>
 
     <dependencyManagement>
