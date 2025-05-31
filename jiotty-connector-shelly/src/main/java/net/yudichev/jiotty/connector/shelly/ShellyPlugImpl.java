@@ -165,11 +165,18 @@ class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
         }
 
         @Override
-        public Optional<ConsumptionCurve> stop() {
+        public Optional<ConsumptionCurve> snap() {
             return inLock(lock, () -> {
                 checkState(isRunning(), "Consumption sampling already stopped or failed earlier");
+                return sampleAggregator.generateConsumptionCurve();
+            });
+        }
+
+        @Override
+        public Optional<ConsumptionCurve> stop() {
+            return inLock(lock, () -> {
+                var result = snap();
                 logger.info("[{}] Stopping consumption sampling", host);
-                Optional<ConsumptionCurve> result = sampleAggregator.generateConsumptionCurve();
                 stopAndReleaseResources();
                 return result;
             });
@@ -286,14 +293,14 @@ class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
                 return Optional.empty();
             }
             var sampleListBuilder = ImmutableList.<Double>builderWithExpectedSize(consumptionByEpochSec.size() * 12 / 10);
-            var curTime = consumptionByEpochSec.firstKey();
-            var endTime = consumptionByEpochSec.lastKey();
+            long curTime = consumptionByEpochSec.firstKey();
+            long endTime = consumptionByEpochSec.lastKey();
             while (curTime <= endTime) {
                 // find the entry nearest to the current time
                 Map.Entry<Long, Double> floorEntry = consumptionByEpochSec.floorEntry(curTime);
                 Map.Entry<Long, Double> ceilingEntry = consumptionByEpochSec.ceilingEntry(curTime);
-                var distanceToFloor = curTime - floorEntry.getKey();
-                var distanceToCeiling = ceilingEntry.getKey() - curTime;
+                long distanceToFloor = curTime - floorEntry.getKey();
+                long distanceToCeiling = ceilingEntry.getKey() - curTime;
                 assert distanceToFloor >= 0 && distanceToCeiling >= 0;
                 sampleListBuilder.add(distanceToFloor < distanceToCeiling ? floorEntry.getValue() : ceilingEntry.getValue());
                 // next minute

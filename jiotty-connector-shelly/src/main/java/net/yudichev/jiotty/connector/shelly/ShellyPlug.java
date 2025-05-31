@@ -16,6 +16,8 @@ public interface ShellyPlug {
     ConsumptionMeasurement startMeasuringConsumption(Consumer<String> errorHandler);
 
     interface ConsumptionMeasurement {
+        Optional<ConsumptionCurve> snap();
+
         Optional<ConsumptionCurve> stop();
     }
 
