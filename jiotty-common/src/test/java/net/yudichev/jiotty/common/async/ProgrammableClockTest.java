@@ -10,10 +10,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -235,6 +237,17 @@ class ProgrammableClockTest {
 
         clock.setTimeAndTick(Instant.ofEpochMilli(3500));
         verify(task, times(3)).run();
+    }
+
+    @Test
+    void scheduleAtFixedRateWithInitialDelayZero() {
+        var runTimes = new ArrayList<Instant>();
+        executor.submit(() -> executor.scheduleAtFixedRate(Duration.ZERO, Duration.ofSeconds(1), () -> runTimes.add(clock.currentInstant())));
+        clock.tick();
+        assertThat(runTimes, contains(Instant.ofEpochSecond(0)));
+        runTimes.clear();
+        clock.setTimeAndTick(Instant.ofEpochMilli(2000));
+        assertThat(runTimes, contains(Instant.ofEpochSecond(1), Instant.ofEpochSecond(2)));
     }
 
     @Test

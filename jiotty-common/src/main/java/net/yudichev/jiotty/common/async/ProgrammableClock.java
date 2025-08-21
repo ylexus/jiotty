@@ -15,8 +15,8 @@ import java.time.temporal.TemporalAmount;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Optional;
 import java.util.TreeMap;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -62,11 +62,14 @@ public final class ProgrammableClock implements CurrentDateTimeProvider, Executo
         // execute due tasks
         checkState(currentTaskTime == null, "ticking from inside a task is not supported");
         Instant targetTime = currentTime;
-        boolean pendingTasks = !tasksByTriggerTime.isEmpty();
-        while (pendingTasks) {
-            Optional<List<Task>> tasksDueAtEarliestInstant = tasksByTriggerTime.headMap(targetTime, true).values().stream().findFirst();
-            tasksDueAtEarliestInstant.ifPresent(tasks -> new ArrayList<>(tasks).forEach(Task::run));
-            pendingTasks = tasksDueAtEarliestInstant.isPresent();
+        boolean tasksDue = !tasksByTriggerTime.isEmpty();
+        while (tasksDue) {
+            Map.Entry<Instant, List<Task>> earliestTaskEntry = tasksByTriggerTime.firstEntry();
+            tasksDue = earliestTaskEntry != null && !earliestTaskEntry.getKey().isAfter(targetTime);
+            if (tasksDue) {
+                // this entry is due - run tasks
+                new ArrayList<>(earliestTaskEntry.getValue()).forEach(Task::run);
+            }
         }
     }
 

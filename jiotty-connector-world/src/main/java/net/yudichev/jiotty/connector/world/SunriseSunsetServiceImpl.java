@@ -3,6 +3,7 @@ package net.yudichev.jiotty.connector.world;
 import com.google.inject.assistedinject.Assisted;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.geo.LatLon;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.CompositeRunnable;
@@ -30,7 +31,7 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     private final ExecutorFactory executorFactory;
     private final SunriseSunsetTimes sunriseSunsetTimes;
     private final CurrentDateTimeProvider currentDateTimeProvider;
-    private final WorldCoordinates coordinates;
+    private final LatLon coordinates;
     private final CompositeRunnable sunsetHandlers = new CompositeRunnable();
     private final CompositeRunnable sunriseHandlers = new CompositeRunnable();
     private final Lock lock = new ReentrantLock();
@@ -43,7 +44,7 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     SunriseSunsetServiceImpl(ExecutorFactory executorFactory,
                              SunriseSunsetTimes sunriseSunsetTimes,
                              CurrentDateTimeProvider currentDateTimeProvider,
-                             @Assisted WorldCoordinates coordinates) {
+                             @Assisted LatLon coordinates) {
         this.executorFactory = checkNotNull(executorFactory);
         this.sunriseSunsetTimes = checkNotNull(sunriseSunsetTimes);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);

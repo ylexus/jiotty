@@ -1,11 +1,13 @@
 package net.yudichev.jiotty.common.varstore;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import org.slf4j.Logger;
@@ -65,12 +67,13 @@ public final class VarStoreImpl implements VarStore {
     }
 
     @Override
-    public <T> Optional<T> readValue(Class<T> type, String key) {
+    public <T> Optional<T> readValue(TypeToken<T> type, String key) {
         return inLock(lock, () -> MoreThrowables.getAsUnchecked(() -> {
             ObjectNode configNode = readConfig();
 
+            JavaType javaType = mapper.constructType(type.getType());
             return Optional.ofNullable(configNode.get(key))
-                           .map(valueNode -> MoreThrowables.getAsUnchecked(() -> mapper.readerFor(type).readValue(valueNode)));
+                           .map(valueNode -> MoreThrowables.getAsUnchecked(() -> mapper.readerFor(javaType).readValue(valueNode)));
         }));
     }
 

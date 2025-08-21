@@ -1,10 +1,12 @@
 package net.yudichev.jiotty.common.varstore;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.common.reflect.TypeToken;
 
 import java.util.Map;
 import java.util.Optional;
@@ -27,8 +29,9 @@ public final class InMemoryVarStore implements VarStore {
     }
 
     @Override
-    public <T> Optional<T> readValue(Class<T> type, String key) {
+    public <T> Optional<T> readValue(TypeToken<T> type, String key) {
+        JavaType javaType = mapper.constructType(type.getType());
         return Optional.ofNullable(serialisedValuesByKey.get(key))
-                       .map(encodedValue -> getAsUnchecked(() -> mapper.readerFor(type).readValue(encodedValue)));
+                       .map(encodedValue -> getAsUnchecked(() -> mapper.readerFor(javaType).readValue(encodedValue)));
     }
 }

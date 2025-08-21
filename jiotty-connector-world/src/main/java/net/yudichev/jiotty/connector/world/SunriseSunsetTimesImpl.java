@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.world;
 
+import net.yudichev.jiotty.common.geo.LatLon;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -34,12 +35,12 @@ final class SunriseSunsetTimesImpl extends BaseLifecycleComponent implements Sun
     }
 
     @Override
-    public CompletableFuture<SunriseSunsetData> getCurrentSunriseSunset(WorldCoordinates worldCoordinates) {
+    public CompletableFuture<SunriseSunsetData> getCurrentSunriseSunset(LatLon worldCoordinates) {
         return whenStartedAndNotLifecycling(() -> call(client.newCall(
                 new Request.Builder()
                         .url(checkNotNull(parse(API_URL)).newBuilder()
-                                                         .addQueryParameter("lat", Double.toString(worldCoordinates.getLatitude()))
-                                                         .addQueryParameter("lng", Double.toString(worldCoordinates.getLongitude()))
+                                                         .addQueryParameter("lat", Double.toString(worldCoordinates.lat()))
+                                                         .addQueryParameter("lng", Double.toString(worldCoordinates.lon()))
                                                          .addQueryParameter("formatted", "0")
                                                          .build())
                         .get()

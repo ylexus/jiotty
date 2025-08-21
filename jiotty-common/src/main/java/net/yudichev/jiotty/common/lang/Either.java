@@ -50,6 +50,11 @@ public final class Either<L, R> {
     }
 
     @Override
+    public String toString() {
+        return map(Objects::toString, Objects::toString);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
