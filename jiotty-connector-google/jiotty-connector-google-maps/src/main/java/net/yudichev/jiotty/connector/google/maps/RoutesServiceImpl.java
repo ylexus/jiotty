@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
@@ -39,6 +38,7 @@ import static net.yudichev.jiotty.connector.google.maps.Bindings.ApiKey;
 
 public final class RoutesServiceImpl implements RoutesService {
     private static final Logger logger = LoggerFactory.getLogger(RoutesServiceImpl.class);
+    private static final Duration CALL_DEADLINE = Duration.ofSeconds(10);
     private final AtomicInteger requestIdGen = new AtomicInteger();
     private final RoutesGrpc.RoutesFutureStub stub;
 
@@ -46,8 +46,7 @@ public final class RoutesServiceImpl implements RoutesService {
     public RoutesServiceImpl(@ApiKey String apiKey) {
         Channel channel = NettyChannelBuilder.forAddress("routes.googleapis.com", 443).build();
         channel = ClientInterceptors.intercept(channel, new RoutesInterceptor(apiKey));
-        stub = RoutesGrpc.newFutureStub(channel)
-                         .withDeadlineAfter(10, TimeUnit.SECONDS);
+        stub = RoutesGrpc.newFutureStub(channel);
     }
 
     @Override
@@ -62,7 +61,7 @@ public final class RoutesServiceImpl implements RoutesService {
         ComputeRoutesRequest request = builder.build();
         int requestId = requestIdGen.incrementAndGet();
         logger.debug("[{}] Sending request: {}", requestId, request);
-        ListenableFuture<ComputeRoutesResponse> future = stub.computeRoutes(request);
+        ListenableFuture<ComputeRoutesResponse> future = stub.withDeadlineAfter(CALL_DEADLINE).computeRoutes(request);
         var resultFuture = new CompletableFuture<Routes>();
         future.addListener(() -> {
             ComputeRoutesResponse response;
