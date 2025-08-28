@@ -29,26 +29,31 @@ public final class HumanReadableExceptionMessage {
         return exception instanceof InterruptedException ? null : exception.getMessage();
     }
 
-    private static void append(StringBuilder stringBuilder, Throwable throwable, @Nullable String message) {
-        if (!stringBuilder.isEmpty()) {
-            stringBuilder.append(": ");
+    private static void append(StringBuilder sb, Throwable throwable, @Nullable String message) {
+        if (!sb.isEmpty()) {
+            sb.append(": ");
         }
+        boolean typeAppended;
         if (throwable.getClass() == RuntimeException.class) {
-            stringBuilder.append("Failure");
+            typeAppended = false;
         } else {
             switch (throwable) {
-                case Exception e -> appendType(stringBuilder, e, "Exception".length());
-                case Error e -> appendType(stringBuilder, e, "Error".length());
-                default -> appendType(stringBuilder, throwable, 0);
+                case Exception e -> appendType(sb, e, "Exception".length());
+                case Error e -> appendType(sb, e, "Error".length());
+                default -> appendType(sb, throwable, 0);
             }
+            typeAppended = true;
         }
         if (message != null) {
-            stringBuilder.append(": ").append(message);
+            if (typeAppended) {
+                sb.append(": ");
+            }
+            sb.append(message);
         }
     }
 
-    private static void appendType(StringBuilder stringBuilder, Throwable throwable, int suffixLength) {
+    private static void appendType(StringBuilder sb, Throwable throwable, int suffixLength) {
         String simpleName = throwable.getClass().getSimpleName();
-        stringBuilder.append(simpleName.substring(0, simpleName.length() - suffixLength));
+        sb.append(simpleName.substring(0, simpleName.length() - suffixLength));
     }
 }
