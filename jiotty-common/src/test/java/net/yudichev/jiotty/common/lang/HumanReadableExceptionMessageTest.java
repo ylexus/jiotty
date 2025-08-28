@@ -2,6 +2,8 @@ package net.yudichev.jiotty.common.lang;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -9,22 +11,27 @@ import static org.hamcrest.Matchers.is;
 class HumanReadableExceptionMessageTest {
     @Test
     void singleException() {
-        assertThat(humanReadableMessage(new RuntimeException("msg")), is("msg"));
+        assertThat(humanReadableMessage(new RuntimeException("msg")), is("Failure: msg"));
     }
 
     @Test
     void nestedWithNoParentMessage() {
-        assertThat(humanReadableMessage(new RuntimeException(new RuntimeException("msg"))), is("msg"));
+        assertThat(humanReadableMessage(new RuntimeException(new RuntimeException("msg"))), is("Failure: msg"));
     }
 
     @Test
     void nestedWithParentMessage() {
-        assertThat(humanReadableMessage(new RuntimeException("parent", new RuntimeException("msg"))), is("parent: msg"));
+        assertThat(humanReadableMessage(new RuntimeException("parent", new RuntimeException("msg"))), is("Failure: parent: Failure: msg"));
     }
 
     @SuppressWarnings("NewExceptionWithoutArguments")
     @Test
     void interruptedException() {
-        assertThat(humanReadableMessage(new RuntimeException("msg", new InterruptedException())), is("msg: Interrupted"));
+        assertThat(humanReadableMessage(new RuntimeException("msg", new InterruptedException())), is("Failure: msg: Interrupted"));
+    }
+
+    @Test
+    void messageInHierarchyIsNull() {
+        assertThat(humanReadableMessage(new IOException(null, new RuntimeException("child"))), is("IO: Failure: child"));
     }
 }
