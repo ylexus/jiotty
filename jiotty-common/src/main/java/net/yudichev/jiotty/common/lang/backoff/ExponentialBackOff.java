@@ -17,6 +17,10 @@ package net.yudichev.jiotty.common.lang.backoff;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
+import java.util.function.DoubleSupplier;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * Implementation of {@link BackOff} that increases the back off period for each retry attempt using
  * a randomization function that grows exponentially.
@@ -89,6 +93,7 @@ public class ExponentialBackOff implements BackOff {
      * The default maximum elapsed time in milliseconds (15 minutes).
      */
     public static final long DEFAULT_MAX_ELAPSED_TIME_MILLIS = 900000;
+    private final DoubleSupplier rng;
     /**
      * The initial retry interval in milliseconds.
      */
@@ -155,6 +160,7 @@ public class ExponentialBackOff implements BackOff {
         maxIntervalMillis = builder.maxIntervalMillis;
         maxElapsedTimeMillis = builder.maxElapsedTimeMillis;
         nanoClock = builder.nanoClock;
+        rng = builder.rng;
         Preconditions.checkArgument(initialIntervalMillis > 0);
         Preconditions.checkArgument(0 <= randomizationFactor && randomizationFactor < 1);
         Preconditions.checkArgument(multiplier >= 1);
@@ -187,7 +193,7 @@ public class ExponentialBackOff implements BackOff {
             return STOP;
         }
         long randomizedInterval =
-                getRandomValueFromInterval(randomizationFactor, Math.random(), currentIntervalMillis);
+                getRandomValueFromInterval(randomizationFactor, rng.getAsDouble(), currentIntervalMillis);
         incrementCurrentInterval();
         return randomizedInterval;
     }
@@ -294,6 +300,7 @@ public class ExponentialBackOff implements BackOff {
      * <p>Implementation is not thread-safe.
      */
     public static class Builder {
+        private DoubleSupplier rng = Math::random;
 
         /**
          * The initial retry interval in milliseconds.
@@ -336,6 +343,15 @@ public class ExponentialBackOff implements BackOff {
          */
         public ExponentialBackOff build() {
             return new ExponentialBackOff(this);
+        }
+
+        public DoubleSupplier getRng() {
+            return rng;
+        }
+
+        public Builder setRng(DoubleSupplier rng) {
+            this.rng = checkNotNull(rng);
+            return this;
         }
 
         /**
@@ -472,7 +488,7 @@ public class ExponentialBackOff implements BackOff {
          * changing the return type, but nothing else.
          */
         public Builder setNanoClock(NanoClock nanoClock) {
-            this.nanoClock = Preconditions.checkNotNull(nanoClock);
+            this.nanoClock = checkNotNull(nanoClock);
             return this;
         }
     }
