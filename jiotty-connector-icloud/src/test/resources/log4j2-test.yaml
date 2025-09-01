@@ -12,3 +12,5 @@ Configuration:
     logger:
       - name: net.yudichev.jiotty.connector.icloud.calendar
         level: debug
+#      - name: org.apache.http
+#        level: debug
