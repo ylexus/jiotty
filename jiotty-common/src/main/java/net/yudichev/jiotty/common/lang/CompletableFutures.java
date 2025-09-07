@@ -56,22 +56,28 @@ public final class CompletableFutures {
         return future;
     }
 
+    public static <T> CompletableFuture<T> cancelled() {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        future.cancel(true);
+        return future;
+    }
+
     public static <T> Collector<CompletableFuture<T>, ?, CompletableFuture<List<T>>> toFutureOfList() {
         return Collector.of(
                 ImmutableList::<CompletableFuture<T>>builder,
                 ImmutableList.Builder::add,
                 (builder1, builder2) ->
                         ImmutableList.<CompletableFuture<T>>builder()
-                                .addAll(builder1.build())
-                                .addAll(builder2.build()),
+                                     .addAll(builder1.build())
+                                     .addAll(builder2.build()),
                 builder -> {
                     ImmutableList<CompletableFuture<T>> listOfFutures = builder.build();
                     //noinspection ZeroLengthArrayAllocation
                     return CompletableFuture.allOf(listOfFutures.toArray(new CompletableFuture[0]))
-                            .thenApply(ignored -> unmodifiableList(listOfFutures.stream()
-                                    .map(CompletableFuture::join)
-                                    // cannot use ImmutableList here, void futures typically return nulls
-                                    .collect(toList())));
+                                            .thenApply(ignored -> unmodifiableList(listOfFutures.stream()
+                                                                                                .map(CompletableFuture::join)
+                                                                                                // cannot use ImmutableList here, void futures typically return nulls
+                                                                                                .collect(toList())));
                 }
         );
     }
@@ -134,20 +140,20 @@ public final class CompletableFutures {
         public void accept(T input) {
             if (future == null) {
                 future = operation.apply(input)
-                        .thenApply(result -> {
-                            List<R> list = new ArrayList<>();
-                            list.add(result);
-                            return list;
-                        });
+                                  .thenApply(result -> {
+                                      List<R> list = new ArrayList<>();
+                                      list.add(result);
+                                      return list;
+                                  });
             } else {
                 future = future.thenCompose(list ->
-                        operation.apply(input)
-                                .thenApply(result -> {
-                                    synchronized (mutex) {
-                                        list.add(result);
-                                        return list;
-                                    }
-                                }));
+                                                    operation.apply(input)
+                                                             .thenApply(result -> {
+                                                                 synchronized (mutex) {
+                                                                     list.add(result);
+                                                                     return list;
+                                                                 }
+                                                             }));
             }
         }
 
