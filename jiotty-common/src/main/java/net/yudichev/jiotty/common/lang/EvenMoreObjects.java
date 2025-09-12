@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.common.lang;
 
+import javax.annotation.Nullable;
 import java.util.function.Function;
 
 public final class EvenMoreObjects {
@@ -7,7 +8,7 @@ public final class EvenMoreObjects {
     }
 
     @SuppressWarnings("ReturnOfNull")
-    public static <T, U> U mapIfNotNull(T value, Function<? super T, ? extends U> mapper) {
+    public static <T, U> U mapIfNotNull(@Nullable T value, Function<? super T, ? extends U> mapper) {
         return value == null ? null : mapper.apply(value);
     }
 }
