@@ -13,13 +13,11 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Throwables.getCausalChain;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler {
@@ -41,13 +39,14 @@ final class BackingOffExceptionHandlerImpl implements BackingOffExceptionHandler
                                         .map(throwable -> {
                                             long backOffMs = backOff.nextBackOffMillis();
                                             logger.debug("Operation '{}': backoff: {}", operationName, backOff);
-                                            checkState(backOffMs != BackOff.STOP,
-                                                       "Operation %s is being retried for too long (%sms) - giving up, last error was: %s",
-                                                       operationName, backOff.getMaxElapsedTimeMillis(), humanReadableMessage(throwable));
+                                            if (backOffMs == BackOff.STOP) {
+                                                //noinspection StringConcatenationMissingWhitespace
+                                                throw new IllegalStateException(
+                                                        "Operation " + operationName + " is being retried for too long (" + backOff.getMaxElapsedTimeMillis()
+                                                                + "ms) - giving up, last error included", throwable);
+                                            }
                                             logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms",
-                                                         operationName,
-                                                         backOffMs,
-                                                         throwable);
+                                                         operationName, backOffMs, throwable);
                                             asUnchecked(() -> Thread.sleep(backOffMs));
                                             return Optional.of(backOffMs);
                                         })
