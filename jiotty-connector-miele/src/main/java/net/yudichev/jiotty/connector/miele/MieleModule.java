@@ -6,6 +6,7 @@ import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutorModule
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
+import net.yudichev.jiotty.common.security.OAuth2TokenManagerModule;
 
 import java.time.Duration;
 
@@ -42,13 +43,13 @@ public final class MieleModule extends BaseLifecycleComponentModule {
                         .withAnnotation(forAnnotation(MieleDishwasherImpl.Dependency.class))
                         .build());
 
-        clientIdSpec.bind(String.class)
-                    .annotatedWith(OAuth2TokenManagerImpl.ClientID.class)
-                    .installedBy(this::installLifecycleComponentModule);
-        clientSecretSpec.bind(String.class)
-                        .annotatedWith(OAuth2TokenManagerImpl.ClientSecret.class)
-                        .installedBy(this::installLifecycleComponentModule);
-        bind(OAuth2TokenManager.class).annotatedWith(MieleDishwasherImpl.Dependency.class).to(registerLifecycleComponent(OAuth2TokenManagerImpl.class));
+        installLifecycleComponentModule(OAuth2TokenManagerModule.builder()
+                                                                .setApiName(literally("Miele"))
+                                                                .setAuthBaseUrl(literally("https://api.mcs3.miele.com/thirdparty"))
+                                                                .setClientId(clientIdSpec)
+                                                                .setClientSecret(clientSecretSpec)
+                                                                .withAnnotation(forAnnotation(MieleDishwasherImpl.Dependency.class))
+                                                                .build());
 
         deviceIdSpec.bind(String.class)
                     .annotatedWith(MieleDishwasherImpl.DeviceId.class)

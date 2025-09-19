@@ -13,6 +13,7 @@ import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -42,6 +43,7 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
 
 final class IcloudCalendarService extends BaseLifecycleComponent implements CalendarService {
@@ -49,6 +51,7 @@ final class IcloudCalendarService extends BaseLifecycleComponent implements Cale
 
     private static final String ICLOUD_BASE = "https://caldav.icloud.com";
     private static final String URI_WELL_KNONWN_CALDAV = ICLOUD_BASE + "/.well-known/caldav";
+    private static final int HTTP_TIMEOUT_MS = 10_000;
 
     private final ExecutorFactory executorFactory;
     private final Supplier<CloseableHttpClient> httpClientFactory;
@@ -61,9 +64,19 @@ final class IcloudCalendarService extends BaseLifecycleComponent implements Cale
         this.executorFactory = checkNotNull(executorFactory);
         var credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(checkNotNull(username), checkNotNull(password)));
-        httpClientFactory = () -> HttpClients.custom()
-                                             .setDefaultCredentialsProvider(credentialsProvider)
-                                             .build();
+        httpClientFactory = () -> {
+            // Apply strict timeouts to avoid indefinite hangs
+            return HttpClients.custom()
+                              .setDefaultCredentialsProvider(credentialsProvider)
+                              .setDefaultRequestConfig(RequestConfig.custom()
+                                                                    .setConnectTimeout(HTTP_TIMEOUT_MS)
+                                                                    .setSocketTimeout(HTTP_TIMEOUT_MS)
+                                                                    .setConnectionRequestTimeout(HTTP_TIMEOUT_MS)
+                                                                    .build())
+                              .evictExpiredConnections()
+                              .evictIdleConnections(HTTP_TIMEOUT_MS, MILLISECONDS)
+                              .build();
+        };
     }
 
     @Override

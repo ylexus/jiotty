@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.miele;
+package net.yudichev.jiotty.common.security;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;

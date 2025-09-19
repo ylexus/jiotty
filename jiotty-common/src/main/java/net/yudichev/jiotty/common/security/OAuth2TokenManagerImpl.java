@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.miele;
+package net.yudichev.jiotty.common.security;
 
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
@@ -53,8 +53,6 @@ import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OAuth2TokenManager {
     private static final Logger logger = LoggerFactory.getLogger(OAuth2TokenManagerImpl.class);
 
-    private static final String AUTH_BASE_URL = "https://api.mcs3.miele.com/thirdparty";
-    private static final String TOKEN_URL = AUTH_BASE_URL + "/token";
     private static final Duration REFRESH_ADVANCE_PERIOD = Duration.ofDays(3);
 
     private final ExecutorFactory executorFactory;
@@ -64,6 +62,9 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final Listeners<String> listeners = new Listeners<>();
     private final String varStoreKey;
+    private final String apiName;
+    private final String authBaseUrl;
+    private final String tokenUrl;
     private OkHttpClient httpClient;
 
     private OauthAccessToken currentToken;
@@ -79,19 +80,24 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
                                   CurrentDateTimeProvider currentDateTimeProvider,
                                   VarStore varStore,
                                   @ClientID String clientId,
-                                  @ClientSecret String clientSecret) {
+                                  @ClientSecret String clientSecret,
+                                  @ApiName String apiName,
+                                  @AuthBaseUrl String authBaseUrl) {
         this.clientId = checkNotNull(clientId);
         this.clientSecret = checkNotNull(clientSecret);
         this.executorFactory = checkNotNull(executorFactory);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
         this.varStore = checkNotNull(varStore);
-        varStoreKey = "MieleOauth2Token_" + clientId;
+        this.apiName = checkNotNull(apiName);
+        this.authBaseUrl = checkNotNull(authBaseUrl);
+        tokenUrl = authBaseUrl + "/token";
+        varStoreKey = apiName + "Oauth2Token_" + clientId;
     }
 
     @Override
     protected void doStart() {
         httpClient = newClient();
-        executor = executorFactory.createSingleThreadedSchedulingExecutor("MieleOauth2");
+        executor = executorFactory.createSingleThreadedSchedulingExecutor(apiName + "-oauth2");
         varStore.readValue(OauthAccessToken.class, varStoreKey)
                 .ifPresentOrElse(accessToken -> {
                                      if (isExpired(accessToken)) {
@@ -129,8 +135,8 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
         // authorisation code based process, need to communicate with the user
         startRedirectHttpServer();
 
-        logger.warn("Miele login required: {}/login?response_type=code&client_id={}&redirect_uri={}&scope=IDENTIFY_APPLIANCES",
-                    AUTH_BASE_URL, clientId,
+        logger.warn("{} login required: {}/login?response_type=code&client_id={}&redirect_uri={}&scope=IDENTIFY_APPLIANCES",
+                    apiName, authBaseUrl, clientId,
                     URLEncoder.encode("http://" + httpServer.getAddress().getHostName() + ':' + httpServer.getAddress().getPort() + "/logincallback"
                             , US_ASCII));
     }
@@ -218,7 +224,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     }
 
     private void requestToken(RequestBody formBody) {
-        var request = new Request.Builder().url(TOKEN_URL)
+        var request = new Request.Builder().url(tokenUrl)
                                            .post(formBody)
                                            .build();
 
@@ -270,5 +276,17 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface ClientSecret {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface ApiName {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface AuthBaseUrl {
     }
 }
