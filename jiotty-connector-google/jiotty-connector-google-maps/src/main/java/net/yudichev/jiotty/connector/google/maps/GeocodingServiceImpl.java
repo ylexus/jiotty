@@ -45,7 +45,7 @@ public final class GeocodingServiceImpl extends BaseLifecycleComponent implement
             @Override
             public void onResult(GeocodingResult[] result) {
                 if (result.length == 0) {
-                    resultFut.completeExceptionally(new RuntimeException("No results"));
+                    resultFut.complete(List.of());
                 } else {
                     var resultBuilder = ImmutableList.<LatLon>builderWithExpectedSize(result.length);
                     for (GeocodingResult geocodingResult : result) {
