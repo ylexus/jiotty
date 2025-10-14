@@ -41,6 +41,14 @@ public final class Either<L, R> {
         return isLeft ? leftMapper.apply(left) : rightMapper.apply(right);
     }
 
+    public <T> Either<T, R> mapLeft(Function<? super L, ? extends T> leftMapper) {
+        return isLeft ? left(leftMapper.apply(left)) : (Either<T, R>) this;
+    }
+
+    public <T> Either<L, T> mapRight(Function<? super R, ? extends T> rightMapper) {
+        return isLeft ? (Either<L, T>) this : right(rightMapper.apply(right));
+    }
+
     public Optional<L> getLeft() {
         return Optional.ofNullable(left);
     }
