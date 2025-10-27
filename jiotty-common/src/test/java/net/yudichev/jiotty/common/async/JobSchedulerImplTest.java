@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.time.temporal.ChronoUnit.HOURS;
@@ -19,12 +21,11 @@ class JobSchedulerImplTest {
     private int execCount;
     private Runnable task;
     private Duration taskRunTime = Duration.ZERO;
+    private ZoneId zoneId = ZoneOffset.UTC;
 
     @BeforeEach
     void setUp() {
         clock = new ProgrammableClock().withMdc().withTasksSeeingTargetTime(true);
-        scheduler = new JobSchedulerImpl(clock, clock);
-        scheduler.start();
         task = () -> {
             clock.advanceTime(taskRunTime);
             execCount++;
@@ -33,6 +34,8 @@ class JobSchedulerImplTest {
 
     @Test
     void daily() {
+        startScheduler();
+
         var jobHandle = scheduler.daily("dailyJob", LocalTime.of(9, 0), task);
         clock.tick();
         assertThat(execCount, is(0));
@@ -56,6 +59,8 @@ class JobSchedulerImplTest {
 
     @Test
     void daily_taskOverruns() {
+        startScheduler();
+
         scheduler.daily("dailyJob", LocalTime.of(9, 0), task);
         // scheduled: 1 jan 9:00 << effectively overruns by 3 days 5 hours
         // scheduled: 2 jan 9:00 << skipped
@@ -79,6 +84,8 @@ class JobSchedulerImplTest {
 
     @Test
     void monthly() {
+        startScheduler();
+
         var jobHandle = scheduler.monthly("monthlyJob", 2, task);
         clock.tick();
         assertThat(execCount, is(0));
@@ -98,5 +105,39 @@ class JobSchedulerImplTest {
         jobHandle.close();
         clock.setTimeAndTick(Instant.parse("1970-05-01T00:00:00Z"));
         assertThat(execCount, is(2));
+    }
+
+    @Test
+    void daily_acrossDst() {
+        zoneId = ZoneId.of("Europe/London");
+        startScheduler();
+
+        // schedule job to 16:00 before BST
+        clock.setTime(Instant.parse("2025-10-25T11:00:00Z"));
+
+        scheduler.daily("dailyJob", LocalTime.of(16, 0), task);
+        clock.tick();
+        assertThat(execCount, is(0));
+
+        clock.setTimeAndTick(Instant.parse("2025-10-25T15:59:59+01:00"));
+        assertThat(execCount, is(0));
+
+        clock.setTimeAndTick(Instant.parse("2025-10-25T16:00:00+01:00"));
+        assertThat(execCount, is(1));
+
+        // across DST change from BST to GMT
+        clock.setTimeAndTick(Instant.parse("2025-10-26T11:00:00Z"));
+        assertThat(execCount, is(1));
+
+        clock.setTimeAndTick(Instant.parse("2025-10-26T15:59:59Z"));
+        assertThat(execCount, is(1));
+
+        clock.setTimeAndTick(Instant.parse("2025-10-26T16:00:00Z"));
+        assertThat(execCount, is(2));
+    }
+
+    private void startScheduler() {
+        scheduler = new JobSchedulerImpl(clock, clock, zoneId);
+        scheduler.start();
     }
 }

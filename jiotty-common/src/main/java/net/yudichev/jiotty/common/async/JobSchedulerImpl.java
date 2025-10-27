@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.common.async;
 
+import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.Runnables;
@@ -8,12 +9,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 
 public final class JobSchedulerImpl extends BaseLifecycleComponent implements JobScheduler {
@@ -21,13 +28,17 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
 
     private final ExecutorFactory executorFactory;
     private final CurrentDateTimeProvider currentDateTimeProvider;
+    private final ZoneId zoneId;
+
     private SchedulingExecutor sharedScheduler;
 
     @Inject
     public JobSchedulerImpl(ExecutorFactory executorFactory,
-                            CurrentDateTimeProvider currentDateTimeProvider) {
+                            CurrentDateTimeProvider currentDateTimeProvider,
+                            @Dependency ZoneId zoneId) {
         this.executorFactory = checkNotNull(executorFactory);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
+        this.zoneId = checkNotNull(zoneId);
     }
 
     @SuppressWarnings("ReturnOfInnerClass") // we are a singleton
@@ -69,11 +80,17 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
         closeIfNotNull(sharedScheduler);
     }
 
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Dependency {
+    }
+
     abstract class ScheduledJob implements Closeable {
         private final Scheduler scheduler;
         private final String jobName;
         private final Runnable task;
-        private final LocalDateTime startTime;
+        private final ZonedDateTime startTime;
 
         private int runNumber;
         private Closeable scheduleHandle;
@@ -82,7 +99,7 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
             this.scheduler = checkNotNull(scheduler);
             this.jobName = checkNotNull(jobName);
             this.task = Runnables.guarded(logger, String.format("executing job %s", jobName), task);
-            startTime = currentDateTimeProvider.currentDateTime();
+            startTime = currentDateTimeProvider.currentInstant().atZone(zoneId);
         }
 
         @Override
@@ -91,16 +108,16 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
         }
 
         public final void scheduleNext() {
-            var currentDateTime = currentDateTimeProvider.currentDateTime();
-            LocalDateTime nextDateTime;
+            ZonedDateTime currentDateTime = currentDateTimeProvider.currentInstant().atZone(zoneId);
+            ZonedDateTime nextDateTime;
             while ((nextDateTime = calculateNextTime(startTime, runNumber++)).isBefore(currentDateTime)) {
                 if (runNumber > 1) {
                     logger.warn("[{}] Previous job overran, next scheduled time should have been {} but now is {}, will skip this run",
-                            jobName, nextDateTime, currentDateTime);
+                                jobName, nextDateTime, currentDateTime);
                 }
             }
 
-            LocalDateTime finalNextDateTime = nextDateTime;
+            ZonedDateTime finalNextDateTime = nextDateTime;
             scheduleHandle = whenStartedAndNotLifecycling(() -> {
                 Closeable handle = scheduler.schedule(Duration.between(currentDateTime, finalNextDateTime), this::trigger);
                 logger.info("[{}] next job scheduled for {}", jobName, finalNextDateTime);
@@ -108,7 +125,7 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
             });
         }
 
-        protected abstract LocalDateTime calculateNextTime(LocalDateTime startTime, int runNumber);
+        protected abstract ZonedDateTime calculateNextTime(ZonedDateTime startTime, int runNumber);
 
         private void trigger() {
             logger.debug("[{}] executing", jobName);
@@ -119,6 +136,7 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
 
     private class MonthlyJob extends ScheduledJob {
 
+        private static final LocalTime TIME_OF_RUN = LocalTime.of(3, 0, 0);
         private final int dayOfMonth;
 
         MonthlyJob(Scheduler scheduler, String jobName, int dayOfMonth, Runnable task) {
@@ -127,9 +145,8 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
         }
 
         @Override
-        protected LocalDateTime calculateNextTime(LocalDateTime startTime, int runNumber) {
-            LocalDate dateNow = startTime.toLocalDate();
-            return dateNow.plusMonths(runNumber).withDayOfMonth(dayOfMonth).atTime(3, 0, 0);
+        protected ZonedDateTime calculateNextTime(ZonedDateTime startTime, int runNumber) {
+            return startTime.plusMonths(runNumber).withDayOfMonth(dayOfMonth).with(TIME_OF_RUN);
         }
     }
 
@@ -142,7 +159,7 @@ public final class JobSchedulerImpl extends BaseLifecycleComponent implements Jo
         }
 
         @Override
-        protected LocalDateTime calculateNextTime(LocalDateTime startTime, int runNumber) {
+        protected ZonedDateTime calculateNextTime(ZonedDateTime startTime, int runNumber) {
             return startTime.plusDays(runNumber).with(time);
         }
     }
