@@ -29,14 +29,14 @@ public interface HomeAssistantClient {
         CompletableFuture<HAState<A>> getState(String domainlessEntityId);
     }
 
-    interface Climate extends Domain<Void> {
-        CompletableFuture<List<HAState<Void>>> setTemperature(String domainlessEntityId, String hvacMode, double temperature);
+    interface Climate extends Domain<HAClimateAttributes> {
+        CompletableFuture<List<HAState<HAClimateAttributes>>> setTemperature(String domainlessEntityId, String hvacMode, double temperature);
 
-        CompletableFuture<List<HAState<Void>>> setHvacMode(String domainlessEntityId, String hvacMode);
+        CompletableFuture<List<HAState<HAClimateAttributes>>> setHvacMode(String domainlessEntityId, String hvacMode);
 
-        CompletableFuture<List<HAState<Void>>> turnOn(String domainlessEntityId);
+        CompletableFuture<List<HAState<HAClimateAttributes>>> turnOn(String domainlessEntityId);
 
-        CompletableFuture<List<HAState<Void>>> turnOff(String domainlessEntityId);
+        CompletableFuture<List<HAState<HAClimateAttributes>>> turnOff(String domainlessEntityId);
     }
 
     interface Switch extends Domain<Void> {

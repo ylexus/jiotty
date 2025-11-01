@@ -180,13 +180,13 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
     }
 
-    private class ClimateImpl extends BaseDomain<Void> implements Climate {
+    private class ClimateImpl extends BaseDomain<HAClimateAttributes> implements Climate {
         public ClimateImpl() {
             super("climate");
         }
 
         @Override
-        public CompletableFuture<List<HAState<Void>>> setTemperature(String domainlessEntityId, String hvacMode, double temperature) {
+        public CompletableFuture<List<HAState<HAClimateAttributes>>> setTemperature(String domainlessEntityId, String hvacMode, double temperature) {
             return invokePostServices("set_temperature", HAClimateSetTemperatureServiceData.builder()
                                                                                            .setEntityId(domainId + '.' + domainlessEntityId)
                                                                                            .setHvacMode(hvacMode)
@@ -195,7 +195,7 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
 
         @Override
-        public CompletableFuture<List<HAState<Void>>> setHvacMode(String domainlessEntityId, String hvacMode) {
+        public CompletableFuture<List<HAState<HAClimateAttributes>>> setHvacMode(String domainlessEntityId, String hvacMode) {
             return invokePostServices("set_hvac_mode", HAClimateSetHvacModeServiceData.builder()
                                                                                       .setEntityId(domainId + '.' + domainlessEntityId)
                                                                                       .setHvacMode(hvacMode)
@@ -203,12 +203,12 @@ public final class HomeAssistantClientImpl extends BaseLifecycleComponent implem
         }
 
         @Override
-        public CompletableFuture<List<HAState<Void>>> turnOn(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<HAClimateAttributes>>> turnOn(String domainlessEntityId) {
             return invokePostServices("turn_on", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
 
         @Override
-        public CompletableFuture<List<HAState<Void>>> turnOff(String domainlessEntityId) {
+        public CompletableFuture<List<HAState<HAClimateAttributes>>> turnOff(String domainlessEntityId) {
             return invokePostServices("turn_off", HAServiceData.of(domainId + '.' + domainlessEntityId));
         }
     }
