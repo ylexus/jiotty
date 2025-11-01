@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.world;
+package net.yudichev.jiotty.connector.world.sun;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

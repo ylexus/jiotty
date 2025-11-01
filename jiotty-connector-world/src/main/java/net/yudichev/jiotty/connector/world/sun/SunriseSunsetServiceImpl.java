@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.world;
+package net.yudichev.jiotty.connector.world.sun;
 
 import com.google.inject.assistedinject.Assisted;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
@@ -122,18 +122,18 @@ final class SunriseSunsetServiceImpl extends BaseLifecycleComponent implements S
     private void onTimesRefresh() {
         whenStartedAndNotLifecycling(() -> {
             sunriseSunsetTimes.getCurrentSunriseSunset(coordinates)
-                    .whenCompleteAsync((sunriseSunsetData, e) -> {
-                        if (e != null) {
-                            logger.error("Unable to get current SS times, will retry in 5 minutes", e);
-                            whenStartedAndNotLifecycling(() -> executor.schedule(Duration.ofMinutes(5), this::onTimesRefresh));
-                        } else {
-                            logger.debug("Refreshed SS data: {}", sunriseSunsetData);
-                            inLock(lock, () -> {
-                                currentSsData = sunriseSunsetData;
-                                onRefresh();
-                            });
-                        }
-                    }, executor);
+                              .whenCompleteAsync((sunriseSunsetData, e) -> {
+                                  if (e != null) {
+                                      logger.error("Unable to get current SS times, will retry in 5 minutes", e);
+                                      whenStartedAndNotLifecycling(() -> executor.schedule(Duration.ofMinutes(5), this::onTimesRefresh));
+                                  } else {
+                                      logger.debug("Refreshed SS data: {}", sunriseSunsetData);
+                                      inLock(lock, () -> {
+                                          currentSsData = sunriseSunsetData;
+                                          onRefresh();
+                                      });
+                                  }
+                              }, executor);
         });
     }
 

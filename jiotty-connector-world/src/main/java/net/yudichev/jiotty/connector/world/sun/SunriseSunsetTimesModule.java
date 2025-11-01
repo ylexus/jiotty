@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.world;
+package net.yudichev.jiotty.connector.world.sun;
 
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;

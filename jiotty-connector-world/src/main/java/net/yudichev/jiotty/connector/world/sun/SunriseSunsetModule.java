@@ -1,4 +1,4 @@
-package net.yudichev.jiotty.connector.world;
+package net.yudichev.jiotty.connector.world.sun;
 
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
@@ -16,8 +16,8 @@ public final class SunriseSunsetModule extends BaseLifecycleComponentModule impl
     @Override
     protected void configure() {
         install(new FactoryModuleBuilder()
-                .implement(SunriseSunsetService.class, SunriseSunsetServiceImpl.class)
-                .build(getExposedKey()));
+                        .implement(SunriseSunsetService.class, SunriseSunsetServiceImpl.class)
+                        .build(getExposedKey()));
         expose(getExposedKey());
     }
 
