@@ -75,7 +75,7 @@ final class WeatherServiceImpl extends BaseLifecycleComponent implements Weather
         Instant now = timeProvider.currentInstant();
         long secondsAhead = Duration.between(now, until).getSeconds();
         checkArgument(secondsAhead >= 0, "instant must be in the future, but was: %s", until);
-        int daysToInclude = (int) Math.ceil(secondsAhead / 86400.0) + 1; // include today + required future days
+        int daysToInclude = (int) Math.ceil(secondsAhead / 86400.0) + 1; // the API response includes today, so today + required future days
         if (daysToInclude < 1) {
             daysToInclude = 1;
         }

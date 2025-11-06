@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface WeatherService {
-    int MAX_FORECAST_DAYS = 14;
+    int MAX_FORECAST_DAYS = 13;
 
     CompletableFuture<Weather> getCurrentWeather(LatLon worldCoordinates);
 
