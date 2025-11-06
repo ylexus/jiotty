@@ -79,7 +79,7 @@ final class WeatherServiceImpl extends BaseLifecycleComponent implements Weather
         if (daysToInclude < 1) {
             daysToInclude = 1;
         }
-        checkArgument(daysToInclude <= MAX_FORECAST_DAYS,
+        checkArgument(daysToInclude <= MAX_FORECAST_DAYS + 1,
                       "Requested instant %s is too far in the future (%s days). Max days supported %s", until, daysToInclude, MAX_FORECAST_DAYS);
 
         int finalDaysToInclude = daysToInclude;
