@@ -66,17 +66,17 @@ final class VerifyingSlideService implements SlideService {
         if (wasStillMoving) {
             logger.debug("Slide {}: was moving, force new position {}", slideId, position);
             return delegate.setSlidePosition(slideId, position, executor)
-                    .thenCompose(unused -> targetPosition.await());
+                           .thenCompose(unused -> targetPosition.await());
         } else {
             return delegate.getSlideInfo(slideId)
-                    .thenCompose(slideInfo -> {
-                        double currentPosition = slideInfo.position();
-                        boolean withinTolerance = withinTolerance(currentPosition, position);
-                        logger.debug("Slide {}: current position {}, target position {}, within tolerance of {}: {}",
-                                slideId, currentPosition, position, positionTolerance, withinTolerance);
-                        return withinTolerance ? completedFuture() : delegate.setSlidePosition(slideId, position, executor);
-                    })
-                    .thenCompose(unused -> targetPosition.await());
+                           .thenCompose(slideInfo -> {
+                               double currentPosition = slideInfo.position();
+                               boolean withinTolerance = withinTolerance(currentPosition, position);
+                               logger.debug("Slide {}: current position {}, target position {}, within tolerance of {}: {}",
+                                            slideId, currentPosition, position, positionTolerance, withinTolerance);
+                               return withinTolerance ? completedFuture() : delegate.setSlidePosition(slideId, position, executor);
+                           })
+                           .thenCompose(unused -> targetPosition.await());
         }
     }
 
@@ -128,8 +128,8 @@ final class VerifyingSlideService implements SlideService {
                                 result.complete(null);
                             } else if (currentDateTimeProvider.currentInstant().isAfter(deadline)) {
                                 result.completeExceptionally(new RuntimeException(
-                                        "Timed out verifying position of slide " + slideInfo + " after, target position " + targetPosition +
-                                                ", current position " + currentPosition));
+                                        "Timed out verifying position of slide " + slideInfo + " after " + POSITION_VERIFY_TIMEOUT + "+, target position " +
+                                                targetPosition + ", current position " + currentPosition));
                             } else {
                                 await();
                             }

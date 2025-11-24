@@ -45,7 +45,9 @@ public final class MieleModule extends BaseLifecycleComponentModule {
 
         installLifecycleComponentModule(OAuth2TokenManagerModule.builder()
                                                                 .setApiName(literally("Miele"))
-                                                                .setAuthBaseUrl(literally("https://api.mcs3.miele.com/thirdparty"))
+                                                                .setLoginUrl(literally("https://api.mcs3.miele.com/thirdparty/login"))
+                                                                .setTokenUrlSpec(literally("https://api.mcs3.miele.com/thirdparty/token"))
+                                                                .setScope(literally("IDENTIFY_APPLIANCES"))
                                                                 .setClientId(clientIdSpec)
                                                                 .setClientSecret(clientSecretSpec)
                                                                 .withAnnotation(forAnnotation(MieleDishwasherImpl.Dependency.class))

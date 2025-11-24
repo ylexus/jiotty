@@ -7,6 +7,7 @@ import net.yudichev.jiotty.common.lang.Json;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
+import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,7 @@ public final class RestClients {
             }
 
             @Override
-            public void onResponse(Call call, okhttp3.Response response) {
+            public void onResponse(Call call, Response response) {
                 try (ResponseBody responseBody = response.body()) {
                     try {
                         if (response.isSuccessful()) {

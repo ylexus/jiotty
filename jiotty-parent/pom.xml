@@ -11,7 +11,7 @@
     <properties>
         <org.junit-jupiter.version>5.11.0</org.junit-jupiter.version>
         <org.slf4j.version>1.7.36</org.slf4j.version> <!-- 2.0 is not compatible with log4j binding; TODO: remove slf4j layer completely -->
-        <org.mockito.version>5.11.0</org.mockito.version>
+        <org.mockito.version>5.20.0</org.mockito.version>
     </properties>
     <modelVersion>4.0.0</modelVersion>
     <name>${project.groupId}:${project.artifactId}</name>

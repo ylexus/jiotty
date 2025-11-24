@@ -64,7 +64,7 @@ final class ManualWeatherServiceRunner {
                                                   }
                                               });
 
-            var forecastInstant = Instant.now().plus(1, ChronoUnit.DAYS);
+            var forecastInstant = Instant.now().plus(WeatherService.MAX_FORECAST_DAYS, ChronoUnit.DAYS);
             var forecastFuture = weatherService.getForecastWeather(coordinates, forecastInstant)
                                                .whenComplete((forecast, error) -> {
                                                    if (error != null) {

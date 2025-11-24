@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -44,7 +45,6 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
-import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
@@ -52,8 +52,6 @@ import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 
 public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OAuth2TokenManager {
     private static final Logger logger = LoggerFactory.getLogger(OAuth2TokenManagerImpl.class);
-
-    private static final Duration REFRESH_ADVANCE_PERIOD = Duration.ofDays(3);
 
     private final ExecutorFactory executorFactory;
     private final VarStore varStore;
@@ -63,8 +61,10 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     private final Listeners<String> listeners = new Listeners<>();
     private final String varStoreKey;
     private final String apiName;
-    private final String authBaseUrl;
+    private final String loginUrl;
     private final String tokenUrl;
+    private final String scope;
+    private final Optional<Integer> fixedCallbackHttpPort;
     private OkHttpClient httpClient;
 
     private OauthAccessToken currentToken;
@@ -82,16 +82,21 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
                                   @ClientID String clientId,
                                   @ClientSecret String clientSecret,
                                   @ApiName String apiName,
-                                  @AuthBaseUrl String authBaseUrl) {
+                                  @LoginUrl String loginUrl,
+                                  @TokenUrl String tokenUrl,
+                                  @Scope String scope,
+                                  @FixedCallbackHttpPort Optional<Integer> fixedCallbackHttpPort) {
         this.clientId = checkNotNull(clientId);
         this.clientSecret = checkNotNull(clientSecret);
         this.executorFactory = checkNotNull(executorFactory);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
         this.varStore = checkNotNull(varStore);
         this.apiName = checkNotNull(apiName);
-        this.authBaseUrl = checkNotNull(authBaseUrl);
-        tokenUrl = authBaseUrl + "/token";
-        varStoreKey = apiName + "Oauth2Token_" + clientId;
+        this.loginUrl = checkNotNull(loginUrl);
+        this.scope = checkNotNull(scope);
+        this.tokenUrl = checkNotNull(tokenUrl);
+        this.fixedCallbackHttpPort = checkNotNull(fixedCallbackHttpPort);
+        varStoreKey = apiName + "Oauth2Token_" + clientId + "_" + scope;
     }
 
     @Override
@@ -132,45 +137,53 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
             return;
         }
 
+        String state = UUID.randomUUID().toString();
         // authorisation code based process, need to communicate with the user
-        startRedirectHttpServer();
-
-        logger.warn("{} login required: {}/login?response_type=code&client_id={}&redirect_uri={}&scope=IDENTIFY_APPLIANCES",
-                    apiName, authBaseUrl, clientId,
-                    URLEncoder.encode("http://" + httpServer.getAddress().getHostName() + ':' + httpServer.getAddress().getPort() + "/logincallback"
-                            , US_ASCII));
+        String callbackUrl = startRedirectHttpServer(state);
+        logger.warn("{} login required: {}?response_type=code&client_id={}&redirect_uri={}&scope={}&state={}",
+                    apiName, loginUrl,
+                    URLEncoder.encode(clientId, US_ASCII),
+                    URLEncoder.encode(callbackUrl, US_ASCII),
+                    URLEncoder.encode(scope, US_ASCII),
+                    URLEncoder.encode(state, US_ASCII));
     }
 
-    private void startRedirectHttpServer() {
-        asUnchecked(() -> {
-            httpServer = HttpServer.create(new InetSocketAddress(getOutboundAddress(), findFreeTcpPort()), 0);
-            httpServer.createContext("/logincallback", exchange -> {
-                logger.info("[{}] login callback received", clientId);
+    private String startRedirectHttpServer(String state) {
+        return getAsUnchecked(() -> {
+            int port = fixedCallbackHttpPort.orElseGet(() -> getAsUnchecked(OAuth2TokenManagerImpl::findFreeTcpPort));
+            httpServer = HttpServer.create(new InetSocketAddress("localhost", port), 0);
+            String callbackUrl = "http://localhost:" + httpServer.getAddress().getPort() + "/callback";
+            httpServer.createContext("/callback", exchange -> {
                 var query = exchange.getRequestURI().getQuery();
-                String authCode = splitQuery(query).get("code");
+                logger.info("[{}] callback received: {}", clientId, query);
+                Map<String, String> queryParams = splitQuery(query);
+                var stateFromServer = queryParams.get("state");
                 String response;
-                if (authCode != null) {
-                    onAuthCodeReceived(authCode);
-                    response = "Success";
-                    exchange.sendResponseHeaders(200, response.length());
-                } else {
-                    response = "No 'code' in query " + query;
+                if (stateFromServer != null && !stateFromServer.equals(state)) {
+                    response = "'state' mismatch: expected " + state + ", got " + stateFromServer;
                     exchange.sendResponseHeaders(400, response.length());
+                } else {
+                    String authCode = queryParams.get("code");
+                    if (authCode != null) {
+                        onAuthCodeReceived(authCode, callbackUrl);
+                        response = "Auth Code Success";
+                        exchange.sendResponseHeaders(200, response.length());
+                    } else {
+                        // probably token callback? TODO test miele
+//                        response = "No 'code' in query " + query;
+//                        exchange.sendResponseHeaders(400, response.length());
+                        logger.info("[{}] token callback received?", clientId);
+                        response = "No Code - token callback?";
+                        exchange.sendResponseHeaders(200, response.length());
+                    }
                 }
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(response.getBytes());
-                }
-            });
-            httpServer.createContext("/tokencallback", exchange -> {
-                logger.info("[{}] token callback received", clientId);
-                String response = "Success";
-                exchange.sendResponseHeaders(200, response.length());
                 try (OutputStream os = exchange.getResponseBody()) {
                     os.write(response.getBytes());
                 }
             });
             httpServer.setExecutor(executor); // creates a default executor
             httpServer.start();
+            return callbackUrl;
         });
     }
 
@@ -193,13 +206,13 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
         });
     }
 
-    private void onAuthCodeReceived(String authCode) {
+    private void onAuthCodeReceived(String authCode, String callbackUrl) {
         logger.info("[{}] auth code received", clientId);
         assert httpServer != null;
         requestToken(new FormBody.Builder()
                              .add("grant_type", "authorization_code")
                              .add("code", authCode)
-                             .add("redirect_uri", "http://" + httpServer.getAddress() + "/tokencallback")
+                             .add("redirect_uri", callbackUrl)
                              .add("client_id", clientId)
                              .add("client_secret", clientSecret)
                              .build());
@@ -247,11 +260,14 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     }
 
     private OauthAccessToken responseToToken(Instant currentTime, OauthAccessTokenResponse response) {
-        var refreshTime = currentTime.plusSeconds(response.expiresInSec())
-                                     .minus(REFRESH_ADVANCE_PERIOD);
-        checkArgument(refreshTime.isAfter(currentDateTimeProvider.currentInstant()),
-                      "Client ID {}: OAuth2 response token's 'expires in, seconds' value {} is too small: the resulting token refresh time {} is in the past",
-                      clientId, response.expiresInSec(), refreshTime);
+        Duration refreshThisLongBeforeExpiry = Duration.ofSeconds(response.expiresInSec() / 10 * 8);
+        Instant expiryTime = currentTime.plusSeconds(response.expiresInSec());
+        Instant refreshTime = expiryTime.minus(refreshThisLongBeforeExpiry);
+        checkArgument(refreshThisLongBeforeExpiry.compareTo(Duration.ofMinutes(1)) >= 0,
+                      """
+                      Client ID %s: OAuth2 response token's 'expires in, seconds' value %s is too small:\
+                      the resulting token refresh time %s is too close to expiry time %s""",
+                      clientId, response.expiresInSec(), refreshTime, expiryTime);
         return OauthAccessToken.of(response.accessToken(), response.refreshToken(), refreshTime);
     }
 
@@ -287,6 +303,24 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    @interface AuthBaseUrl {
+    @interface LoginUrl {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface TokenUrl {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface Scope {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface FixedCallbackHttpPort {
     }
 }

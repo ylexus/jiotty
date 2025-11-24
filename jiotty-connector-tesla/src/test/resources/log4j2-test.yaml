@@ -6,6 +6,9 @@ Configuration:
         Pattern: "%d %p [%t] [%X{thread}] [due %X{task.due}] [cur %X{current.time}] %C{1.} %m%n"
   Loggers:
     Root:
-      level: DEBUG
+      level: info
       AppenderRef:
         - ref: STDOUT
+    logger:
+      - name: net.yudichev.jiotty.connector.tesla
+        level: debug
