@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.nest;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.rest.ContentTypes;
@@ -11,7 +12,6 @@ import okhttp3.RequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.concurrent.CompletableFuture;

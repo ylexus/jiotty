@@ -1,9 +1,9 @@
 package net.yudichev.jiotty.common.net;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

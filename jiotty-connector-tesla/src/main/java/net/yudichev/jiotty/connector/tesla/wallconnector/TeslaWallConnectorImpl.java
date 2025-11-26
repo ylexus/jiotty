@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.tesla.wallconnector;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import okhttp3.OkHttpClient;
@@ -8,7 +9,6 @@ import okhttp3.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.net.URI;

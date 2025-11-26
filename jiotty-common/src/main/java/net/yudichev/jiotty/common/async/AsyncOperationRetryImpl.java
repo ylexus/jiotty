@@ -1,10 +1,10 @@
 package net.yudichev.jiotty.common.async;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.lang.Either;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -29,27 +29,30 @@ public class AsyncOperationRetryImpl implements AsyncOperationRetry {
                                                         Supplier<? extends CompletableFuture<T>> action,
                                                         BiConsumer<? super Long, Runnable> backoffHandler) {
         return action.get()
-                .thenApply(value -> {
-                    backOffHandler.reset();
-                    return Either.<T, RetryableFailure>left(value);
-                })
-                .exceptionally(exception -> {
-                    Optional<Long> backoffDelayMs = backOffHandler.handle(operationName, exception);
-                    return Either.right(RetryableFailure.of(exception, backoffDelayMs));
-                })
-                .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
-                        CompletableFuture::completedFuture,
-                        retryableFailure -> retryableFailure.backoffDelayMs()
-                                .map(backoffDelayMs -> {
-                                    logger.info("Retrying operation '{}' with backoff {}ms because: {}",
-                                            operationName, backoffDelayMs, humanReadableMessage(retryableFailure.exception()));
-                                    var retryFuture = new CompletableFuture<T>();
-                                    backoffHandler.accept(
-                                            backoffDelayMs,
-                                            () -> withBackOffAndRetry(operationName, action, backoffHandler).whenComplete(thenComplete(retryFuture)));
-                                    return retryFuture;
-                                })
-                                .orElseGet(() -> failure(retryableFailure.exception()))
-                ));
+                     .thenApply(value -> {
+                         backOffHandler.reset();
+                         return Either.<T, RetryableFailure>left(value);
+                     })
+                     .exceptionally(exception -> {
+                         Optional<Long> backoffDelayMs = backOffHandler.handle(operationName, exception);
+                         return Either.right(RetryableFailure.of(exception, backoffDelayMs));
+                     })
+                     .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
+                             CompletableFuture::completedFuture,
+                             retryableFailure -> retryableFailure.backoffDelayMs()
+                                                                 .map(backoffDelayMs -> {
+                                                                     logger.info("Retrying operation '{}' with backoff {}ms because: {}",
+                                                                                 operationName,
+                                                                                 backoffDelayMs,
+                                                                                 humanReadableMessage(retryableFailure.exception()));
+                                                                     var retryFuture = new CompletableFuture<T>();
+                                                                     backoffHandler.accept(
+                                                                             backoffDelayMs,
+                                                                             () -> withBackOffAndRetry(operationName, action, backoffHandler).whenComplete(
+                                                                                     thenComplete(retryFuture)));
+                                                                     return retryFuture;
+                                                                 })
+                                                                 .orElseGet(() -> failure(retryableFailure.exception()))
+                     ));
     }
 }

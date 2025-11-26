@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.Key;
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.inject.HasWithAnnotation;
@@ -10,7 +11,6 @@ import net.yudichev.jiotty.common.lang.throttling.ThresholdThrottlingConsumerMod
 import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 
-import javax.inject.Singleton;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -53,9 +53,9 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
         bind(MqttConnectOptions.class).annotatedWith(MqttImpl.Dependency.class).toInstance(mqttConnectOptions);
 
         installLifecycleComponentModule(ThresholdThrottlingConsumerModule.builder()
-                .setValueType(Throwable.class)
-                .withAnnotation(forAnnotation(MqttImpl.Dependency.class))
-                .build());
+                                                                         .setValueType(Throwable.class)
+                                                                         .withAnnotation(forAnnotation(MqttImpl.Dependency.class))
+                                                                         .build());
 
         bind(exposedKey).to(registerLifecycleComponent(MqttImpl.class));
         expose(exposedKey);

@@ -1,8 +1,13 @@
 package net.yudichev.jiotty.connector.aws.iot.mqtt;
 
-import com.amazonaws.services.iot.client.*;
+import com.amazonaws.services.iot.client.AWSIotException;
+import com.amazonaws.services.iot.client.AWSIotMessage;
+import com.amazonaws.services.iot.client.AWSIotMqttClient;
+import com.amazonaws.services.iot.client.AWSIotQos;
+import com.amazonaws.services.iot.client.AWSIotTopic;
 import com.google.common.collect.Sets;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.Json;
@@ -10,7 +15,6 @@ import net.yudichev.jiotty.connector.aws.PrivateKeyReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Retention;
@@ -31,7 +35,9 @@ import java.util.function.BiConsumer;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.io.Resources.getResource;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.Closeable.idempotent;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
@@ -92,7 +98,7 @@ final class AwsIotMqttConnectionImpl extends BaseLifecycleComponent implements A
                                         asUnchecked(() -> client.unsubscribe(topic, timeout.toMillis()));
                                     } else {
                                         logger.warn("Ignored attempt to close a subscription to topic {} via client {} when the component is not running",
-                                                topic, client);
+                                                    topic, client);
                                     }
                                 });
                             } finally {

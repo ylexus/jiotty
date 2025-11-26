@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
 import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.async.AsyncOperationRetryImpl;
@@ -26,7 +27,6 @@ import org.eclipse.paho.client.mqttv3.MqttTopic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
@@ -247,10 +247,8 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     @interface Dependency {
     }
 
-    private static class MessageToStringDataCallback implements BiConsumer<String, MqttMessage> {
-        private final BiConsumer<String, String> delegate;
-
-        MessageToStringDataCallback(BiConsumer<String, String> delegate) {
+    private record MessageToStringDataCallback(BiConsumer<String, String> delegate) implements BiConsumer<String, MqttMessage> {
+        private MessageToStringDataCallback(BiConsumer<String, String> delegate) {
             this.delegate = checkNotNull(delegate);
         }
 

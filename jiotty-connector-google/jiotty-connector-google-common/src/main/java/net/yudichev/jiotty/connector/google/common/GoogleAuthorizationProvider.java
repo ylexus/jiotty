@@ -3,9 +3,9 @@ package net.yudichev.jiotty.connector.google.common;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.net.URL;
@@ -44,13 +44,13 @@ final class GoogleAuthorizationProvider implements Provider<GoogleAuthorization>
         GoogleApiAuthSettings settings = settingsProvider.get();
         URL credentialsUrl = credentialsUrlProvider.get();
         return GoogleAuthorization.builder()
-                .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
-                .setAuthDataStoreRootDir(settings.authDataStoreRootDir())
-                .setCredentialsUrl(credentialsUrl)
-                .setLocalReceiverHostName(settings.localReceiverHostName())
-                .addRequiredScopes(requiredScopes)
-                .withBrowser(authorizationBrowser)
-                .build();
+                                  .setHttpTransport(getAsUnchecked(GoogleNetHttpTransport::newTrustedTransport))
+                                  .setAuthDataStoreRootDir(settings.authDataStoreRootDir())
+                                  .setCredentialsUrl(credentialsUrl)
+                                  .setLocalReceiverHostName(settings.localReceiverHostName())
+                                  .addRequiredScopes(requiredScopes)
+                                  .withBrowser(authorizationBrowser)
+                                  .build();
     }
 
     @BindingAnnotation

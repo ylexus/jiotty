@@ -9,11 +9,11 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

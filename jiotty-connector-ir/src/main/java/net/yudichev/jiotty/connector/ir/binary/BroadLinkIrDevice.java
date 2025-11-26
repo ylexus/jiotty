@@ -5,17 +5,19 @@ import com.github.mob41.blapi.RM2Device;
 import com.github.mob41.blapi.mac.Mac;
 import com.github.mob41.blapi.pkt.cmd.rm2.SendDataCmdPayload;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
@@ -55,7 +57,7 @@ final class BroadLinkIrDevice extends BaseLifecycleComponent implements IrDevice
                     if (attempts == 0) {
                         throw new RuntimeException(
                                 String.format("Failed to authenticate Broadlink device on host %s, MAC %s after %s attempts",
-                                        host, macAddress, INIT_ATTEMPTS));
+                                              host, macAddress, INIT_ATTEMPTS));
                     } else {
                         logger.info("Unable to authenticate Broadlink device on host {}, MAC {}, will retry {} more time(s)", host, macAddress, attempts);
                     }

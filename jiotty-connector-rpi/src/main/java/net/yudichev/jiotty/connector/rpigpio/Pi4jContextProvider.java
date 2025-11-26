@@ -2,9 +2,8 @@ package net.yudichev.jiotty.connector.rpigpio;
 
 import com.pi4j.Pi4J;
 import com.pi4j.context.Context;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-
-import javax.inject.Provider;
 
 final class Pi4jContextProvider extends BaseLifecycleComponent implements Provider<Context> {
     private Context gpio;

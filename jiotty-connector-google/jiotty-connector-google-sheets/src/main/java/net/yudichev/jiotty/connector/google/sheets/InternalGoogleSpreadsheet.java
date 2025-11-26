@@ -5,6 +5,8 @@ import com.google.api.services.sheets.v4.model.Spreadsheet;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.assistedinject.Assisted;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.rest.RestClients;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import okhttp3.Call;
@@ -14,8 +16,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

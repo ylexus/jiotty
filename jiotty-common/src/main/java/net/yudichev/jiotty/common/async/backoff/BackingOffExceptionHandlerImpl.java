@@ -2,11 +2,11 @@ package net.yudichev.jiotty.common.async.backoff;
 
 import com.google.common.base.MoreObjects;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.Optional;

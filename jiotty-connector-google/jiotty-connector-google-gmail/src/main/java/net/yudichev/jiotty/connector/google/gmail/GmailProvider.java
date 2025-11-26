@@ -2,11 +2,10 @@ package net.yudichev.jiotty.connector.google.gmail;
 
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.gmail.Gmail;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.icloud.calendar;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -8,7 +9,6 @@ import net.yudichev.jiotty.common.lang.CompletableFutures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -17,7 +17,7 @@ import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 final class LocalIcloudCalendarRunner {
     private static final Logger logger = LoggerFactory.getLogger(LocalIcloudCalendarRunner.class);
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(ExecutorModule::new)
                    .addModule(() -> IcloudCalendarModule.builder()

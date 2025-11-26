@@ -1,11 +1,10 @@
 package net.yudichev.jiotty.connector.slide;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -13,7 +12,8 @@ final class ExecutorProvider extends BaseLifecycleComponent implements Provider<
     private final ExecutorFactory executorFactory;
     private SchedulingExecutor executor;
 
-    @Inject ExecutorProvider(ExecutorFactory executorFactory) {
+    @Inject
+    ExecutorProvider(ExecutorFactory executorFactory) {
         this.executorFactory = checkNotNull(executorFactory);
     }
 

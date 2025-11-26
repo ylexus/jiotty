@@ -1,11 +1,11 @@
 package net.yudichev.jiotty.common.varstore;
 
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
-import javax.inject.Singleton;
 import java.nio.file.Path;
 
 import static com.google.common.base.Preconditions.checkNotNull;

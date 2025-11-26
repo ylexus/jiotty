@@ -2,12 +2,11 @@ package net.yudichev.jiotty.connector.google.sheets;
 
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-
-import javax.inject.Singleton;
 
 public final class GoogleSheetsModule extends BaseGoogleServiceModule implements ExposedKeyModule<GoogleSheetsClient> {
     private GoogleSheetsModule(BindingSpec<GoogleAuthorization> googleAuthorizationSpec) {

@@ -1,10 +1,10 @@
 package net.yudichev.jiotty.common.lang.throttling;
 
 import com.google.inject.assistedinject.Assisted;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import javax.inject.Inject;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;

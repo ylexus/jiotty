@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.common.keystore;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -8,7 +9,6 @@ import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Paths;
@@ -25,7 +25,7 @@ final class ManualKeyStoreAccessRunner {
     @SuppressWarnings("StaticVariableMayNotBeInitialized")
     private static String alias;
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         alias = args[2];
         Application.builder()
                    .addModule(ExecutorModule::new)

@@ -1,14 +1,14 @@
 package net.yudichev.jiotty.common.async.backoff;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
 import net.yudichev.jiotty.common.lang.backoff.SynchronizedBackOff;
 import org.immutables.value.Value;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
@@ -31,12 +31,12 @@ final class BackOffProvider implements Provider<BackOff> {
     @Override
     public BackOff get() {
         return new SynchronizedBackOff(new ExponentialBackOff.Builder()
-                .setInitialIntervalMillis(toIntExact(config.initialInterval().toMillis()))
-                .setMaxIntervalMillis(toIntExact(config.maxInterval().toMillis()))
-                .setMultiplier(config.multiplier())
-                .setRandomizationFactor(config.randomizationFactor())
-                .setMaxElapsedTimeMillis(toIntExact(config.maxElapsedTime().toMillis()))
-                .build());
+                                               .setInitialIntervalMillis(toIntExact(config.initialInterval().toMillis()))
+                                               .setMaxIntervalMillis(toIntExact(config.maxInterval().toMillis()))
+                                               .setMultiplier(config.multiplier())
+                                               .setRandomizationFactor(config.randomizationFactor())
+                                               .setMaxElapsedTimeMillis(toIntExact(config.maxElapsedTime().toMillis()))
+                                               .build());
     }
 
     @BindingAnnotation

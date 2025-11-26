@@ -106,7 +106,7 @@ final class InternalGoogleDrivePath implements GoogleDrivePath {
                             logger.debug("findFolderByPath: could not find folder {} with parentId {}, returning empty", pathElement, parentId);
                             return Optional.empty();
                         }
-                        parentId = matchingFiles.get(0).getId();
+                        parentId = matchingFiles.getFirst().getId();
                         logger.debug("Found folder {} folder Id {}", pathElement, parentId);
                     }
                     return Optional.of(new InternalGoogleDrivePath(drive, parentId, ImmutableList.<String>builder()

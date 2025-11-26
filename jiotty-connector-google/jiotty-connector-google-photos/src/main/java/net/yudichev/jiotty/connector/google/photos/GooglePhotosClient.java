@@ -44,7 +44,7 @@ public interface GooglePhotosClient {
                                 .setFileName(file.getFileName().toString())
                                 .build()),
                         executor))
-                .thenApply(mediaItemOrErrors -> mediaItemOrErrors.get(0).map(
+                .thenApply(mediaItemOrErrors -> mediaItemOrErrors.getFirst().map(
                         item -> item,
                         status -> {
                             throw new MediaItemCreationFailedException(String.format("Unable to create media item for file %s status %s: %s",

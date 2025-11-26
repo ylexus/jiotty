@@ -1,18 +1,17 @@
 package net.yudichev.jiotty.connector.tplinksmartplug;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.appliance.Appliance;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 
-import javax.inject.Inject;
-
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 
 final class LocalTpLinkSmartPlugRunner {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(ExecutorModule::new)
                    .addModule(() -> TpLinkSmartPlugModule.localConnectionBuilder()

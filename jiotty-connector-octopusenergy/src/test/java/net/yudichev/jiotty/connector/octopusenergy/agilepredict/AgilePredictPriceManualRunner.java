@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.octopusenergy.agilepredict;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
@@ -7,11 +8,9 @@ import net.yudichev.jiotty.common.lang.CompletableFutures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 final class AgilePredictPriceManualRunner {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(AgilePredictPriceModule::new)
                    .addModule(() -> new BaseLifecycleComponentModule() {

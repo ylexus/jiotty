@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.world.weather;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.geo.LatLon;
@@ -8,7 +9,6 @@ import net.yudichev.jiotty.common.time.TimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
@@ -17,7 +17,7 @@ import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 
 @SuppressWarnings({"UseOfSystemOutOrSystemErr", "CallToSystemExit"})
 final class ManualWeatherServiceRunner {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("Usage: ManualWeatherServiceRunner <apiKey>");
             System.exit(2);

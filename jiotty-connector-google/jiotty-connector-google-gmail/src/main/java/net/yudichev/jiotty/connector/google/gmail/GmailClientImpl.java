@@ -8,6 +8,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.common.collect.Sets;
+import jakarta.inject.Inject;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
@@ -18,7 +19,6 @@ import net.yudichev.jiotty.connector.google.gmail.Bindings.GmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.time.Duration;
@@ -121,8 +121,11 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
         void execute() {
             synchronize();
             schedule = whenStartedAndNotLifecycling(() ->
-                    executor.scheduleAtFixedRate(MESSAGE_POLL_PERIOD,
-                            withExceptionLoggedAfterThreshold(logger, "polling Gmail", MAX_ALLOWED_ERRORS_WHEN_POLLING, this::synchronize)));
+                                                            executor.scheduleAtFixedRate(MESSAGE_POLL_PERIOD,
+                                                                                         withExceptionLoggedAfterThreshold(logger,
+                                                                                                                           "polling Gmail",
+                                                                                                                           MAX_ALLOWED_ERRORS_WHEN_POLLING,
+                                                                                                                           this::synchronize)));
         }
 
         private void synchronize() {
@@ -133,9 +136,9 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
                 AtomicReference<BigInteger> newHistoryIdRef = new AtomicReference<>();
                 do {
                     ListMessagesResponse response = messagesRequests.list(Constants.ME)
-                            .setQ(query)
-                            .setPageToken(pageToken)
-                            .execute();
+                                                                    .setQ(query)
+                                                                    .setPageToken(pageToken)
+                                                                    .execute();
                     if (response.getMessages() == null) {
                         //noinspection BreakStatement
                         break;
@@ -153,7 +156,9 @@ final class GmailClientImpl extends BaseLifecycleComponent implements GmailClien
                         }
                     };
                     response.getMessages().forEach(message ->
-                            asUnchecked(() -> messagesRequests.get(Constants.ME, message.getId()).setFormat("full").queue(batch, callback)));
+                                                           asUnchecked(() -> messagesRequests.get(Constants.ME, message.getId())
+                                                                                             .setFormat("full")
+                                                                                             .queue(batch, callback)));
                     batch.execute();
                     pageToken = response.getNextPageToken();
                 } while (pageToken != null);

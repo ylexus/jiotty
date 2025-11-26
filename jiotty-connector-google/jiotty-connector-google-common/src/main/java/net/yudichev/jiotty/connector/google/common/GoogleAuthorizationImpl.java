@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.google.common;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -62,9 +63,9 @@ final class GoogleAuthorizationImpl implements GoogleAuthorization {
         String clientSecret = clientSecrets.getDetails().getClientSecret();
 
         return UserCredentials.newBuilder()
-                .setClientId(clientId)
-                .setClientSecret(clientSecret)
-                .setRefreshToken(credential.getRefreshToken())
-                .build();
+                              .setClientId(clientId)
+                              .setClientSecret(clientSecret)
+                              .setRefreshToken(credential.getRefreshToken())
+                              .build();
     }
 }

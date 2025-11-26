@@ -1,14 +1,14 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 

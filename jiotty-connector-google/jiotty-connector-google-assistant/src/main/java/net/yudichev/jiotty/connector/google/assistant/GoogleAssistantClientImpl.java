@@ -1,19 +1,25 @@
 package net.yudichev.jiotty.connector.google.assistant;
 
-import com.google.assistant.embedded.v1alpha2.*;
+import com.google.assistant.embedded.v1alpha2.AssistConfig;
+import com.google.assistant.embedded.v1alpha2.AssistRequest;
+import com.google.assistant.embedded.v1alpha2.AssistResponse;
+import com.google.assistant.embedded.v1alpha2.AudioOutConfig;
+import com.google.assistant.embedded.v1alpha2.DeviceConfig;
+import com.google.assistant.embedded.v1alpha2.DialogStateIn;
+import com.google.assistant.embedded.v1alpha2.EmbeddedAssistantGrpc;
 import com.google.auth.Credentials;
 import com.google.inject.BindingAnnotation;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.auth.MoreCallCredentials;
 import io.grpc.stub.StreamObserver;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.io.ByteArrayOutputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -21,7 +27,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
@@ -78,13 +86,13 @@ final class GoogleAssistantClientImpl extends BaseLifecycleComponent implements 
             });
 
             AssistRequest assistRequest = AssistRequest.newBuilder()
-                    .setConfig(AssistConfig.newBuilder()
-                            .setTextQuery(phrase)
-                            .setAudioOutConfig(audioOutConfig)
-                            .setDialogStateIn(dialogStateIn)
-                            .setDeviceConfig(deviceConfig)
-                            .build())
-                    .build();
+                                                       .setConfig(AssistConfig.newBuilder()
+                                                                              .setTextQuery(phrase)
+                                                                              .setAudioOutConfig(audioOutConfig)
+                                                                              .setDialogStateIn(dialogStateIn)
+                                                                              .setDeviceConfig(deviceConfig)
+                                                                              .build())
+                                                       .build();
 
             logger.debug("Issuing assist request: {}", assistRequest);
             requestStreamObserver.onNext(assistRequest);
@@ -99,7 +107,7 @@ final class GoogleAssistantClientImpl extends BaseLifecycleComponent implements 
 
         channel = ManagedChannelBuilder.forTarget(HOSTNAME).build();
         stub = EmbeddedAssistantGrpc.newStub(channel)
-                .withCallCredentials(MoreCallCredentials.from(credentials));
+                                    .withCallCredentials(MoreCallCredentials.from(credentials));
     }
 
     @Override

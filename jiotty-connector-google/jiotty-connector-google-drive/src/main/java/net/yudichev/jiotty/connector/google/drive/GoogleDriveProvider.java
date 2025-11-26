@@ -2,10 +2,9 @@ package net.yudichev.jiotty.connector.google.drive;
 
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.connector.google.common.impl.Bindings.Authorization;

@@ -5,9 +5,9 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
 import com.google.inject.assistedinject.Assisted;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.connector.google.gmail.Bindings.GmailService;
 
-import javax.inject.Inject;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -45,7 +45,12 @@ final class InternalGmailMessageAttachment implements GmailMessageAttachment {
         MessagePartBody body = messagePart.getBody();
         return body.getAttachmentId() != null ?
                 supplyAsync(() -> getAsUnchecked(() ->
-                        gmail.users().messages().attachments().get(Constants.ME, message.getId(), body.getAttachmentId()).execute().decodeData())) :
+                                                         gmail.users()
+                                                              .messages()
+                                                              .attachments()
+                                                              .get(Constants.ME, message.getId(), body.getAttachmentId())
+                                                              .execute()
+                                                              .decodeData())) :
                 completedFuture(body.decodeData());
     }
 

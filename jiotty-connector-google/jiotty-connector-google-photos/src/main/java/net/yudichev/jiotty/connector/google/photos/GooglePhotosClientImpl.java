@@ -4,20 +4,24 @@ import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.rpc.UnaryCallable;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
-import com.google.photos.library.v1.proto.*;
+import com.google.photos.library.v1.proto.BatchCreateMediaItemsRequest;
+import com.google.photos.library.v1.proto.CreateAlbumRequest;
+import com.google.photos.library.v1.proto.GetAlbumRequest;
+import com.google.photos.library.v1.proto.ListAlbumsRequest;
+import com.google.photos.library.v1.proto.NewMediaItemResult;
 import com.google.photos.library.v1.upload.UploadMediaItemRequest;
 import com.google.photos.library.v1.upload.UploadMediaItemResponse;
 import com.google.photos.types.proto.Album;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Path;
@@ -59,9 +63,9 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                 UploadMediaItemResponse uploadResponse;
                 try (RandomAccessFile randomAccessFile = new RandomAccessFile(file.toFile(), "r")) {
                     UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder()
-                            .setDataFile(randomAccessFile)
-                            .setMimeType("application/octet-stream")
-                            .build();
+                                                                                 .setDataFile(randomAccessFile)
+                                                                                 .setMimeType("application/octet-stream")
+                                                                                 .build();
                     uploadResponse = callClient(theClient.uploadMediaItemCallable(), uploadRequest);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -95,18 +99,20 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                         .getNewMediaItemResultsList();
 
                 checkState(newMediaItemResultsList.size() == newMediaItems.size(),
-                        "expected media item creation result list size %s, got: %s", newMediaItems.size(), newMediaItemResultsList);
+                           "expected media item creation result list size %s, got: %s", newMediaItems.size(), newMediaItemResultsList);
 
                 return newMediaItemResultsList.stream()
-                        .map(newMediaItemResult -> {
-                            Status status = newMediaItemResult.getStatus();
-                            MediaItemOrError mediaItemOrError = status.getCode() == Code.OK_VALUE ?
-                                    MediaItemOrError.item(new InternalGoogleMediaItem(newMediaItemResult.getMediaItem())) :
-                                    MediaItemOrError.error(status);
-                            logger.debug("Finished uploading token {}, result {}", newMediaItemResult.getUploadToken(), newMediaItemResult);
-                            return mediaItemOrError;
-                        })
-                        .collect(toImmutableList());
+                                              .map(newMediaItemResult -> {
+                                                  Status status = newMediaItemResult.getStatus();
+                                                  MediaItemOrError mediaItemOrError = status.getCode() == Code.OK_VALUE ?
+                                                          MediaItemOrError.item(new InternalGoogleMediaItem(newMediaItemResult.getMediaItem())) :
+                                                          MediaItemOrError.error(status);
+                                                  logger.debug("Finished uploading token {}, result {}",
+                                                               newMediaItemResult.getUploadToken(),
+                                                               newMediaItemResult);
+                                                  return mediaItemOrError;
+                                              })
+                                              .collect(toImmutableList());
             }, executor);
         });
     }
@@ -118,10 +124,10 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
             return supplyAsync(() -> {
                 logger.debug("Creating album '{}'", name);
                 Album album = callClient(theClient.createAlbumCallable(), CreateAlbumRequest.newBuilder()
-                        .setAlbum(Album.newBuilder()
-                                .setTitle(name)
-                                .build())
-                        .build());
+                                                                                            .setAlbum(Album.newBuilder()
+                                                                                                           .setTitle(name)
+                                                                                                           .build())
+                                                                                            .build());
                 logger.debug("Created album {}", album);
                 return new InternalGooglePhotosAlbum(theClient, album);
             }, executor);
@@ -136,13 +142,13 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
                 logger.debug("List all albums");
                 PagedRequest<Album> request = new PagedRequest<>(logger, loadedAlbumCountProgressCallback, pageToken -> {
                     ListAlbumsRequest.Builder requestBuilder = ListAlbumsRequest.newBuilder()
-                            .setExcludeNonAppCreatedData(false)
-                            .setPageSize(50);
+                                                                                .setExcludeNonAppCreatedData(false)
+                                                                                .setPageSize(50);
                     pageToken.ifPresent(requestBuilder::setPageToken);
                     return callClient(theClient.listAlbumsPagedCallable(), requestBuilder.build());
                 });
                 List<GooglePhotosAlbum> result = request.getAll().map(album -> new InternalGooglePhotosAlbum(theClient, album))
-                        .collect(toImmutableList());
+                                                        .collect(toImmutableList());
                 logger.debug("Listed {} album(s)", result.size());
                 return result;
             }, executor);
@@ -166,8 +172,9 @@ final class GooglePhotosClientImpl extends BaseLifecycleComponent implements Goo
     protected void doStart() {
         //noinspection resource it's closed
         client = getAsUnchecked(() -> PhotosLibraryClient.initialize(PhotosLibrarySettings.newBuilder()
-                .setCredentialsProvider(FixedCredentialsProvider.create(googleAuthorizationProvider.get().getCredentials()))
-                .build()));
+                                                                                          .setCredentialsProvider(FixedCredentialsProvider.create(
+                                                                                                  googleAuthorizationProvider.get().getCredentials()))
+                                                                                          .build()));
         closeable = idempotent(() -> client.close());
     }
 

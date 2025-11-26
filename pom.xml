@@ -8,7 +8,7 @@
     <groupId>net.yudichev.jiotty</groupId>
     <artifactId>jiotty</artifactId>
     <packaging>pom</packaging>
-    <version>2.8.0-SNAPSHOT</version>
+    <version>2.9.0-SNAPSHOT</version>
 
     <description>Java components for low level home automation coding</description>
     <url>http://jiotty.yudichev.net</url>
@@ -59,7 +59,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.21.0</version>
+                    <version>4.0.0-M16</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -94,7 +94,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.4.2</version>
+                    <version>3.5.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -119,7 +119,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>versions-maven-plugin</artifactId>
-                    <version>2.19.1</version>
+                    <version>2.20.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -139,15 +139,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                    <!--                    <annotationProcessorPaths>
-                                            <dependency>
-                                                <groupId>org.immutables</groupId>
-                                                <artifactId>value</artifactId>
-                                                <version>2.8.3</version>
-                                            </dependency>
-                                        </annotationProcessorPaths>-->
+                    <source>25</source>
+                    <target>25</target>
+                    <annotationProcessorPaths>
+                        <dependency>
+                            <groupId>org.immutables</groupId>
+                            <artifactId>value</artifactId>
+                            <version>2.11.6</version>
+                        </dependency>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -223,7 +223,7 @@
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.7.0</version>
+                <version>0.9.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <publishingServerId>central</publishingServerId>

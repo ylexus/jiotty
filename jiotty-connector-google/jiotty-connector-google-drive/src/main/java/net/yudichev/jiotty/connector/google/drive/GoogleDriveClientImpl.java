@@ -4,12 +4,12 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.About;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.Set;
@@ -17,7 +17,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
@@ -57,13 +59,13 @@ final class GoogleDriveClientImpl extends BaseLifecycleComponent implements Goog
     @Override
     public CompletableFuture<About> aboutDrive(Set<String> fields, Executor executor) {
         return whenStartedAndNotLifecycling(() -> supplyAsync(() -> getAsUnchecked(() -> {
-                    var result = drive.about().get()
-                            .setFields(String.join(", ", fields))
-                            .execute();
-                    logger.debug("aboutDrive: {}", result);
-                    return result;
-                }),
-                executor));
+                                                                  var result = drive.about().get()
+                                                                                    .setFields(String.join(", ", fields))
+                                                                                    .execute();
+                                                                  logger.debug("aboutDrive: {}", result);
+                                                                  return result;
+                                                              }),
+                                                              executor));
     }
 
     @BindingAnnotation

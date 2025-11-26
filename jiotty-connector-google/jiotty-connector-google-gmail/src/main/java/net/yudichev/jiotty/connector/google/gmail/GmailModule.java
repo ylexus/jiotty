@@ -2,12 +2,11 @@ package net.yudichev.jiotty.connector.google.gmail;
 
 import com.google.api.services.gmail.Gmail;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-
-import javax.inject.Singleton;
 
 public final class GmailModule extends BaseGoogleServiceModule implements ExposedKeyModule<GmailClient> {
     private GmailModule(BindingSpec<GoogleAuthorization> authorizationSpec) {
@@ -21,9 +20,9 @@ public final class GmailModule extends BaseGoogleServiceModule implements Expose
     @Override
     protected void doConfigure() {
         install(new FactoryModuleBuilder()
-                .implement(GmailMessage.class, InternalGmailMessage.class)
-                .implement(GmailMessageAttachment.class, InternalGmailMessageAttachment.class)
-                .build(InternalGmailObjectFactory.class));
+                        .implement(GmailMessage.class, InternalGmailMessage.class)
+                        .implement(GmailMessageAttachment.class, InternalGmailMessageAttachment.class)
+                        .build(InternalGmailObjectFactory.class));
 
         bind(Gmail.class).annotatedWith(Bindings.GmailService.class).toProvider(GmailProvider.class).in(Singleton.class);
         bind(getExposedKey()).to(registerLifecycleComponent(GmailClientImpl.class));

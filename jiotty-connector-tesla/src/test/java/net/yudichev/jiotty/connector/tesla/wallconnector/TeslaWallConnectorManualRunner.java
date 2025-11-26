@@ -1,17 +1,16 @@
 package net.yudichev.jiotty.connector.tesla.wallconnector;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
-
-import javax.inject.Inject;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 
 @SuppressWarnings("CallToPrintStackTrace")
 class TeslaWallConnectorManualRunner {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(() -> TeslaWallConnectorModule.builder()
                                                             .setHostAddress(literally(args[0]))

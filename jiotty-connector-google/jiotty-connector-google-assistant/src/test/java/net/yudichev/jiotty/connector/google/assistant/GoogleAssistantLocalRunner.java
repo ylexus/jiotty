@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.google.assistant;
 
 import com.google.assistant.embedded.v1alpha2.AudioOutConfig;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -11,7 +12,6 @@ import net.yudichev.jiotty.connector.google.common.GoogleAuthorizationModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
@@ -23,7 +23,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class GoogleAssistantLocalRunner {
     private static final Logger logger = LoggerFactory.getLogger(GoogleAssistantLocalRunner.class);
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(ExecutorModule::new)
                    .addModule(() -> GoogleAuthorizationModule

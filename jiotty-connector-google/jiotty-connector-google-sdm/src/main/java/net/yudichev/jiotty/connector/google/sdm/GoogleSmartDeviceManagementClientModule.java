@@ -1,12 +1,11 @@
 package net.yudichev.jiotty.connector.google.sdm;
 
 import com.google.api.services.smartdevicemanagement.v1.SmartDeviceManagement;
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.impl.BaseGoogleServiceModule;
-
-import javax.inject.Singleton;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -25,10 +24,10 @@ public final class GoogleSmartDeviceManagementClientModule extends BaseGoogleSer
     @Override
     protected void doConfigure() {
         projectId.bind(String.class)
-                .annotatedWith(GoogleSmartDeviceManagementClientImpl.ProjectId.class)
-                .installedBy(this::installLifecycleComponentModule);
+                 .annotatedWith(GoogleSmartDeviceManagementClientImpl.ProjectId.class)
+                 .installedBy(this::installLifecycleComponentModule);
         bind(SmartDeviceManagement.class).annotatedWith(GoogleSmartDeviceManagementClientImpl.Dependency.class)
-                .toProvider(SmartDeviceManagementProvider.class).in(Singleton.class);
+                                         .toProvider(SmartDeviceManagementProvider.class).in(Singleton.class);
         bind(getExposedKey()).to(GoogleSmartDeviceManagementClientImpl.class);
         expose(getExposedKey());
     }

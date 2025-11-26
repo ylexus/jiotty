@@ -3,10 +3,10 @@ package net.yudichev.jiotty.connector.google.sdm;
 import com.google.api.services.smartdevicemanagement.v1.SmartDeviceManagement;
 import com.google.api.services.smartdevicemanagement.v1.model.GoogleHomeEnterpriseSdmV1ListDevicesResponse;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.List;
@@ -15,7 +15,9 @@ import java.util.concurrent.Executor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 

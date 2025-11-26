@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.tesla.fleet;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.TypeToken;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
@@ -11,7 +12,6 @@ import net.yudichev.jiotty.common.net.SslCustomisationModule;
 import net.yudichev.jiotty.common.time.TimeModule;
 import net.yudichev.jiotty.common.varstore.VarStoreModule;
 
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
@@ -34,7 +34,7 @@ final class TeslaFleetManualRunner {
 
     private static String vin;
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         vin = checkNotNull(args[4]);
         Application.builder()
                    .addModule(() -> VarStoreModule.builder().setPath(literally(Paths.get(args[0]))).build())

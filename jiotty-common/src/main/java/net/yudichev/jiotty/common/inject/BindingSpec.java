@@ -11,9 +11,9 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.name.Names;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -444,15 +444,15 @@ public abstract class BindingSpec<T> {
         @Override
         protected void configure() {
             sourceBindingSpec.bind(types.getFromType())
-                    .annotatedWith(sourceAnnotation)
-                    .installedBy(this::installLifecycleComponentModule);
+                             .annotatedWith(sourceAnnotation)
+                             .installedBy(this::installLifecycleComponentModule);
             Key<U> targetKey = Key.get(types.getToType(), targetAnnotation);
             installLifecycleComponentModule(new BaseLifecycleComponentModule() {
                 @Override
                 protected void configure() {
                     mappingFunction.bind(types.getMapperType())
-                            .annotatedWith(Inner.class)
-                            .installedBy(this::installLifecycleComponentModule);
+                                   .annotatedWith(Inner.class)
+                                   .installedBy(this::installLifecycleComponentModule);
                     installLifecycleComponentModule(new BaseLifecycleComponentModule() {
                         @Override
                         protected void configure() {
@@ -477,14 +477,7 @@ public abstract class BindingSpec<T> {
         @interface Inner {
         }
 
-        private static final class Types<T, U> {
-            private final TypeToken<T> fromType;
-            private final TypeToken<U> toType;
-
-            Types(TypeToken<T> fromType, TypeToken<U> toType) {
-                this.fromType = checkNotNull(fromType);
-                this.toType = checkNotNull(toType);
-            }
+        private record Types<T, U>(TypeToken<T> fromType, TypeToken<U> toType) {
 
             static <T, U> Types<T, U> create(TypeToken<T> fromType, TypeToken<U> toType) {
                 return new Types<>(fromType, toType);
@@ -512,8 +505,8 @@ public abstract class BindingSpec<T> {
 
             private <V> TypeLiteral<V> asResolvedTypeLiteral(TypeToken<V> typeToken) {
                 return asTypeLiteral(typeToken
-                        .where(new TypeParameter<>() {}, fromType)
-                        .where(new TypeParameter<>() {}, toType));
+                                             .where(new TypeParameter<>() {}, fromType)
+                                             .where(new TypeParameter<>() {}, toType));
             }
         }
 

@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.world.weather;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.geo.LatLon;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
@@ -11,7 +12,6 @@ import okhttp3.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;

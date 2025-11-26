@@ -17,11 +17,11 @@ this program. If not, see http://www.gnu.org/licenses/.
 package net.yudichev.jiotty.connector.ir.lirc;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 import net.yudichev.jiotty.common.lang.Closeable;
 
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;

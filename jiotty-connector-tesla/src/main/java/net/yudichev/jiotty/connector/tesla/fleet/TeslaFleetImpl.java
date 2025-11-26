@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.tesla.fleet;
 
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.Json;
@@ -20,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

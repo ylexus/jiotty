@@ -1,9 +1,9 @@
 package net.yudichev.jiotty.appliance;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.Set;

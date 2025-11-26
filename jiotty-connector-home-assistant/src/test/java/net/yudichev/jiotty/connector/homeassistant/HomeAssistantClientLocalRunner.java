@@ -1,11 +1,11 @@
 package net.yudichev.jiotty.connector.homeassistant;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.time.Instant;
@@ -21,7 +21,7 @@ import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class HomeAssistantClientLocalRunner {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(() -> HomeAssistantClientModule
                            .builder()

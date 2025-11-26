@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.shelly;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -7,7 +8,6 @@ import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import net.yudichev.jiotty.common.time.TimeModule;
 
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
@@ -19,7 +19,7 @@ import static net.yudichev.jiotty.connector.shelly.ShellyPlug.ConsumptionMeasure
 @SuppressWarnings({"ThrowCaughtLocally", "DynamicRegexReplaceableByCompiledPattern", "UseOfSystemOutOrSystemErr", "OverlyNestedMethod", "CallToSystemExit"})
 final class ShellyPlugManualRunner {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Application.builder()
                    .addModule(TimeModule::new)
                    .addModule(ExecutorModule::new)

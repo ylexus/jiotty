@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.owntracks;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.DispatchedConsumer;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.Json;
@@ -8,7 +9,6 @@ import net.yudichev.jiotty.connector.mqtt.Mqtt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.HashMap;
@@ -47,7 +47,7 @@ final class OwnTracksImpl implements OwnTracks {
     @Override
     public CompletableFuture<Void> publishLocationUpdateRequest(DeviceKey deviceKey) {
         return mqtt.publish(String.format("owntracks/%s/%s/cmd", deviceKey.userName(), deviceKey.deviceName()),
-                "{\"_type\":\"cmd\",\"action\":\"reportLocation\"}");
+                            "{\"_type\":\"cmd\",\"action\":\"reportLocation\"}");
     }
 
     private Closeable mqttSubscribe(String topic, Consumer<OwnTracksJsonMessage> consumer) {
@@ -61,13 +61,14 @@ final class OwnTracksImpl implements OwnTracks {
     private static DeviceKey parseTopic(String theTopic) {
         String[] topicParts = theTopic.split("/");
         checkState(topicParts.length >= 3,
-                "owntracks topic format unrecognized: %s, should have at least 3 parts but had %s", theTopic, topicParts.length);
+                   "owntracks topic format unrecognized: %s, should have at least 3 parts but had %s", theTopic, topicParts.length);
         return DeviceKey.of(topicParts[1], topicParts[2]);
     }
 
     private static Consumer<OwnTracksUpdate<OwnTracksLocationUpdateOrLwt>> lwtIgnored(Consumer<OwnTracksUpdate<OwnTrackLocationUpdate>> handler) {
         return updateOrLwt -> updateOrLwt.payload().asLocationUpdate().ifPresent(ownTrackLocationUpdate ->
-                handler.accept(OwnTracksUpdate.of(updateOrLwt.deviceKey(), ownTrackLocationUpdate)));
+                                                                                         handler.accept(OwnTracksUpdate.of(updateOrLwt.deviceKey(),
+                                                                                                                           ownTrackLocationUpdate)));
     }
 
     private static <T extends HasFixTimestamp> Consumer<OwnTracksUpdate<T>> orderProtected(Consumer<OwnTracksUpdate<T>> delegate) {

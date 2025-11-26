@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.connector.slide;
 
 import com.google.inject.Key;
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.BindingSpec;
@@ -9,7 +10,6 @@ import net.yudichev.jiotty.common.inject.HasWithAnnotation;
 import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 
-import javax.inject.Singleton;
 import java.util.Optional;
 import java.util.function.Supplier;
 
