@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.ip;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.DispatchedConsumer;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
@@ -14,7 +15,6 @@ import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

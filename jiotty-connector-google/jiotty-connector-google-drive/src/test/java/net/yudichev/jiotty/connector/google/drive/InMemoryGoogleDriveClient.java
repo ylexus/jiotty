@@ -1,8 +1,8 @@
 package net.yudichev.jiotty.connector.google.drive;
 
 import com.google.api.services.drive.model.About;
+import jakarta.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;

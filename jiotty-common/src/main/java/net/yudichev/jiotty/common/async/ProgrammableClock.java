@@ -1,11 +1,11 @@
 package net.yudichev.jiotty.common.async;
 
+import jakarta.annotation.Nullable;
 import net.yudichev.jiotty.common.lang.BaseIdempotentCloseable;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.MDC;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;

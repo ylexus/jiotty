@@ -2,6 +2,7 @@ package net.yudichev.jiotty.connector.tesla.fleet;
 
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
@@ -20,7 +21,6 @@ import okhttp3.ResponseBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -207,7 +207,7 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
                                 future.complete(Optional.empty());
                             } else {
                                 future.completeExceptionally(new RuntimeException(
-                                        "Response code " + response.code() + (responseBody == null ? "" : ", body: " + responseBody.string())));
+                                        "Response code " + response.code() + ", body: " + responseBody.string()));
                             }
                         } catch (RuntimeException | IOException e) {
                             future.completeExceptionally(new RuntimeException("failed to process response body", e));

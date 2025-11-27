@@ -4,14 +4,12 @@ import com.google.inject.assistedinject.Assisted;
 import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 
-import javax.annotation.concurrent.NotThreadSafe;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-@NotThreadSafe
 public final class ThresholdThrottlingConsumer<T> implements Consumer<T> {
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final ThresholdGatedConsumer<T> thresholdGatedConsumer;

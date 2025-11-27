@@ -11,4 +11,4 @@ Configuration:
         - ref: STDOUT
     logger:
       - name: net.yudichev.jiotty.connector.shelly
-        level: debug
+        level: '${sys:log4j.root.level:-DEBUG}'

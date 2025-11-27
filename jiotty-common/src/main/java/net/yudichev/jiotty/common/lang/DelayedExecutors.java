@@ -1,7 +1,10 @@
 package net.yudichev.jiotty.common.lang;
 
-import javax.annotation.Nonnull;
-import java.util.concurrent.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 final class DelayedExecutors {
     private DelayedExecutors() {
@@ -32,7 +35,7 @@ final class DelayedExecutors {
 
         static final class DaemonThreadFactory implements ThreadFactory {
             @Override
-            public Thread newThread(@Nonnull Runnable r) {
+            public Thread newThread(Runnable r) {
                 Thread t = new Thread(r);
                 t.setDaemon(true);
                 t.setName("CompletableFutureDelayScheduler");
@@ -41,38 +44,22 @@ final class DelayedExecutors {
         }
     }
 
-    private static final class DelayedExecutor implements Executor {
-        private final long delay;
-        private final TimeUnit unit;
-        private final Executor executor;
-
-        DelayedExecutor(long delay, TimeUnit unit, Executor executor) {
-            this.delay = delay;
-            this.unit = unit;
-            this.executor = executor;
-        }
+    private record DelayedExecutor(long delay, TimeUnit unit, Executor executor) implements Executor {
 
         @Override
-        public void execute(@Nonnull Runnable command) {
-            Delayer.delay(new TaskSubmitter(executor, command), delay, unit);
+            public void execute(Runnable command) {
+                Delayer.delay(new TaskSubmitter(executor, command), delay, unit);
+            }
         }
-    }
 
     /**
-     * Action to submit user task
-     */
-    private static final class TaskSubmitter implements Runnable {
-        private final Executor executor;
-        private final Runnable action;
-
-        TaskSubmitter(Executor executor, Runnable action) {
-            this.executor = executor;
-            this.action = action;
-        }
+         * Action to submit user task
+         */
+        private record TaskSubmitter(Executor executor, Runnable action) implements Runnable {
 
         @Override
-        public void run() {
-            executor.execute(action);
+            public void run() {
+                executor.execute(action);
+            }
         }
-    }
 }

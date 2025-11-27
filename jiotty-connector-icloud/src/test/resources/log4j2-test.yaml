@@ -11,6 +11,6 @@ Configuration:
         - ref: STDOUT
     logger:
       - name: net.yudichev.jiotty.connector.icloud.calendar
-        level: debug
+        level: '${sys:log4j.root.level:-DEBUG}'
 #      - name: org.apache.http
-#        level: debug
+#        level: '${sys:log4j.root.level:-DEBUG}'

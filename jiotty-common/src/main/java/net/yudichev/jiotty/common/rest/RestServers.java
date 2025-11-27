@@ -2,13 +2,13 @@ package net.yudichev.jiotty.common.rest;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Throwables;
+import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;

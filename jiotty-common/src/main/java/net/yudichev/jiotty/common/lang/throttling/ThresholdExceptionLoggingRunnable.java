@@ -2,11 +2,8 @@ package net.yudichev.jiotty.common.lang.throttling;
 
 import org.slf4j.Logger;
 
-import javax.annotation.concurrent.NotThreadSafe;
-
 import static com.google.common.base.Preconditions.checkNotNull;
 
-@NotThreadSafe
 public final class ThresholdExceptionLoggingRunnable implements Runnable {
     private final Runnable delegate;
     private final ThresholdGatedConsumer<RuntimeException> exceptionLoggingAction;
@@ -17,7 +14,8 @@ public final class ThresholdExceptionLoggingRunnable implements Runnable {
     }
 
     public static Runnable withExceptionLoggedAfterThreshold(Logger logger, String description, int threshold, Runnable delegate) {
-        return new ThresholdExceptionLoggingRunnable(delegate, ThresholdGatedConsumer.thresholdGated(threshold, e -> logger.error("Error when {}", description, e)));
+        return new ThresholdExceptionLoggingRunnable(delegate,
+                                                     ThresholdGatedConsumer.thresholdGated(threshold, e -> logger.error("Error when {}", description, e)));
     }
 
     @Override

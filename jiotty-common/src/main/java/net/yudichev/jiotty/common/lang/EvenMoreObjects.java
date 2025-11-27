@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.common.lang;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
+
 import java.util.function.Function;
 
 public final class EvenMoreObjects {

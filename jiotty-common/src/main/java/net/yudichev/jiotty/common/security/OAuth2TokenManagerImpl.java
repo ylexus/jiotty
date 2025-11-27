@@ -3,6 +3,7 @@ package net.yudichev.jiotty.common.security;
 import com.google.common.reflect.TypeToken;
 import com.google.inject.BindingAnnotation;
 import com.sun.net.httpserver.HttpServer;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
@@ -18,7 +19,6 @@ import okhttp3.RequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Retention;

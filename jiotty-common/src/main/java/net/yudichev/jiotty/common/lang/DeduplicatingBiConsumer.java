@@ -1,6 +1,7 @@
 package net.yudichev.jiotty.common.lang;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
+
 import java.util.function.BiConsumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;

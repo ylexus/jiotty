@@ -1,8 +1,8 @@
 package net.yudichev.jiotty.common.lang;
 
 import com.google.common.base.Throwables;
+import jakarta.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -54,6 +54,6 @@ public final class HumanReadableExceptionMessage {
 
     private static void appendType(StringBuilder sb, Throwable throwable, int suffixLength) {
         String simpleName = throwable.getClass().getSimpleName();
-        sb.append(simpleName.substring(0, simpleName.length() - suffixLength));
+        sb.append(simpleName, 0, simpleName.length() - suffixLength);
     }
 }
