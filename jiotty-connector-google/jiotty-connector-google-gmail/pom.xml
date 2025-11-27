@@ -59,8 +59,13 @@
             <artifactId>log4j-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>jakarta.mail</artifactId>
+            <groupId>jakarta.mail</groupId>
+            <artifactId>jakarta.mail-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-mail</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.lmax</groupId>
@@ -115,12 +120,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <configuration>
-                    <ignoredUnusedDeclaredDependencies>
-                        <!-- it's a runtime dependency -->
-                        <ignoredUnusedDeclaredDependency>com.sun.mail:jakarta.mail</ignoredUnusedDeclaredDependency>
-                    </ignoredUnusedDeclaredDependencies>
-                </configuration>
             </plugin>
         </plugins>
     </build>
