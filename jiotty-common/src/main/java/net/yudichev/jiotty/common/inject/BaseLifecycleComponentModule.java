@@ -4,6 +4,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -21,18 +22,23 @@ public abstract class BaseLifecycleComponentModule extends PrivateModule {
     }
 
     /**
-     * @deprecated use {@link #registerLifecycleComponent(Class)}
+     * Bind the target lifecycle component as a singleton and register it.
      */
-    @Deprecated
-    protected final <T extends LifecycleComponent> Key<T> boundLifecycleComponent(Class<T> implClass) {
-        return registerLifecycleComponent(implClass);
+    protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(Class<T> implClass) {
+        return registerLifecycleComponent(Key.get(implClass));
     }
 
     /**
-     * Bind the target lifecycle component as singleton and register it.
+     * Bind the target lifecycle component as a singleton and register it.
      */
-    protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(Class<T> implClass) {
-        Key<T> implKey = Key.get(implClass);
+    protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(TypeLiteral<T> implType) {
+        return registerLifecycleComponent(Key.get(implType));
+    }
+
+    /**
+     * Bind the target lifecycle component as a singleton and register it.
+     */
+    protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(Key<T> implKey) {
         bind(implKey).in(Singleton.class);
         Key<LifecycleComponent> lifecycleComponentKey = Key.get(LifecycleComponent.class, GuiceUtil.uniqueAnnotation());
         bind(lifecycleComponentKey).to(implKey);

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.TypeToken;
 import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.Application;
+import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.keystore.KeyStoreAccessModule;
@@ -30,6 +31,7 @@ import static net.yudichev.jiotty.connector.tesla.fleet.TeslaVehicle.Endpoint.CL
 import static net.yudichev.jiotty.connector.tesla.fleet.TeslaVehicle.Endpoint.LOCATION_DATA;
 import static net.yudichev.jiotty.connector.tesla.fleet.TeslaVehicle.Endpoint.VEHICLE_STATE;
 
+@SuppressWarnings("StaticVariableMayNotBeInitialized")
 final class TeslaFleetManualRunner {
 
     private static String vin;
@@ -39,6 +41,7 @@ final class TeslaFleetManualRunner {
         Application.builder()
                    .addModule(() -> VarStoreModule.builder().setPath(literally(Paths.get(args[0]))).build())
                    .addModule(TimeModule::new)
+                   .addModule(ExecutorModule::new)
                    .addModule(() -> KeyStoreAccessModule.builder()
                                                         .setPathToKeystore(literally(args[7]).map(new TypeToken<>() {}, new TypeToken<>() {}, Paths::get))
                                                         .setKeystorePass(literally(args[8]))
@@ -62,7 +65,8 @@ final class TeslaFleetManualRunner {
                    .run();
     }
 
-    @SuppressWarnings({"UseOfSystemOutOrSystemErr", "OverlyBroadCatchBlock", "CallToPrintStackTrace"})
+    @SuppressWarnings({"UseOfSystemOutOrSystemErr", "OverlyBroadCatchBlock", "CallToPrintStackTrace", "OverlyComplexMethod", "OverlyLongMethod",
+            "DynamicRegexReplaceableByCompiledPattern"})
     private static class CmdLineTest extends BaseLifecycleComponent {
         private final TeslaFleet teslaFleet;
 

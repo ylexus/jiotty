@@ -193,9 +193,9 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
                 public void onResponse(Call call, Response response) {
                     try (ResponseBody responseBody = response.body()) {
                         try {
+                            String responseString = requireNonNull(responseBody).string();
+                            logger.debug("[{}] response: {}", requestId, responseString);
                             if (response.isSuccessful()) {
-                                String responseString = requireNonNull(responseBody).string();
-                                logger.debug("[{}] response: {}", requestId, responseString);
                                 T responseData;
                                 try {
                                     responseData = Json.parse(responseString, responseType);
