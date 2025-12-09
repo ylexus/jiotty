@@ -12,7 +12,7 @@
 
     <artifactId>jiotty-bom</artifactId>
     <properties>
-        <version.org.apache.logging.log4j>2.24.1</version.org.apache.logging.log4j>
+        <version.org.apache.logging.log4j>2.25.2</version.org.apache.logging.log4j>
         <org.immutables.version>2.11.6</org.immutables.version>
         <org.slf4j.version>1.7.36</org.slf4j.version> <!-- 2.0 is not compatible with log4j binding; TODO: remove slf4j layer completely -->
     </properties>
