@@ -12,3 +12,5 @@ Configuration:
     logger:
       - name: net.yudichev.jiotty.connector.tesla
         level: '${sys:log4j.root.level:-DEBUG}'
+      - name: net.yudichev.jiotty.common.rest
+        level: '${sys:log4j.root.level:-DEBUG}'

@@ -7,15 +7,15 @@ import java.util.concurrent.CompletableFuture;
 public interface TeslaVehicle {
     CompletableFuture<Void> wakeUp();
 
-    CompletableFuture<Void> setChargeLimit(int limitPercent);
+    CompletableFuture<Optional<String>> setChargeLimit(int limitPercent);
 
-    CompletableFuture<Void> startCharge();
+    CompletableFuture<Optional<String>> startCharge();
 
-    CompletableFuture<Void> stopCharge();
+    CompletableFuture<Optional<String>> stopCharge();
 
-    CompletableFuture<Void> startAutoConditioning();
+    CompletableFuture<Optional<String>> startAutoConditioning();
 
-    CompletableFuture<Void> stopAutoConditioning();
+    CompletableFuture<Optional<String>> stopAutoConditioning();
 
     /**
      * @return {@link Optional#empty()} if the vehicle is not online

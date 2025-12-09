@@ -238,6 +238,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     }
 
     private void requestToken(RequestBody formBody) {
+        logger.info("[{}] requesting token", clientId);
         var request = new Request.Builder().url(tokenUrl)
                                            .post(formBody)
                                            .build();
@@ -273,6 +274,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
     }
 
     private void setCurrentToken(OauthAccessToken accessToken) {
+        logger.debug("[{}] token set, expires at {}", clientId, accessToken.expiryTime());
         currentToken = accessToken;
         listeners.notify(currentToken.accessToken());
     }

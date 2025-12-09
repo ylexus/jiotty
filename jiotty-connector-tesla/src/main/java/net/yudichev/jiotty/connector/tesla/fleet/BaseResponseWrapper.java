@@ -5,10 +5,14 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;
 
+import java.util.Optional;
+
 @Value.Immutable
 @PublicImmutablesStyle
 @JsonDeserialize
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface BaseResponseWrapper<R> {
-    R response();
+    Optional<R> response();
+
+    Optional<String> error();
 }

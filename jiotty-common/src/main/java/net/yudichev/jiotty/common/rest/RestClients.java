@@ -15,23 +15,26 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 
 public final class RestClients {
     private static final Logger logger = LoggerFactory.getLogger(RestClients.class);
 
     private static final int DEFAULT_CALL_RETRY_COUNT = 3;
     private static final Duration DEFAULT_HTTP_TIMEOUT = Duration.ofSeconds(60);
+    private static final AtomicInteger requestIdGenerator = new AtomicInteger();
 
     private RestClients() {
     }
 
     public static OkHttpClient newClient() {
-        return newClient(builder -> {});
+        return newClient(_ -> {});
     }
 
     public static OkHttpClient newClient(Consumer<? super OkHttpClient.Builder> customizer) {
@@ -59,11 +62,17 @@ public final class RestClients {
     }
 
     public static <T> CompletableFuture<T> call(Call theCall, TypeToken<? extends T> responseType, int retryCount) {
+        return call(theCall, responseType, retryCount, false);
+    }
+
+    public static <T> CompletableFuture<T> call(Call theCall, TypeToken<? extends T> responseType, int retryCount, boolean attemptParsingUnsuccessfulResponse) {
+        int requestId = requestIdGenerator.incrementAndGet();
         CompletableFuture<T> future = new CompletableFuture<>();
+        logger.debug("[{}] Sending {} {}", requestId, theCall.request().method(), theCall.request().url());
         theCall.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                logger.debug("Call failed: {}, retries left: {}", call, retryCount, e);
+                logger.debug("[{}] Call failed: {}, retries left: {}", requestId, call, retryCount, e);
                 if (retryCount == 0) {
                     future.completeExceptionally(new RuntimeException("call failed: " + call.request(), e));
                 } else {
@@ -84,6 +93,7 @@ public final class RestClients {
                     try {
                         if (response.isSuccessful()) {
                             if (response.code() == 204) { // no body
+                                logger.debug("[{}] Response code 204", requestId);
                                 if (responseType.getType() == Void.class) {
                                     future.complete(null);
                                 } else {
@@ -92,21 +102,40 @@ public final class RestClients {
                                 }
                             } else {
                                 String responseString = requireNonNull(responseBody).string();
-                                T responseData;
-                                try {
-                                    responseData = Json.parse(responseString, responseType);
-                                    future.complete(responseData);
-                                } catch (RuntimeException e) {
-                                    future.completeExceptionally(new RuntimeException("Failed parsing response " + responseString, e));
-                                }
+                                logger.debug("[{}] Response code {}: {}", requestId, response.code(), responseString);
+                                parseAndCompleteFuture(responseString);
                             }
                         } else {
-                            future.completeExceptionally(new RuntimeException(
-                                    "Response code " + response.code() + (responseBody == null ? "" : ", body: " + responseBody.string())));
+                            String responseString = safelyToString(responseBody);
+                            logger.debug("[{}] Response code {}: {}", requestId, response.code(), responseString);
+                            if (attemptParsingUnsuccessfulResponse) {
+                                parseAndCompleteFuture(responseString);
+                            } else {
+                                future.completeExceptionally(new RuntimeException(
+                                        "Response code " + response.code() + ", body: " + responseString));
+                            }
                         }
                     } catch (RuntimeException | IOException e) {
                         future.completeExceptionally(new RuntimeException("failed to process response body", e));
                     }
+                }
+            }
+
+            private void parseAndCompleteFuture(String responseString) {
+                T responseData;
+                try {
+                    responseData = Json.parse(responseString, responseType);
+                    future.complete(responseData);
+                } catch (RuntimeException e) {
+                    future.completeExceptionally(new RuntimeException("Failed parsing response " + responseString, e));
+                }
+            }
+
+            private static String safelyToString(ResponseBody responseBody) {
+                try {
+                    return responseBody.string();
+                } catch (Exception e) {
+                    return "<failed to read body: " + humanReadableMessage(e) + ">";
                 }
             }
         });

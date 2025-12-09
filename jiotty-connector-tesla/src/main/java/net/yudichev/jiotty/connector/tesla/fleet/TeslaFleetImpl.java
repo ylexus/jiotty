@@ -116,7 +116,8 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
             // Ignoring pagination
             return call(httpClient.newCall(request), LIST_VEHICLES_RESPONSE_TYPE, 0)
                     .whenComplete((resp, throwable) -> logger.debug("[{}] result {}", requestId, resp, throwable))
-                    .thenApply(ResponseWrapper::response);
+                    .thenApply(listResponseWrapper -> listResponseWrapper.response()
+                                                                         .orElseThrow(() -> new IllegalStateException("No 'response' attribute in response")));
         });
     }
 
@@ -175,7 +176,11 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
             logger.debug("[{}] executing {}", requestId, url);
             return callAndAllow408(requestId, httpClient.newCall(request), GET_VEHICLE_DATA_RESPONSE_TYPE)
                     .whenComplete((resp, throwable) -> logger.debug("[{}] result {}", requestId, resp, throwable))
-                    .thenApply(wrapperOptional -> wrapperOptional.map(ResponseWrapper::response));
+                    .thenApply(wrapperOptional ->
+                                       wrapperOptional.map(vehicleDataResponseWrapper ->
+                                                                   vehicleDataResponseWrapper.response()
+                                                                                             .orElseThrow(() -> new IllegalStateException(
+                                                                                                     "No 'response' attribute in response"))));
         }
 
         private static <T> CompletableFuture<Optional<T>> callAndAllow408(int requestId, Call theCall, TypeToken<? extends T> responseType) {
@@ -233,40 +238,43 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
         }
 
         @Override
-        public CompletableFuture<Void> setChargeLimit(int limitPercent) {
+        public CompletableFuture<Optional<String>> setChargeLimit(int limitPercent) {
             String json = "{\"percent\":" + limitPercent + "}";
             return postCommand(setChargeLimitUrl, json);
         }
 
         @Override
-        public CompletableFuture<Void> startCharge() {
+        public CompletableFuture<Optional<String>> startCharge() {
             return postCommand(chargeStartUrl, null);
         }
 
         @Override
-        public CompletableFuture<Void> stopCharge() {
+        public CompletableFuture<Optional<String>> stopCharge() {
             return postCommand(chargeStopUrl, null);
         }
 
         @Override
-        public CompletableFuture<Void> startAutoConditioning() {
+        public CompletableFuture<Optional<String>> startAutoConditioning() {
             return postCommand(autoConditioningStartUrl, null);
         }
 
         @Override
-        public CompletableFuture<Void> stopAutoConditioning() {
+        public CompletableFuture<Optional<String>> stopAutoConditioning() {
             return postCommand(autoConditioningStopUrl, null);
         }
 
-        private CompletableFuture<Void> postCommand(String url, @Nullable String jsonBody) {
+        private CompletableFuture<Optional<String>> postCommand(String url, @Nullable String jsonBody) {
             return post(url, jsonBody, CMD_RESPONSE_TYPE)
-                    .thenApply(responseWrapper -> {
-                        if (responseWrapper.response().result()) {
-                            return null;
-                        } else {
-                            throw new RuntimeException(responseWrapper.response().reason().orElse("unknown reason"));
-                        }
-                    });
+                    .thenApply(responseWrapper ->
+                                       responseWrapper.response()
+                                                      .map(response -> {
+                                                          if (response.result()) {
+                                                              return Optional.<String>empty();
+                                                          } else {
+                                                              throw new RuntimeException(response.reason().orElse("unknown reason"));
+                                                          }
+                                                      })
+                                                      .orElseGet(() -> Optional.of(responseWrapper.error().orElse("unknown error"))));
         }
 
         private <T> CompletableFuture<ResponseWrapper<T>> post(String url,
@@ -282,7 +290,7 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
             Request request = builder.build();
             int requestId = requestIdGenerator.incrementAndGet();
             logger.debug("[{}] executing {}{}", requestId, url, jsonBody == null ? "" : jsonBody);
-            return call(httpClient.newCall(request), responseType, 0)
+            return call(httpClient.newCall(request), responseType, 0, true)
                     .whenComplete((resp, throwable) -> logger.debug("[{}] result {}", requestId, resp, throwable));
         }
     }
