@@ -109,6 +109,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
                                          refreshAccessToken(accessToken.refreshToken());
                                      } else {
                                          setCurrentToken(accessToken);
+                                         scheduleTokenRefresh();
                                      }
                                  },
                                  this::obtainAccessToken);

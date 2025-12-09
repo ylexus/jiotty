@@ -39,9 +39,9 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static net.yudichev.jiotty.common.lang.Closeable.closeSafelyIfNotNull;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
@@ -193,7 +193,7 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
                 public void onResponse(Call call, Response response) {
                     try (ResponseBody responseBody = response.body()) {
                         try {
-                            String responseString = requireNonNull(responseBody).string();
+                            String responseString = responseBody.string();
                             logger.debug("[{}] response: {}", requestId, responseString);
                             if (response.isSuccessful()) {
                                 T responseData;
@@ -207,11 +207,19 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
                                 future.complete(Optional.empty());
                             } else {
                                 future.completeExceptionally(new RuntimeException(
-                                        "Response code " + response.code() + ", body: " + responseBody.string()));
+                                        "Response code " + response.code() + ", body: " + safelyToString(responseBody)));
                             }
                         } catch (RuntimeException | IOException e) {
                             future.completeExceptionally(new RuntimeException("failed to process response body", e));
                         }
+                    }
+                }
+
+                private static String safelyToString(ResponseBody responseBody) {
+                    try {
+                        return responseBody.string();
+                    } catch (Exception e) {
+                        return "<failed to read body: " + humanReadableMessage(e) + ">";
                     }
                 }
             });
