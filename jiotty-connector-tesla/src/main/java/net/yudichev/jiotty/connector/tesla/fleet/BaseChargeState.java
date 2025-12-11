@@ -2,6 +2,8 @@ package net.yudichev.jiotty.connector.tesla.fleet;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -17,7 +19,11 @@ import java.io.IOException;
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface BaseChargeState {
     @JsonProperty("charging_state")
-    TeslaChargingState chargingState();
+    @JsonSetter(nulls = Nulls.SKIP)
+    @Value.Default
+    default TeslaChargingState chargingState() {
+        return TeslaChargingState.UNKNOWN;
+    }
 
     @JsonProperty("conn_charge_cable")
     @JsonDeserialize(using = ChargingStateDeserialiser.class)
