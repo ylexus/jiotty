@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
@@ -148,12 +149,13 @@ final class TeslamateDatabaseImpl extends BaseLifecycleComponent implements Tesl
                                                                     LatLon startLocation,
                                                                     LatLon endLocation,
                                                                     double withinMeters) {
+            checkState(!isClosed(), "Connection is closed");
             return executor.submit(() -> doQueryDrives(computationId, startInstant, endInstant, startLocation, endLocation, withinMeters));
         }
 
         @Override
         protected void doClose() {
-            Closeable.closeSafelyIfNotNull(logger, dataSource);
+            executor.execute(() -> Closeable.closeSafelyIfNotNull(logger, dataSource));
         }
 
         private List<HistoricalDrive> doQueryDrives(long computationId,
