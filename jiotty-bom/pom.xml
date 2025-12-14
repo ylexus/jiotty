@@ -156,6 +156,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-pushover</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-fieldglass</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -176,7 +181,27 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-energy</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-logging</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-user</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-world</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -192,6 +217,11 @@
                 <groupId>com.github.caldav4j</groupId>
                 <artifactId>caldav4j</artifactId>
                 <version>1.0.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ilpersi</groupId>
+                <artifactId>pushover-client</artifactId>
+                <version>1.1.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -212,6 +242,12 @@
                 <artifactId>google-maps-services</artifactId>
                 <version>2.2.0</version>
             </dependency>
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>7.0.2</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-slf4j-impl</artifactId>

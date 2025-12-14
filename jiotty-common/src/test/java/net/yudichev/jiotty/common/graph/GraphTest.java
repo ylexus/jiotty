@@ -1,0 +1,248 @@
+package net.yudichev.jiotty.common.graph;
+
+import net.yudichev.jiotty.common.async.ProgrammableClock;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@ExtendWith(MockitoExtension.class)
+class GraphTest {
+    private final Map<String, TestNode> triggeredNodeBySourceNodeName = new HashMap<>();
+    private final List<String> triggeredNodes = new ArrayList<>();
+    @Mock
+    private Consumer<RuntimeException> exceptionHandler;
+    private Graph graph;
+    private boolean nodeWaveReturnValue = true;
+    private TestNode node1;
+    private TestNode node2;
+    private TestNode node3;
+    private TestNode node4;
+    private TestNode node5;
+    private ProgrammableClock clock;
+
+    @BeforeEach
+    void setUp() {
+        clock = new ProgrammableClock();
+        clock.advanceTimeAndTick(Duration.ofMinutes(5));
+        graph = new Graph(clock, exceptionHandler);
+    }
+
+    static void generatePermutations(List<Integer> current, Set<Integer> remaining, List<List<Integer>> result) {
+        if (remaining.isEmpty()) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+
+        for (Integer num : new ArrayList<>(remaining)) {
+            current.add(num);
+            Set<Integer> nextRemaining = new HashSet<>(remaining);
+            nextRemaining.remove(num);
+            generatePermutations(current, nextRemaining, result);
+            current.removeLast();
+        }
+    }
+
+    static Stream<List<Integer>> graphStructure() {
+        List<Integer> nums = List.of(0, 1, 2, 3, 4);
+        List<List<Integer>> result = new ArrayList<>();
+        generatePermutations(new ArrayList<>(), new HashSet<>(nums), result);
+        return result.stream();
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    void graphStructure(List<Integer> subscriptionOrder) {
+        createNodes(subscriptionOrder);
+        graph.runWaves();
+        // initially everything is triggered once
+        assertThat(triggeredNodes).containsExactly("1", "5", "2", "4", "3");
+        triggeredNodes.clear();
+
+        node1.trigger();
+        node5.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1", "5", "2", "4", "3");
+
+        triggeredNodes.clear();
+        node1.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1", "2", "4", "3");
+
+        triggeredNodes.clear();
+        node5.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("5", "3");
+
+        triggeredNodes.clear();
+        node2.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("2");
+
+        triggeredNodes.clear();
+        node4.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("4", "3");
+
+        triggeredNodes.clear();
+        node3.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("3");
+
+        nodeWaveReturnValue = false;
+
+        triggeredNodes.clear();
+        node1.trigger();
+        node5.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1", "5");
+
+        triggeredNodes.clear();
+        node1.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1");
+
+        triggeredNodes.clear();
+        node5.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("5");
+
+        triggeredNodes.clear();
+        node2.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("2");
+
+        triggeredNodes.clear();
+        node4.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("4");
+
+        triggeredNodes.clear();
+        node3.trigger();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("3");
+
+        triggeredNodes.clear();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).isEmpty();
+    }
+
+    @Test
+    void nodesTriggeringOtherNodesInWave() {
+        createNodes();
+        assertThat(graph.wave()).isFalse();
+        triggeredNodes.clear();
+
+        willTrigger("4", node1);
+        node4.trigger();
+        assertThat(graph.wave()).isTrue();
+        assertThat(triggeredNodes).containsExactly("4", "3");
+        triggeredNodes.clear();
+        clearTriggers();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1", "2", "4", "3");
+        triggeredNodes.clear();
+
+        willTrigger("3", node5);
+        willTrigger("5", node3);
+        node5.trigger();
+        assertThat(graph.wave()).isTrue();
+        assertThat(triggeredNodes).containsExactly("5", "3");
+        triggeredNodes.clear();
+        clearTriggers();
+
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("5", "3");
+    }
+
+    @Test
+    void failsIfCycle() {
+        node1 = graph.registerNode("1", new TestNode("1"));
+        node2 = graph.registerNode("2", new TestNode("2"));
+        node3 = graph.registerNode("3", new TestNode("3"));
+
+        /*
+         1 -> 2 -> 3 -> 1
+         */
+        node1.subscribeTo(node2);
+        node2.subscribeTo(node3);
+        assertThatThrownBy(() -> node3.subscribeTo(node1)).hasMessageContaining("cycle");
+    }
+
+    private void clearTriggers() {
+        triggeredNodeBySourceNodeName.clear();
+    }
+
+    private void willTrigger(String source, TestNode dest) {
+        triggeredNodeBySourceNodeName.put(source, dest);
+    }
+
+    private void createNodes() {
+        createNodes(List.of(0, 1, 2, 3, 4));
+    }
+
+    private void createNodes(List<Integer> subscriptionOrder) {
+    /*
+    1---    5
+   / \  \ /
+  2   4  |
+       \/
+        3
+     */
+        node1 = graph.registerNode("1", new TestNode("1"));
+        node2 = graph.registerNode("2", new TestNode("2"));
+        node3 = graph.registerNode("3", new TestNode("3"));
+        node4 = graph.registerNode("4", new TestNode("4"));
+        node5 = graph.registerNode("5", new TestNode("5"));
+
+        List<Runnable> subscriptions = List.of(
+                () -> node2.subscribeTo(node1),
+                () -> node4.subscribeTo(node1),
+                () -> node3.subscribeTo(node4),
+                () -> node3.subscribeTo(node1),
+                () -> node3.subscribeTo(node5));
+        subscriptionOrder.forEach(i -> subscriptions.get(i).run());
+    }
+
+    private class TestNode extends BaseNode {
+        private final String name;
+
+        public TestNode(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public void initialise() {
+            assertThat(nodeContext().node()).isSameAs(this);
+            assertThat(nodeContext().name()).isEqualTo(name);
+            assertThat(nodeContext().graph()).isSameAs(graph);
+        }
+
+        @Override
+        public boolean wave() {
+            assertThat(nodeContext().graph().waveTime()).isEqualTo(clock.currentInstant());
+            triggeredNodes.add(name);
+            TestNode nodeToTrigger = triggeredNodeBySourceNodeName.get(name);
+            if (nodeToTrigger != null) {
+                nodeToTrigger.trigger();
+            }
+            return nodeWaveReturnValue;
+        }
+    }
+}

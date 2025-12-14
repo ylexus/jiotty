@@ -273,16 +273,21 @@
         <module>jiotty-connector-mqtt</module>
         <module>jiotty-connector-nest</module>
         <module>jiotty-connector-octopusenergy</module>
+        <module>jiotty-connector-pushover</module>
         <module>jiotty-connector-rpi</module>
         <module>jiotty-connector-shelly</module>
+        <module>jiotty-connector-tesla</module>
         <module>jiotty-connector-tplinksmartplug</module>
         <module>jiotty-connector-world</module>
         <module>jiotty-connector-owntracks</module>
         <module>jiotty-connector-fieldglass</module>
         <module>jiotty-connector-slide</module>
         <module>jiotty-connector-webclient</module>
+        <module>jiotty-persistence</module>
+        <module>jiotty-energy</module>
         <module>jiotty-logging</module>
         <module>jiotty-parent</module>
-        <module>jiotty-connector-tesla</module>
+        <module>jiotty-user</module>
+        <module>jiotty-world</module>
     </modules>
 </project>

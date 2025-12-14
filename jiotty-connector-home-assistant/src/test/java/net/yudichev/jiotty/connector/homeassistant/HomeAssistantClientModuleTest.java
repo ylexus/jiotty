@@ -9,8 +9,8 @@ class HomeAssistantClientModuleTest {
     @Test
     void configure() {
         var module = HomeAssistantClientModule.builder()
-                                              .setBaseUrlSpec(literally("baseUrl"))
-                                              .setAccessTokenSpec(literally("accessToken"))
+                                              .setBaseUrl(literally("baseUrl"))
+                                              .setAccessToken(literally("accessToken"))
                                               .build();
         Guice.createInjector(module).getInstance(module.getExposedKey());
     }

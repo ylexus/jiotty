@@ -71,6 +71,7 @@ class ShellyPlugImplTest {
     void startAfterFailure(@Mock Consumer<String> errorHandler, @Mock Call call) {
         when(httpClient.newCall(any())).thenReturn(call);
         AtomicInteger counter = new AtomicInteger();
+        when(call.request()).thenReturn(new okhttp3.Request.Builder().method("GET", null).url("http://host:1234").build());
         doAnswer(invocation -> {
             Callback callback = invocation.getArgument(0);
             callback.onFailure(call, new IOException("no route to host " + counter.incrementAndGet()));

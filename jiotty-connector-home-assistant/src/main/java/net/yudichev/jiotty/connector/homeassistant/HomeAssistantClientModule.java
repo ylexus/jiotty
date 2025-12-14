@@ -37,12 +37,12 @@ public final class HomeAssistantClientModule extends BaseLifecycleComponentModul
         private BindingSpec<String> baseUrlSpec;
         private BindingSpec<String> accessTokenSpec;
 
-        public Builder setBaseUrlSpec(BindingSpec<String> baseUrlSpec) {
+        public Builder setBaseUrl(BindingSpec<String> baseUrlSpec) {
             this.baseUrlSpec = checkNotNull(baseUrlSpec);
             return this;
         }
 
-        public Builder setAccessTokenSpec(BindingSpec<String> accessTokenSpec) {
+        public Builder setAccessToken(BindingSpec<String> accessTokenSpec) {
             this.accessTokenSpec = checkNotNull(accessTokenSpec);
             return this;
         }

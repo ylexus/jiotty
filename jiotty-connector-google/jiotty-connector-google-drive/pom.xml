@@ -109,8 +109,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <configuration>
-                    <!-- this is some weird phenomenon, possible because of the presence of test-scoped immutables -->
-                    <ignoredNonTestScopedDependencies>com.google.code.findbugs:jsr305</ignoredNonTestScopedDependencies>
+                    <ignoredNonTestScopedDependencies>
+                        <!-- only used in test scoped immutables, impossible to remove from there -->
+                        <dependency>com.google.code.findbugs:jsr305</dependency>
+                    </ignoredNonTestScopedDependencies>
                 </configuration>
             </plugin>
         </plugins>

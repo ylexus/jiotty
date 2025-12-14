@@ -31,7 +31,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
+import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 /**
  * Originally from <a href="https://chatgpt.com/c/6754cbf0-1374-800b-9e27-9ff9d91b33f0">here</a>
@@ -106,8 +106,12 @@ class MieleDishwasherImplTest {
                                             .withBody("[]")));
 
         assertThatThrownBy(() -> mieleDishwasher.getPrograms().join())
-                .extracting(Throwables::getCausalChain).asInstanceOf(LIST)
-                .anySatisfy(e -> assertThat(e).isInstanceOf(SocketTimeoutException.class));
+                .extracting(Throwables::getCausalChain).asInstanceOf(list(Throwable.class))
+                .anySatisfy(e -> assertThat(e).satisfiesAnyOf(
+                        // different environments / okhttp versions produce different results here
+                        ex -> assertThat(ex).isInstanceOf(SocketTimeoutException.class),
+                        ex -> assertThat(ex).message().containsIgnoringCase("timeout")
+                ));
     }
 
     @Test

@@ -25,8 +25,8 @@ final class HomeAssistantClientLocalRunner {
         Application.builder()
                    .addModule(() -> HomeAssistantClientModule
                            .builder()
-                           .setBaseUrlSpec(literally(args[0]))
-                           .setAccessTokenSpec(literally(args[1]))
+                           .setBaseUrl(literally(args[0]))
+                           .setAccessToken(literally(args[1]))
                            .build())
                    .addModule(() -> new BaseLifecycleComponentModule() {
                        @Override
