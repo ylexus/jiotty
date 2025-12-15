@@ -36,6 +36,7 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
     @OverridingMethodsMustInvokeSuper
     public boolean doWave() {
         if (request == null) {
+            resetRetryState();
             return false;
         }
 
@@ -118,7 +119,9 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
         return request;
     }
 
-    /** Called in-wave before anything else - return true to immediately forget the request and reset to an idle state */
+    /**
+     * Called in-wave before anything else - return true to immediately forget the request and reset to an idle state
+     */
     protected boolean shouldForgetRequest() {
         return false;
     }
@@ -164,9 +167,14 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
 
     private void doExecuteRequest(int retryNumber) {
         assert request != null;
+        DeviceRequest<R> requestSent = request;
         sendCommand(retryNumber, request.payload(), failure -> {
-            logger.info("{} failure, will be retried: {}", request, failure);
-            lastFailure = failure;
+            if (request != null) {
+                logger.info("{} failure, will be retried: {}", request, failure);
+                lastFailure = failure;
+            } else {
+                logger.debug("Ignoring delayed failure - request {} already inactive: {}", requestSent, failure);
+            }
         });
         assert pendingRequestRetrySchedule == null;
         pendingRequestRetrySchedule = runner.executor().schedule(retryDelay, () -> {
