@@ -1,0 +1,89 @@
+{
+  "ident": {
+    "type": {
+      "key_localized": "Device type",
+      "value_raw": 7,
+      "value_localized": "Dishwasher"
+    },
+    "deviceName": "",
+    "protocolVersion": 4,
+    "deviceIdentLabel": {
+      "fabNumber": "000106457348",
+      "fabIndex": "69",
+      "techType": "G7422",
+      "matNumber": "11870270",
+      "swids": [
+        "5418",
+        "20492",
+        "25166",
+        "25293",
+        "25386",
+        "4928",
+        "20475",
+        "25266",
+        "4875",
+        "20366",
+        "20462"
+      ]
+    },
+    "xkmIdentLabel": {
+      "techType": "EK057",
+      "releaseVersion": "08.32"
+    }
+  },
+  "state": {
+    "ProgramID": {
+      "value_raw": null,
+      "value_localized": "",
+      "key_localized": "Program name"
+    },
+    "status": {
+      "value_raw": 255,
+      "value_localized": "Not connected",
+      "key_localized": "status"
+    },
+    "programType": {
+      "value_raw": null,
+      "value_localized": "",
+      "key_localized": "Program type"
+    },
+    "programPhase": {
+      "value_raw": null,
+      "value_localized": "",
+      "key_localized": "Program phase"
+    },
+    "remainingTime": [],
+    "startTime": [],
+    "targetTemperature": [],
+    "coreTargetTemperature": [],
+    "temperature": [],
+    "coreTemperature": [],
+    "remoteEnable": {
+      "fullRemoteControl": false,
+      "smartGrid": false,
+      "mobileStart": null
+    },
+    "ambientLight": null,
+    "light": null,
+    "elapsedTime": [],
+    "spinningSpeed": {
+      "unit": "rpm",
+      "value_raw": null,
+      "value_localized": null,
+      "key_localized": "Spin speed"
+    },
+    "dryingStep": {
+      "value_raw": null,
+      "value_localized": "",
+      "key_localized": "Drying level"
+    },
+    "ventilationStep": {
+      "value_raw": null,
+      "value_localized": "",
+      "key_localized": "Fan level"
+    },
+    "plateStep": [],
+    "ecoFeedback": null,
+    "batteryLevel": null
+  }
+}

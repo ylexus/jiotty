@@ -27,7 +27,7 @@ interface BaseDeviceState extends MieleEvent {
     @JsonIgnore
     @Value.Derived
     default Optional<Duration> remainingTime() {
-        return remainingTimeParts().map(hm -> Duration.ofHours(hm[0]).plusMinutes(hm[1]));
+        return remainingTimeParts().map(hm -> hm.length == 2 ? Duration.ofHours(hm[0]).plusMinutes(hm[1]) : null);
     }
 
     @JsonProperty("remoteEnable")
