@@ -36,4 +36,12 @@ public final class Listeners<T> {
     public void clear() {
         listeners.clear();
     }
+
+    public boolean isEmpty() {
+        return listeners.isEmpty();
+    }
+
+    public int size() {
+        return listeners.size();
+    }
 }

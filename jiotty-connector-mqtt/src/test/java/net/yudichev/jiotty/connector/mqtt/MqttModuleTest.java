@@ -5,6 +5,7 @@ import com.google.inject.Key;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import net.yudichev.jiotty.common.async.ExecutorModule;
+import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.time.TimeModule;
 import org.hamcrest.Matchers;
@@ -18,11 +19,11 @@ class MqttModuleTest {
     void injector() {
         Named annotation = Names.named("a");
         ExposedKeyModule<Mqtt> module = MqttModule.builder()
-                .setClientId("ci")
-                .setServerUri("su")
-                .withConnectionOptionsCustomised(mqttConnectOptions -> mqttConnectOptions.setUserName("u"))
-                .withAnnotation(forAnnotation(annotation))
-                .build();
+                                                  .setClientId("ci")
+                                                  .setServerUri("su")
+                                                  .withConnectionOptionsCustomised(BindingSpec.literally(options -> options.setUserName("u")))
+                                                  .withAnnotation(forAnnotation(annotation))
+                                                  .build();
 
         assertThat(module.getExposedKey(), Matchers.is(Key.get(Mqtt.class, annotation)));
 

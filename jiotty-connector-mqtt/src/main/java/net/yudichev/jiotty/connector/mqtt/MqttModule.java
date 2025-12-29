@@ -1,8 +1,10 @@
 package net.yudichev.jiotty.connector.mqtt;
 
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
+import net.yudichev.jiotty.common.inject.BindingSpec;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import net.yudichev.jiotty.common.inject.HasWithAnnotation;
 import net.yudichev.jiotty.common.inject.SpecifiedAnnotation;
@@ -20,16 +22,16 @@ import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forNoAnnotat
 public final class MqttModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Mqtt> {
     private final String serverUri;
     private final String clientId;
-    private final Consumer<MqttConnectOptions> connectionOptionsCustomiser;
+    private final BindingSpec<Consumer<MqttConnectOptions>> connectionOptionsCustomiserSpec;
     private final Key<Mqtt> exposedKey;
 
     private MqttModule(String serverUri,
                        String clientId,
-                       Consumer<MqttConnectOptions> connectionOptionsCustomiser,
+                       BindingSpec<Consumer<MqttConnectOptions>> connectionOptionsCustomiserSpec,
                        SpecifiedAnnotation specifiedAnnotation) {
         this.serverUri = checkNotNull(serverUri);
         this.clientId = checkNotNull(clientId);
-        this.connectionOptionsCustomiser = checkNotNull(connectionOptionsCustomiser);
+        this.connectionOptionsCustomiserSpec = checkNotNull(connectionOptionsCustomiserSpec);
         exposedKey = specifiedAnnotation.specify(ExposedKeyModule.super.getExposedKey().getTypeLiteral());
     }
 
@@ -48,9 +50,9 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
         bindConstant().annotatedWith(MqttClientProvider.ClientId.class).to(clientId);
         bind(IMqttAsyncClient.class).toProvider(MqttClientProvider.class).in(Singleton.class);
 
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        connectionOptionsCustomiser.accept(mqttConnectOptions);
-        bind(MqttConnectOptions.class).annotatedWith(MqttImpl.Dependency.class).toInstance(mqttConnectOptions);
+        connectionOptionsCustomiserSpec.bind(new TypeLiteral<>() {})
+                                       .annotatedWith(MqttImpl.Dependency.class)
+                                       .installedBy(this::installLifecycleComponentModule);
 
         installLifecycleComponentModule(ThresholdThrottlingConsumerModule.builder()
                                                                          .setValueType(Throwable.class)
@@ -64,7 +66,7 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
     public static final class Builder implements TypedBuilder<ExposedKeyModule<Mqtt>>, HasWithAnnotation {
         private String serverUri;
         private String clientId;
-        private Consumer<MqttConnectOptions> connectionOptionsCustomiser = ignored -> {};
+        private BindingSpec<Consumer<MqttConnectOptions>> connectionOptionsCustomiserSpec = BindingSpec.literally(ignored -> {});
         private SpecifiedAnnotation specifiedAnnotation = forNoAnnotation();
 
         public Builder setServerUri(String serverUri) {
@@ -77,8 +79,8 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
             return this;
         }
 
-        public Builder withConnectionOptionsCustomised(Consumer<MqttConnectOptions> connectionOptionsCustomiser) {
-            this.connectionOptionsCustomiser = checkNotNull(connectionOptionsCustomiser);
+        public Builder withConnectionOptionsCustomised(BindingSpec<Consumer<MqttConnectOptions>> connectionOptionsCustomiserSpec) {
+            this.connectionOptionsCustomiserSpec = checkNotNull(connectionOptionsCustomiserSpec);
             return this;
         }
 
@@ -90,7 +92,7 @@ public final class MqttModule extends BaseLifecycleComponentModule implements Ex
 
         @Override
         public ExposedKeyModule<Mqtt> build() {
-            return new MqttModule(serverUri, clientId, connectionOptionsCustomiser, specifiedAnnotation);
+            return new MqttModule(serverUri, clientId, connectionOptionsCustomiserSpec, specifiedAnnotation);
         }
     }
 }

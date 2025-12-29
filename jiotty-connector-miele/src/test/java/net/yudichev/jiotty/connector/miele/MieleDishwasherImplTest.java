@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -48,9 +49,27 @@ class MieleDishwasherImplTest {
     @BeforeEach
     void setUp(WireMockRuntimeInfo wmRuntimeInfo) {
         String baseUrl = wmRuntimeInfo.getHttpBaseUrl();
-        OAuth2TokenManager mockTokenManager = accessTokenHandler -> {
-            accessTokenHandler.accept(ACCESS_TOKEN);
-            return () -> {};
+        OAuth2TokenManager mockTokenManager = new OAuth2TokenManager() {
+            @Override
+            public String clientSecret() {
+                return "";
+            }
+
+            @Override
+            public String clientId() {
+                return "";
+            }
+
+            @Override
+            public String scope() {
+                return "";
+            }
+
+            @Override
+            public Closeable subscribeToAccessToken(Consumer<? super String> accessTokenHandler) {
+                accessTokenHandler.accept(ACCESS_TOKEN);
+                return () -> {};
+            }
         };
 
         mieleDishwasher = new MieleDishwasherImpl(
@@ -64,7 +83,7 @@ class MieleDishwasherImplTest {
                                   .callTimeout(Duration.ofSeconds(1))
                                   .readTimeout(Duration.ofSeconds(1))
                                   .writeTimeout(Duration.ofSeconds(1)),
-                builder -> {},
+                _ -> {},
                 1);
         mieleDishwasher.start();
     }

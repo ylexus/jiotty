@@ -1,5 +1,6 @@
 package net.yudichev.jiotty.connector.tesla.fleet;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -17,10 +18,20 @@ public interface TeslaVehicle {
 
     CompletableFuture<Optional<String>> stopAutoConditioning();
 
+    CompletableFuture<TelemetryGetConfigResponse> telemetryGetConfig();
+
+    CompletableFuture<TelemetryDeleteConfigResponse> telemetryDeleteConfig();
+
+    CompletableFuture<TelemetryFleetStatus> telemetryFleetStatus();
+
+    CompletableFuture<List<TelemetryFleetError>> telemetryFleetErrors();
+
     /**
      * @return {@link Optional#empty()} if the vehicle is not online
      */
     CompletableFuture<Optional<VehicleData>> getData(Set<Endpoint> endpoints);
+
+    String vin();
 
     enum Endpoint {
         CHARGE_STATE("charge_state"),

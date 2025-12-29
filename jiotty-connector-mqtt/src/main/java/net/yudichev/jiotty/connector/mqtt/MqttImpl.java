@@ -61,7 +61,7 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     private final ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory;
     private final MqttConnectOptions mqttConnectOptions;
     private final Map<String, MqttMessage> lastReceivedMessageByTopic = new HashMap<>();
-    private final Map<String, Set<BiConsumer<String, MqttMessage>>> subscriptionsByFilter = new HashMap<>();
+    private final Map<String, Set<Subscription>> subscriptionsByFilter = new HashMap<>();
     private final IMqttAsyncClient client;
     private final ExecutorFactory executorFactory;
     private final String name;
@@ -73,19 +73,20 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     MqttImpl(IMqttAsyncClient client,
              ExecutorFactory executorFactory,
              @Dependency ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory,
-             @Dependency MqttConnectOptions mqttConnectOptions) {
-        this(client, executorFactory, throttledLoggerFactory, mqttConnectOptions, System::nanoTime, ExponentialBackOff.DEFAULT_RANDOMIZATION_FACTOR);
+             @Dependency Consumer<MqttConnectOptions> mqttConnectOptionsCustomiser) {
+        this(client, executorFactory, throttledLoggerFactory, mqttConnectOptionsCustomiser, System::nanoTime, ExponentialBackOff.DEFAULT_RANDOMIZATION_FACTOR);
     }
 
     MqttImpl(IMqttAsyncClient client,
              ExecutorFactory executorFactory,
              ThresholdThrottlingConsumerFactory<Throwable> throttledLoggerFactory,
-             MqttConnectOptions mqttConnectOptions,
+             Consumer<MqttConnectOptions> mqttConnectOptionsCustomiser,
              NanoClock nanoClock,
              double connectBackoffRandmisationFactor) {
         this.executorFactory = checkNotNull(executorFactory);
         this.throttledLoggerFactory = checkNotNull(throttledLoggerFactory);
-        this.mqttConnectOptions = checkNotNull(mqttConnectOptions);
+        mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptionsCustomiser.accept(mqttConnectOptions);
         this.client = client;
         name = super.name() + " " + client.getClientId() + " " + client.getServerURI();
         this.nanoClock = checkNotNull(nanoClock);
@@ -161,33 +162,34 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
     }
 
     @Override
-    public Closeable subscribe(String topicFilter, BiConsumer<String, String> dataCallback) {
+    public Closeable subscribe(String topicFilter, int qos, BiConsumer<String, String> dataCallback) {
         checkStarted();
         BiConsumer<String, MqttMessage> callback = exceptionLogging(new MessageToStringDataCallback(dataCallback));
+        var subscription = new Subscription(qos, callback);
         executor.execute(() -> {
             deliverImage(topicFilter, callback);
             subscriptionsByFilter.computeIfAbsent(topicFilter, filter -> {
                 doSubscribe(filter,
-                            (topic, message) -> {
-                                Set<BiConsumer<String, MqttMessage>> subscriptions = subscriptionsByFilter.get(filter);
-                                if (!subscriptions.isEmpty()) {
-                                    runForAll(subscriptions, consumer -> consumer.accept(topic, message));
-                                }
-                            });
+                            2, (topic, message) -> {
+                            Set<Subscription> subscriptions = subscriptionsByFilter.get(filter);
+                            if (!subscriptions.isEmpty()) {
+                                runForAll(subscriptions, sub -> sub.accept(topic, message));
+                            }
+                        });
                 return new HashSet<>();
-            }).add(callback);
+            }).add(subscription);
         });
 
         return idempotent(() -> executor.execute(guarded(logger, "unsubscribe", () ->
-                subscriptionsByFilter.computeIfPresent(topicFilter, (filter, callbacks) -> {
-                    callbacks.remove(callback);
-                    if (callbacks.isEmpty()) {
+                subscriptionsByFilter.computeIfPresent(topicFilter, (_, subscriptions) -> {
+                    subscriptions.remove(subscription);
+                    if (subscriptions.isEmpty()) {
                         if (client.isConnected()) {
                             asUnchecked(() -> client.unsubscribe(topicFilter));
                         }
                         return null;
                     }
-                    return callbacks;
+                    return subscriptions;
                 }))));
     }
 
@@ -225,8 +227,8 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         };
     }
 
-    private void doSubscribe(String topicFilter, BiConsumer<String, MqttMessage> callback) {
-        asUnchecked(() -> client.subscribe(topicFilter, 2, (topic, message) -> {
+    private void doSubscribe(String topicFilter, int qos, BiConsumer<String, MqttMessage> callback) {
+        asUnchecked(() -> client.subscribe(topicFilter, qos, (topic, message) -> {
             logger.debug("IN topic: {}, msg: {}", topic, message);
             guarded(logger, "Notify client on MQTT message", () -> callback.accept(topic, message)).run();
         }));
@@ -281,8 +283,10 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
             executor.execute(() -> {
                 logger.info("Restoring subscriptions: {}", subscriptionsByFilter);
                 try {
-                    subscriptionsByFilter.forEach((topicFilter, callbacks) ->
-                                                          callbacks.forEach(callback -> doSubscribe(topicFilter, callback)));
+                    subscriptionsByFilter.forEach((topicFilter, subscriptions) ->
+                                                          subscriptions.forEach(subscription -> doSubscribe(topicFilter,
+                                                                                                            subscription.qos(),
+                                                                                                            subscription.dataCallback())));
                     backOff.reset();
                 } catch (RuntimeException e) {
                     long nextRetryInMs = backOff.nextBackOffMillis();
@@ -312,6 +316,12 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         @Override
         public void deliveryComplete(IMqttDeliveryToken token) {
             logger.debug("Message delivered: {}", token.getMessageId());
+        }
+    }
+
+    private record Subscription(int qos, BiConsumer<String, MqttMessage> dataCallback) {
+        public void accept(String topic, MqttMessage message) {
+            dataCallback.accept(topic, message);
         }
     }
 }

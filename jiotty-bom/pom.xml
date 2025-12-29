@@ -7,14 +7,16 @@
     <parent>
         <groupId>net.yudichev.jiotty</groupId>
         <artifactId>jiotty</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>jiotty-bom</artifactId>
     <properties>
-        <version.org.apache.logging.log4j>2.25.2</version.org.apache.logging.log4j>
+        <version.org.apache.logging.log4j>2.25.3</version.org.apache.logging.log4j>
         <org.immutables.version>2.11.6</org.immutables.version>
         <org.slf4j.version>1.7.36</org.slf4j.version> <!-- 2.0 is not compatible with log4j binding; TODO: remove slf4j layer completely -->
+        <com.google.maps.version>1.65.0</com.google.maps.version>
+        <com.google.http-client.version>2.0.2</com.google.http-client.version>
     </properties>
     <packaging>pom</packaging>
 
@@ -121,6 +123,13 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jiotty-connector-mqtt</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jiotty-connector-nest</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -217,6 +226,13 @@
                 <groupId>com.github.caldav4j</groupId>
                 <artifactId>caldav4j</artifactId>
                 <version>1.0.5</version>
+                <exclusions>
+                    <!-- this lib packages commons-logging classes without any package remapping -->
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>jcl-over-slf4j</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.github.ilpersi</groupId>
@@ -233,9 +249,33 @@
             <dependency>
                 <groupId>com.google.maps</groupId>
                 <artifactId>google-maps-routing-bom</artifactId>
-                <version>1.65.0</version>
+                <version>${com.google.maps.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <!-- Part of the BOM above only declared to add exclusion -->
+                <groupId>com.google.maps.api.grpc</groupId>
+                <artifactId>proto-google-maps-routing-v2</artifactId>
+                <version>${com.google.maps.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>jsr305</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <!-- Part of the BOM above only declared to add exclusion -->
+                <groupId>com.google.maps.api.grpc</groupId>
+                <artifactId>grpc-google-maps-routing-v2</artifactId>
+                <version>${com.google.maps.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>jsr305</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.google.maps</groupId>
@@ -357,6 +397,12 @@
                 <groupId>com.google.auth</groupId>
                 <artifactId>google-auth-library-oauth2-http</artifactId>
                 <version>1.40.0</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>jsr305</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.google.auth</groupId>
@@ -419,7 +465,7 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
-                <version>2.0.2</version>
+                <version>${com.google.http-client.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.errorprone</groupId>
@@ -452,9 +498,21 @@
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-bom</artifactId>
                 <!-- this must be kept the same as referenced via the used google-api-client (via google-api-client-parent) -->
-                <version>2.0.2</version>
+                <version>${com.google.http-client.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <!-- Part of the BOM above only declared to add exclusion -->
+                <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client</artifactId>
+                <version>${com.google.http-client.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>jsr305</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.google.oauth-client</groupId>

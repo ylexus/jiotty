@@ -14,3 +14,5 @@ Configuration:
         level: '${sys:log4j.root.level:-DEBUG}'
       - name: net.yudichev.jiotty.common.rest
         level: '${sys:log4j.root.level:-DEBUG}'
+      - name: net.yudichev.jiotty.connector.mqtt
+        level: '${sys:log4j.root.level:-DEBUG}'

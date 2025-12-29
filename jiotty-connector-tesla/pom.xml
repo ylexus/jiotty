@@ -5,7 +5,7 @@
     <parent>
         <groupId>net.yudichev.jiotty</groupId>
         <artifactId>jiotty-parent</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
         <relativePath>../jiotty-parent</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -21,6 +21,11 @@
         <dependency>
             <groupId>net.yudichev.jiotty</groupId>
             <artifactId>jiotty-persistence</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.yudichev.jiotty</groupId>
+            <artifactId>jiotty-connector-mqtt</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -77,4 +82,19 @@
             <artifactId>assertj-core</artifactId>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredNonTestScopedDependencies>
+                        <!-- no reference to this dependency in code anywhere, it's fully transitive, so some analysis failure -->
+                        <dependency>org.eclipse.paho:org.eclipse.paho.client.mqttv3</dependency>
+                    </ignoredNonTestScopedDependencies>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

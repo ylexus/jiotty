@@ -115,6 +115,21 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
                                  this::obtainAccessToken);
     }
 
+    @Override
+    public String clientSecret() {
+        return clientSecret;
+    }
+
+    @Override
+    public String clientId() {
+        return clientId;
+    }
+
+    @Override
+    public String scope() {
+        return scope;
+    }
+
     @SuppressWarnings("TypeMayBeWeakened")
     private boolean isExpired(OauthAccessToken accessToken) {
         return currentDateTimeProvider.currentInstant().isAfter(accessToken.expiryTime());

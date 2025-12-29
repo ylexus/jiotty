@@ -7,7 +7,6 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,8 +49,7 @@ class MqttImplTest {
     void setUp() throws MqttException {
         clock = new ProgrammableClock().withMdc();
 
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqtt = new MqttImpl(client, clock, (threshold, throttlingDuration, delegate) -> e -> {}, mqttConnectOptions, clock, 0) {
+        mqtt = new MqttImpl(client, clock, (_, _, _) -> _ -> {}, _ -> {}, clock, 0) {
             @Override
             void scheduleReconnect(Scheduler scheduler, Long delayMillis, Runnable runnable) {
                 scheduler.schedule(Duration.ofMillis(delayMillis), runnable);
