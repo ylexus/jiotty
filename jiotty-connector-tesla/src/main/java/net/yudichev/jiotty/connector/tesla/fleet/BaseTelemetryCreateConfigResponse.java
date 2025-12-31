@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;
 
+import java.util.Optional;
+
 @Value.Immutable
 @PublicImmutablesStyle
 @JsonDeserialize
@@ -15,5 +17,5 @@ interface BaseTelemetryCreateConfigResponse {
     int updatedVehicles();
 
     @JsonProperty("skipped_vehicles")
-    TelemetryCreateConfigSkippedVehicles skippedVehicles();
+    Optional<TelemetryCreateConfigSkippedVehicles> skippedVehicles();
 }
