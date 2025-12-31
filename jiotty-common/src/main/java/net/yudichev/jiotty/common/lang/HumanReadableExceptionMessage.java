@@ -9,19 +9,25 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class HumanReadableExceptionMessage {
     public static String humanReadableMessage(Throwable exception) {
+        var sb = new StringBuilder(128);
+        var appender = Appender.wrap(sb);
+        appendHumanReadableMessage(exception, appender);
+
+        return sb.toString();
+    }
+
+    public static void appendHumanReadableMessage(Throwable exception, Appender appender) {
         List<Throwable> causalChain = Throwables.getCausalChain(exception);
-        StringBuilder stringBuilder = new StringBuilder(64);
         Throwable parent = null;
+        boolean appended = false;
         for (Throwable throwable : causalChain) {
             String parentExceptionMessage;
             if (parent != null && !throwable.toString().equals(parentExceptionMessage = exceptionMessage(parent))) {
-                append(stringBuilder, parent, parentExceptionMessage);
+                appended = append(appended, appender, parent, parentExceptionMessage);
             }
             parent = throwable;
         }
-        append(stringBuilder, checkNotNull(parent), exceptionMessage(parent));
-
-        return stringBuilder.toString();
+        append(appended, appender, checkNotNull(parent), exceptionMessage(parent));
     }
 
     @Nullable
@@ -29,31 +35,34 @@ public final class HumanReadableExceptionMessage {
         return exception instanceof InterruptedException ? null : exception.getMessage();
     }
 
-    private static void append(StringBuilder sb, Throwable throwable, @Nullable String message) {
-        if (!sb.isEmpty()) {
-            sb.append(": ");
+    private static boolean append(boolean appended, Appender appender, Throwable throwable, @Nullable String message) {
+        if (appended) {
+            appender.append(": ");
         }
         boolean typeAppended;
         if (throwable.getClass() == RuntimeException.class) {
             typeAppended = false;
         } else {
             switch (throwable) {
-                case Exception e -> appendType(sb, e, "Exception".length());
-                case Error e -> appendType(sb, e, "Error".length());
-                default -> appendType(sb, throwable, 0);
+                case Exception e -> appendType(appender, e, "Exception".length());
+                case Error e -> appendType(appender, e, "Error".length());
+                default -> appendType(appender, throwable, 0);
             }
             typeAppended = true;
         }
+        appended |= typeAppended;
         if (message != null) {
             if (typeAppended) {
-                sb.append(": ");
+                appender.append(": ");
             }
-            sb.append(message);
+            appender.append(message);
+            appended = true;
         }
+        return appended;
     }
 
-    private static void appendType(StringBuilder sb, Throwable throwable, int suffixLength) {
+    private static void appendType(Appender appender, Throwable throwable, int suffixLength) {
         String simpleName = throwable.getClass().getSimpleName();
-        sb.append(simpleName, 0, simpleName.length() - suffixLength);
+        appender.append(simpleName, 0, simpleName.length() - suffixLength);
     }
 }
