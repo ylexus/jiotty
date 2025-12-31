@@ -1,6 +1,5 @@
 package net.yudichev.jiotty.connector.tesla.fleet;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -24,7 +23,7 @@ public interface TeslaVehicle {
 
     CompletableFuture<TelemetryFleetStatus> telemetryFleetStatus();
 
-    CompletableFuture<List<TelemetryFleetError>> telemetryFleetErrors();
+    CompletableFuture<TelemetryFleetErrorsResponse> telemetryFleetErrors();
 
     /**
      * @return {@link Optional#empty()} if the vehicle is not online

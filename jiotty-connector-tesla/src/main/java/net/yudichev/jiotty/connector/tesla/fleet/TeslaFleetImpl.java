@@ -403,7 +403,7 @@ public final class TeslaFleetImpl extends BaseLifecycleComponent implements Tesl
         }
 
         @Override
-        public CompletableFuture<List<TelemetryFleetError>> telemetryFleetErrors() {
+        public CompletableFuture<TelemetryFleetErrorsResponse> telemetryFleetErrors() {
             return executeGet(telemetryFleetErrorsUrl, new TypeToken<>() {});
         }
     }
