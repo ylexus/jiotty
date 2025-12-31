@@ -1,5 +1,7 @@
 package net.yudichev.jiotty.common.lang;
 
+import java.util.function.BiConsumer;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
@@ -17,6 +19,23 @@ public interface Appender extends Appendable {
     Appender append(int i);
 
     Appender append(Object object);
+
+    default <T> Appender append(Iterable<? extends T> iterable, BiConsumer<Appender, ? super T> appendCode) {
+        int i = 0;
+        append('[');
+        for (T item : iterable) {
+            if (i++ > 0) {
+                append(", ");
+            }
+            appendCode.accept(this, item);
+        }
+        append(']');
+        return this;
+    }
+
+    default <T> Appender append(Iterable<? extends T> iterable) {
+        return append(iterable, Appender::append);
+    }
 
     static Appender wrap(Appendable appendable) {
         return new AppendableWrapper(appendable);
