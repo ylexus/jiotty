@@ -1,6 +1,5 @@
 package net.yudichev.jiotty.connector.tesla.fleet;
 
-import jakarta.annotation.Nullable;
 import net.yudichev.jiotty.common.geo.LatLon;
 import net.yudichev.jiotty.common.lang.Json;
 
@@ -14,32 +13,6 @@ public sealed interface TelemetryField permits
         TelemetryField.THvacLeftTemperatureRequest,
         TelemetryField.THvacRightTemperatureRequest {
     String name();
-
-    static @Nullable TelemetryField decode(String fieldName, String jsonData) {
-        return switch (fieldName) {
-            case "DetailedChargeState" -> TDetailedChargeState.decode(jsonData);
-            case "BatteryLevel" -> new TBatteryLevel(decodeDouble(jsonData));
-            case "ChargeLimitSoc" -> new TChargeLimitSoc(decodeInt(jsonData));
-            case "Location" -> TLocation.decode(Json.parse(jsonData, TelemetryLocation.class));
-            case "PreconditioningEnabled" -> new TPreconditioningEnabled(decodeBoolean(jsonData));
-            case "InsideTemp" -> new TInsideTemp(decodeDouble(jsonData));
-            case "HvacLeftTemperatureRequest" -> new THvacLeftTemperatureRequest(decodeDouble(jsonData));
-            case "HvacRightTemperatureRequest" -> new THvacRightTemperatureRequest(decodeDouble(jsonData));
-            default -> null;
-        };
-    }
-
-    static boolean decodeBoolean(String jsonData) {
-        return Boolean.parseBoolean(jsonData);
-    }
-
-    static int decodeInt(String jsonData) {
-        return Integer.parseInt(jsonData);
-    }
-
-    static double decodeDouble(String jsonData) {
-        return Double.parseDouble(jsonData);
-    }
 
     record TDetailedChargeState(TeslaChargingState state) implements TelemetryField {
         public static final TDetailedChargeState DISCONNECTED = new TDetailedChargeState(TeslaChargingState.DISCONNECTED);
