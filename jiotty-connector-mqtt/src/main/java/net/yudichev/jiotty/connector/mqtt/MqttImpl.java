@@ -87,6 +87,8 @@ class MqttImpl extends BaseLifecycleComponent implements Mqtt {
         this.throttledLoggerFactory = checkNotNull(throttledLoggerFactory);
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptionsCustomiser.accept(mqttConnectOptions);
+        // force auto-reconnect: we are not implementing own reconnect, so this is essential
+        mqttConnectOptions.setAutomaticReconnect(true);
         this.client = client;
         name = super.name() + " " + client.getClientId() + " " + client.getServerURI();
         this.nanoClock = checkNotNull(nanoClock);
