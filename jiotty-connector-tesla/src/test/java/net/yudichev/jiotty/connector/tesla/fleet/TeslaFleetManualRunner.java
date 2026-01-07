@@ -34,10 +34,10 @@ import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TBatteryL
 import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TChargeLimitSoc;
 import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TDetailedChargeState;
 import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.THvacLeftTemperatureRequest;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.THvacPower;
 import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.THvacRightTemperatureRequest;
 import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TInsideTemp;
 import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TLocation;
-import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TPreconditioningEnabled;
 import static net.yudichev.jiotty.connector.tesla.fleet.TeslaVehicle.Endpoint.CHARGE_STATE;
 import static net.yudichev.jiotty.connector.tesla.fleet.TeslaVehicle.Endpoint.CLIMATE_STATE;
 import static net.yudichev.jiotty.connector.tesla.fleet.TeslaVehicle.Endpoint.LOCATION_DATA;
@@ -147,7 +147,7 @@ final class TeslaFleetManualRunner {
                                             TBatteryLevel.NAME, TelemetryFieldParams.builder().setIntervalSeconds(30).setMinimumDelta(0.5).build(),
                                             TChargeLimitSoc.NAME, TelemetryFieldParams.of(1),
                                             TLocation.NAME, TelemetryFieldParams.of(60),
-                                            TPreconditioningEnabled.NAME, TelemetryFieldParams.of(1),
+                                            THvacPower.NAME, TelemetryFieldParams.of(1),
                                             TInsideTemp.NAME, TelemetryFieldParams.builder().setIntervalSeconds(1).setMinimumDelta(0.5).build(),
                                             THvacLeftTemperatureRequest.NAME, TelemetryFieldParams.of(1),
                                             THvacRightTemperatureRequest.NAME, TelemetryFieldParams.of(1));

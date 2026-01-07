@@ -3,24 +3,29 @@ package net.yudichev.jiotty.connector.tesla.fleet;
 import jakarta.annotation.Nullable;
 import net.yudichev.jiotty.common.lang.Json;
 
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TBatteryLevel;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TChargeLimitSoc;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TDetailedChargeState;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.THvacLeftTemperatureRequest;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.THvacPower;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.THvacRightTemperatureRequest;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TInsideTemp;
+import static net.yudichev.jiotty.connector.tesla.fleet.TelemetryField.TLocation;
+
 final class TelemetryFieldDecoder {
     /// @return `null` if the `fieldName` is unsupported
     public static @Nullable TelemetryField decode(String fieldName, String jsonData) {
         return switch (fieldName) {
-            case "DetailedChargeState" -> TelemetryField.TDetailedChargeState.decode(jsonData);
-            case "BatteryLevel" -> new TelemetryField.TBatteryLevel(decodeDouble(jsonData));
-            case "ChargeLimitSoc" -> new TelemetryField.TChargeLimitSoc(decodeInt(jsonData));
-            case "Location" -> TelemetryField.TLocation.decode(Json.parse(jsonData, TelemetryLocation.class));
-            case "PreconditioningEnabled" -> new TelemetryField.TPreconditioningEnabled(decodeBoolean(jsonData));
-            case "InsideTemp" -> new TelemetryField.TInsideTemp(decodeDouble(jsonData));
-            case "HvacLeftTemperatureRequest" -> new TelemetryField.THvacLeftTemperatureRequest(decodeDouble(jsonData));
-            case "HvacRightTemperatureRequest" -> new TelemetryField.THvacRightTemperatureRequest(decodeDouble(jsonData));
+            case TDetailedChargeState.NAME -> TDetailedChargeState.decode(jsonData);
+            case TBatteryLevel.NAME -> new TBatteryLevel(decodeDouble(jsonData));
+            case TChargeLimitSoc.NAME -> new TChargeLimitSoc(decodeInt(jsonData));
+            case TLocation.NAME -> TLocation.decode(Json.parse(jsonData, TelemetryLocation.class));
+            case THvacPower.NAME -> THvacPower.decode(jsonData);
+            case TInsideTemp.NAME -> new TInsideTemp(decodeDouble(jsonData));
+            case THvacLeftTemperatureRequest.NAME -> new THvacLeftTemperatureRequest(decodeDouble(jsonData));
+            case THvacRightTemperatureRequest.NAME -> new THvacRightTemperatureRequest(decodeDouble(jsonData));
             default -> null;
         };
-    }
-
-    private static boolean decodeBoolean(String jsonData) {
-        return Boolean.parseBoolean(jsonData);
     }
 
     private static int decodeInt(String jsonData) {

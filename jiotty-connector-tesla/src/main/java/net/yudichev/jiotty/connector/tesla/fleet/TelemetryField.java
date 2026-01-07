@@ -8,11 +8,36 @@ public sealed interface TelemetryField permits
         TelemetryField.TBatteryLevel,
         TelemetryField.TChargeLimitSoc,
         TelemetryField.TLocation,
-        TelemetryField.TPreconditioningEnabled,
+        TelemetryField.THvacPower,
         TelemetryField.TInsideTemp,
         TelemetryField.THvacLeftTemperatureRequest,
         TelemetryField.THvacRightTemperatureRequest {
-    String name();
+    String fieldName();
+
+    enum THvacPower implements TelemetryField {
+        UNKNOWN,
+        OFF,
+        ON,
+        PRECONDITION,
+        OVERHEAT_PROTECT;
+
+        public static final String NAME = "HvacPower";
+
+        public static THvacPower decode(String jsonValue) {
+            return switch (Json.parse(jsonValue, String.class)) {
+                case "HvacPowerStateOff" -> OFF;
+                case "HvacPowerStateOn" -> ON;
+                case "HvacPowerStatePrecondition" -> PRECONDITION;
+                case "HvacPowerStateOverheatProtect" -> OVERHEAT_PROTECT;
+                default -> UNKNOWN;
+            };
+        }
+
+        @Override
+        public String fieldName() {
+            return NAME;
+        }
+    }
 
     record TDetailedChargeState(TeslaChargingState state) implements TelemetryField {
         public static final TDetailedChargeState DISCONNECTED = new TDetailedChargeState(TeslaChargingState.DISCONNECTED);
@@ -37,7 +62,7 @@ public sealed interface TelemetryField permits
         }
 
         @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
@@ -46,7 +71,7 @@ public sealed interface TelemetryField permits
         public static final String NAME = "BatteryLevel";
 
         @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
@@ -55,7 +80,7 @@ public sealed interface TelemetryField permits
         public static final String NAME = "ChargeLimitSoc";
 
         @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
@@ -68,16 +93,7 @@ public sealed interface TelemetryField permits
         }
 
         @Override
-        public String name() {
-            return NAME;
-        }
-    }
-
-    record TPreconditioningEnabled(boolean value) implements TelemetryField {
-        public static final String NAME = "PreconditioningEnabled";
-
-        @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
@@ -86,7 +102,7 @@ public sealed interface TelemetryField permits
         public static final String NAME = "InsideTemp";
 
         @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
@@ -95,7 +111,7 @@ public sealed interface TelemetryField permits
         public static final String NAME = "HvacLeftTemperatureRequest";
 
         @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
@@ -104,7 +120,7 @@ public sealed interface TelemetryField permits
         public static final String NAME = "HvacRightTemperatureRequest";
 
         @Override
-        public String name() {
+        public String fieldName() {
             return NAME;
         }
     }
