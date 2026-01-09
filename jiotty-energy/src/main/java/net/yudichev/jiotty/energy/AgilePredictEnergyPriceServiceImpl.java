@@ -89,10 +89,10 @@ final class AgilePredictEnergyPriceServiceImpl extends BaseLifecycleComponent im
     }
 
     private void retrievePrices() {
-        logger.info("Requesting AgilePredict prices for 7 days");
-        priceService.getPrices("A", 7)
+        logger.info("Requesting AgilePredict prices for 13 days");
+        priceService.getPrices("A", 13)
                     .thenAcceptAsync(prices -> listeners.notify(handleAgilePredictPrices(prices)), executor)
-                    .whenCompleteAsync((unused, throwable) -> {
+                    .whenCompleteAsync((_, throwable) -> {
                         if (throwable != null) {
                             handleFailure(throwable);
                         }
