@@ -102,11 +102,6 @@
                     <version>3.3.1</version>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.12.0</version>
-                </plugin>
-                <plugin>
                     <groupId>org.sonatype.plugins</groupId>
                     <artifactId>nexus-staging-maven-plugin</artifactId>
                     <version>1.7.0</version>
@@ -192,39 +187,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <configuration>
-                            <!-- Do not warn about missing Javadoc on every element -->
-                            <doclint>all,-missing</doclint>
-                            <tags>
-                                <tag>
-                                    <name>apiNote</name>
-                                    <placement>a</placement>
-                                    <head>API Note:</head>
-                                </tag>
-                                <tag>
-                                    <name>implSpec</name>
-                                    <placement>a</placement>
-                                    <head>Implementation Requirements:</head>
-                                </tag>
-                                <tag>
-                                    <name>implNote</name>
-                                    <placement>a</placement>
-                                    <head>Implementation Note:</head>
-                                </tag>
-                            </tags>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>attach-javadoc</id>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
                 </plugins>
             </build>
         </profile>
@@ -238,39 +200,6 @@
                         <executions>
                             <execution>
                                 <id>attach-sources</id>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <configuration>
-                            <!-- Do not warn about missing Javadoc on every element -->
-                            <doclint>all,-missing</doclint>
-                            <tags>
-                                <tag>
-                                    <name>apiNote</name>
-                                    <placement>a</placement>
-                                    <head>API Note:</head>
-                                </tag>
-                                <tag>
-                                    <name>implSpec</name>
-                                    <placement>a</placement>
-                                    <head>Implementation Requirements:</head>
-                                </tag>
-                                <tag>
-                                    <name>implNote</name>
-                                    <placement>a</placement>
-                                    <head>Implementation Note:</head>
-                                </tag>
-                            </tags>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>attach-javadoc</id>
                                 <goals>
                                     <goal>jar</goal>
                                 </goals>
