@@ -7,9 +7,11 @@ public interface NodeContext {
 
     String name();
 
-    void triggerInNextWave();
+    /// @return `true` if the node was not already pending trigger
+    boolean triggerInNextWave();
 
-    void triggerMeAndParentsInNextWave();
+    /// @return `true` if at least one node was not already pending trigger
+    boolean triggerMeAndParentsInNextWave();
 
     Graph graph();
 }

@@ -28,6 +28,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.net.URI;
 import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -71,9 +72,9 @@ final class IcloudCalendar implements Calendar {
             try (var httpClient = httpClientFactory.get()) {
 
                 // Build time range: now -> next 24h
-                var start = new DateTime(java.util.Date.from(from));
+                var start = new DateTime(Date.from(from));
                 start.setUtc(true);
-                var end = new DateTime(java.util.Date.from(to));
+                var end = new DateTime(Date.from(to));
                 end.setUtc(true);
 
                 // Build comp-filters for VCALENDAR/VEVENT
@@ -135,10 +136,8 @@ final class IcloudCalendar implements Calendar {
 
     @Override
     public String toString() {
-        var sb = new StringBuilder("IcloudCalendar{");
-        sb.append("id='").append(id).append('\'');
-        sb.append(", name='").append(name).append('\'');
-        sb.append('}');
-        return sb.toString();
+        return "IcloudCalendar{" + "id='" + id + '\''
+               + ", name='" + name + '\''
+               + '}';
     }
 }

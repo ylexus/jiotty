@@ -29,11 +29,11 @@ final class PushoverLocalRunner {
     }
 
     static class Runner extends BaseLifecycleComponent {
-        private final net.yudichev.jiotty.connector.pushover.UserAlerter userAlerter;
+        private final UserAlerter userAlerter;
         private Thread thread;
 
         @Inject
-        public Runner(net.yudichev.jiotty.connector.pushover.UserAlerter userAlerter) {
+        public Runner(UserAlerter userAlerter) {
             this.userAlerter = checkNotNull(userAlerter);
         }
 

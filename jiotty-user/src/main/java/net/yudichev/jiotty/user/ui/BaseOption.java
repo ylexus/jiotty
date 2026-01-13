@@ -13,12 +13,12 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public abstract class BaseOption<T> implements net.yudichev.jiotty.user.ui.Option<T> {
+public abstract class BaseOption<T> implements Option<T> {
     private final String key;
     @Nullable
     private final T defaultValue;
     private final TaskExecutor executor;
-    private final Listeners<net.yudichev.jiotty.user.ui.Option<T>> changeListeners = new Listeners<>();
+    private final Listeners<Option<T>> changeListeners = new Listeners<>();
     @SuppressWarnings("ProtectedField") // optional field
     protected int formOrder = Integer.MIN_VALUE;
     protected String tabName = "Misc";
@@ -42,7 +42,7 @@ public abstract class BaseOption<T> implements net.yudichev.jiotty.user.ui.Optio
 
     @Override
     public final int getFormOrder() {
-        return formOrder == Integer.MIN_VALUE ? net.yudichev.jiotty.user.ui.Option.super.getFormOrder() : formOrder;
+        return formOrder == Integer.MIN_VALUE ? Option.super.getFormOrder() : formOrder;
     }
 
     @Override
@@ -56,7 +56,7 @@ public abstract class BaseOption<T> implements net.yudichev.jiotty.user.ui.Optio
     }
 
     @Override
-    public Closeable addChangeListener(Consumer<net.yudichev.jiotty.user.ui.Option<T>> listener) {
+    public Closeable addChangeListener(Consumer<Option<T>> listener) {
         return changeListeners.addListener(listener);
     }
 

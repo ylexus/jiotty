@@ -9,7 +9,7 @@ import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
-import net.yudichev.jiotty.common.lang.DeduplicatingConsumer;
+import net.yudichev.jiotty.common.lang.ConcurrentDeduplicatingConsumer;
 import net.yudichev.jiotty.common.lang.StabilisingConsumer;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import org.slf4j.Logger;
@@ -107,7 +107,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     @Override
     public Closeable addListener(Consumer<Status> statusConsumer, Executor executor) {
         return whenStartedAndNotLifecycling(() -> {
-            Consumer<Status> consumer = new DispatchedConsumer<>(new DeduplicatingConsumer<>(referenceEquality(), statusConsumer), executor);
+            Consumer<Status> consumer = new DispatchedConsumer<>(new ConcurrentDeduplicatingConsumer<>(referenceEquality(), statusConsumer), executor);
             listeners.add(consumer);
             this.executor.execute(() -> {
                 if (currentStableStatus != null) {
@@ -122,8 +122,8 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
     protected void doStart() {
         logger.info("Start monitoring {} ({}) with tolerance {}", name, hostnames, tolerance);
         executor = executorFactory.createSingleThreadedSchedulingExecutor("host-monitor-" + name);
-        statusStabiliser = new DeduplicatingConsumer<>(referenceEquality(),
-                                                       new StabilisingConsumer<>(executor, tolerance, this::onStableStatus));
+        statusStabiliser = new ConcurrentDeduplicatingConsumer<>(referenceEquality(),
+                                                                 new StabilisingConsumer<>(executor, tolerance, this::onStableStatus));
 
         executor.execute(() -> {
             onStatus(UP, "Assume UP on startup");
@@ -325,6 +325,7 @@ final class HostMonitorImpl extends BaseLifecycleComponent implements HostMonito
         }
     }
 
+    @SuppressWarnings("ClassCanBeRecord")
     private static class CompositePoller implements HostPoller {
         private final ImmutableList<HostPoller> delegates;
 

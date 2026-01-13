@@ -9,20 +9,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.function.Consumer;
 
-import static net.yudichev.jiotty.common.lang.EqualityComparator.equality;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class DeduplicatingConsumerTest {
+abstract class DeduplicatingConsumerTest {
     @Mock
     private Consumer<String> delegate;
-    private DeduplicatingConsumer<String> deduplicatingConsumer;
+    private Consumer<String> deduplicatingConsumer;
 
     @BeforeEach
     void setUp() {
-        deduplicatingConsumer = new DeduplicatingConsumer<>(equality(), delegate);
+        deduplicatingConsumer = createInstance(EqualityComparator.equality(), delegate);
     }
+
+    protected abstract Consumer<String> createInstance(EqualityComparator<String> equalityComparator, Consumer<String> delegate);
 
     @AfterEach
     void tearDown() {

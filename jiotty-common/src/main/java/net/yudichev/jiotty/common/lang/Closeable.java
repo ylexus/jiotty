@@ -27,9 +27,8 @@ public interface Closeable extends AutoCloseable {
     }
 
     static Closeable forCloseables(Collection<? extends AutoCloseable> closeables) {
-        //noinspection Convert2MethodRef getting weird compiler error
         return forActions(closeables.stream()
-                                    .<Runnable>map(closeable -> () -> asUnchecked(() -> closeable.close()))
+                                    .<Runnable>map(closeable -> () -> asUnchecked(closeable::close))
                                     .collect(toImmutableList()));
     }
 

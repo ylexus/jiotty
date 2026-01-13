@@ -43,8 +43,12 @@ public abstract class BaseNode implements Node {
         return checkNotNull(nodeContext, "not initialised yet");
     }
 
-    public void trigger() {
-        nodeContext.triggerInNextWave();
+    public boolean trigger() {
+        return nodeContext.triggerInNextWave();
+    }
+
+    public boolean triggerMeAndParents() {
+        return nodeContext.triggerMeAndParentsInNextWave();
     }
 
     protected void initialise() {

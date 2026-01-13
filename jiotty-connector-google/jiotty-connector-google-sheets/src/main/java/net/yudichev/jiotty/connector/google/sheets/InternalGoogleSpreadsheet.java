@@ -14,6 +14,7 @@ import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import java.io.IOException;
@@ -51,7 +52,7 @@ final class InternalGoogleSpreadsheet implements GoogleSpreadsheet {
                                                                     new ValueRange().setValues(ImmutableList.of(ImmutableList.of(value))))
                                                             .setValueInputOption("USER_ENTERED")
                                                             .execute()))
-                .thenApply(response -> null);
+                .thenApply(_ -> null);
     }
 
     @Override
@@ -89,7 +90,7 @@ final class InternalGoogleSpreadsheet implements GoogleSpreadsheet {
                       }
 
                       @Override
-                      public void onResponse(Call call, okhttp3.Response response) {
+                      public void onResponse(Call call, Response response) {
                           ResponseBody responseBody = checkNotNull(response.body());
                           try {
                               future.complete(responseBody.bytes());

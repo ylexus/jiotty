@@ -256,15 +256,18 @@ public class Graph extends BaseIdempotentCloseable {
         }
 
         @Override
-        public void triggerInNextWave() {
+        public boolean triggerInNextWave() {
             assertCallingThreadConsistent();
-            nodesPendingTrigger.add(this);
+            return nodesPendingTrigger.add(this);
         }
 
         @Override
-        public void triggerMeAndParentsInNextWave() {
-            triggerInNextWave();
-            forAllParentsRecursively(NodeState::triggerInNextWave);
+        public boolean triggerMeAndParentsInNextWave() {
+            boolean triggered = triggerInNextWave();
+            for (NodeState parent : parents) {
+                triggered |= parent.triggerMeAndParentsInNextWave();
+            }
+            return triggered;
         }
 
         @Override
@@ -292,13 +295,6 @@ public class Graph extends BaseIdempotentCloseable {
             for (NodeState child : children) {
                 consumer.accept(child);
                 child.forAllChildrenRecursively(consumer);
-            }
-        }
-
-        private void forAllParentsRecursively(Consumer<NodeState> consumer) {
-            for (NodeState parent : parents) {
-                consumer.accept(parent);
-                parent.forAllParentsRecursively(consumer);
             }
         }
     }

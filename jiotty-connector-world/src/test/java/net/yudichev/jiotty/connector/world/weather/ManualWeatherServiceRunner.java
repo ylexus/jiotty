@@ -5,6 +5,7 @@ import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.geo.LatLon;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.time.TimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ final class ManualWeatherServiceRunner {
                    .addModule(() -> WeatherServiceModule.builder()
                                                         .setApiKey(literally(apiKey))
                                                         .build())
-                   .addModule(() -> new net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule() {
+                   .addModule(() -> new BaseLifecycleComponentModule() {
                        @Override
                        protected void configure() {
                            registerLifecycleComponent(Runner.class);

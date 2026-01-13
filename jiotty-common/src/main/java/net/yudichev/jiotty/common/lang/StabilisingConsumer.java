@@ -11,6 +11,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.Closeable.closeIfNotNull;
 
+/// Delays propagating updates until no more updates are received within `stabilisationDuration`, unless `ignoreStabilisationPredicate` returns true, in which
+/// case the value is immediately propagated.
 public final class StabilisingConsumer<T> implements Consumer<T> {
     private final Scheduler scheduler;
     private final Predicate<T> ignoreStabilisationPredicate;
@@ -21,7 +23,7 @@ public final class StabilisingConsumer<T> implements Consumer<T> {
     private volatile T pendingValue;
 
     public StabilisingConsumer(Scheduler scheduler, Duration stabilisationDuration, Consumer<T> delegate) {
-        this(scheduler, stabilisationDuration, delegate, t -> false);
+        this(scheduler, stabilisationDuration, delegate, _ -> false);
     }
 
     public StabilisingConsumer(Scheduler scheduler, Duration stabilisationDuration, Consumer<T> delegate, Predicate<T> ignoreStabilisationPredicate) {

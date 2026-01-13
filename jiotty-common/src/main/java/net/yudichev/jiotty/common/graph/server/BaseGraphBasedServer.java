@@ -110,7 +110,7 @@ public abstract class BaseGraphBasedServer extends BaseLifecycleComponent {
                         logger.debug("Not starting new wave as in panic");
                         return;
                     }
-                    logger.debug("New wave triggered by {}", triggeredBy);
+                    logger.debug("New wave triggered at least by {}", triggeredBy);
                     graph().runWaves();
                     recordState();
 
@@ -131,6 +131,7 @@ public abstract class BaseGraphBasedServer extends BaseLifecycleComponent {
         logger.debug("{} node(s) created, registering them in graph", nodes.size());
         nodes.forEach(ServerNode::registerInGraph);
         logger.debug("{} node(s) registered in graph", nodes.size());
+        graphRunner.scheduleNewWave("Nodes registered");
     }
 
     private <T extends ServerNode> T addNode(T node) {

@@ -80,14 +80,14 @@ final class InternalGoogleNestThermostat implements GoogleNestThermostat {
         return Mode.valueOf(modeTrait.get("mode"));
     }
 
-    private void setEcoMode(String ecoMode) throws java.io.IOException {
+    private void setEcoMode(String ecoMode) throws IOException {
         GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request = new GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest();
         request.setCommand("sdm.devices.commands.ThermostatEco.SetMode");
         request.setParams(ImmutableMap.of("mode", ecoMode));
         executeRequest(request);
     }
 
-    private void executeRequest(GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request) throws java.io.IOException {
+    private void executeRequest(GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest request) throws IOException {
         logger.debug("devices.executeCommand({}, {})", deviceName, request);
         smartDeviceManagement.enterprises().devices().executeCommand(deviceName, request).execute();
     }

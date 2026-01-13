@@ -5,6 +5,7 @@ import net.yudichev.jiotty.common.async.backoff.RetryableOperationExecutor;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,7 +72,7 @@ class ShellyPlugImplTest {
     void startAfterFailure(@Mock Consumer<String> errorHandler, @Mock Call call) {
         when(httpClient.newCall(any())).thenReturn(call);
         AtomicInteger counter = new AtomicInteger();
-        when(call.request()).thenReturn(new okhttp3.Request.Builder().method("GET", null).url("http://host:1234").build());
+        when(call.request()).thenReturn(new Request.Builder().method("GET", null).url("http://host:1234").build());
         doAnswer(invocation -> {
             Callback callback = invocation.getArgument(0);
             callback.onFailure(call, new IOException("no route to host " + counter.incrementAndGet()));

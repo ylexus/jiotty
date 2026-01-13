@@ -23,7 +23,7 @@ class DateTimeUtilsTest {
         LocalTime start = LocalTime.of(23, 30);
         LocalTime end = LocalTime.of(8, 0);
 
-        List<TimeInterval> intervals = net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, start, end);
+        List<TimeInterval> intervals = DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, start, end);
 
         assertThat(intervals).containsExactly(
                 ti(zdt("2025-01-01T01:45:00Z").toInstant(), zdt("2025-01-01T08:00:00Z").toInstant()),
@@ -41,7 +41,7 @@ class DateTimeUtilsTest {
         LocalTime start = LocalTime.of(8, 0);
         LocalTime end = LocalTime.of(12, 0);
 
-        List<TimeInterval> intervals = net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, start, end);
+        List<TimeInterval> intervals = DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, start, end);
 
         assertThat(intervals).containsExactly(
                 ti(zdt("2025-01-01T08:00:00Z").toInstant(), zdt("2025-01-01T12:00:00Z").toInstant()),
@@ -55,7 +55,7 @@ class DateTimeUtilsTest {
         ZonedDateTime from = zdt("2025-01-01T23:30:00Z");
         ZonedDateTime to = zdt("2025-01-02T08:00:00Z");
         List<TimeInterval> intervals =
-                net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, LocalTime.of(23, 30), LocalTime.of(8, 0));
+                DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, LocalTime.of(23, 30), LocalTime.of(8, 0));
         assertThat(intervals).containsExactly(
                 ti(zdt("2025-01-01T23:30:00Z").toInstant(), zdt("2025-01-02T08:00:00Z").toInstant())
         );
@@ -65,14 +65,14 @@ class DateTimeUtilsTest {
     void getTimeIntervalsMatchingStartEndTime_startEqualsEndProducesEmpty() {
         ZonedDateTime from = zdt("2025-01-01T00:00:00Z");
         ZonedDateTime to = zdt("2025-01-02T00:00:00Z");
-        assertThat(net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, LocalTime.of(8, 0), LocalTime.of(8, 0)))
+        assertThat(DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, LocalTime.of(8, 0), LocalTime.of(8, 0)))
                 .isEmpty();
     }
 
     @Test
     void getTimeIntervalsMatchingStartEndTime_emptyRangeProducesEmpty() {
         ZonedDateTime t = zdt("2025-01-01T00:00:00Z");
-        assertThat(net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(t, t, LocalTime.of(0, 0), LocalTime.of(23, 59)))
+        assertThat(DateTimeUtils.getTimeIntervalsMatchingStartEndTime(t, t, LocalTime.of(0, 0), LocalTime.of(23, 59)))
                 .isEmpty();
     }
 
@@ -80,7 +80,7 @@ class DateTimeUtilsTest {
     void getTimeIntervalsMatchingStartEndTime_zoneMismatchThrows() {
         ZonedDateTime from = zdt("2025-01-01T00:00:00Z");
         ZonedDateTime to = from.withZoneSameInstant(ZoneId.of("Europe/London"));
-        assertThatThrownBy(() -> net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from,
+        assertThatThrownBy(() -> DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from,
                                                                                                                     to,
                                                                                                                     LocalTime.of(1, 0),
                                                                                                                     LocalTime.of(2, 0)))
@@ -97,7 +97,7 @@ class DateTimeUtilsTest {
         LocalTime start = LocalTime.of(0, 30);
         LocalTime end = LocalTime.of(3, 30);
 
-        List<TimeInterval> intervals = net.yudichev.jiotty.common.time.DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, start, end);
+        List<TimeInterval> intervals = DateTimeUtils.getTimeIntervalsMatchingStartEndTime(from, to, start, end);
         assertThat(intervals).containsExactly(ti(zdtOffset("2025-03-30T00:30:00+00:00"), zdtOffset("2025-03-30T03:30:00+01:00")));
     }
 

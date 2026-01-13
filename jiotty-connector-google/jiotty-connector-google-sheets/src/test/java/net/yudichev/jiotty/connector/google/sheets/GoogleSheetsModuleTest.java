@@ -8,12 +8,13 @@ import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-@ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
+@ExtendWith(MockitoExtension.class)
 class GoogleSheetsModuleTest {
     @Test
     void createInjector(@Mock GoogleAuthorization googleAuthorization) {

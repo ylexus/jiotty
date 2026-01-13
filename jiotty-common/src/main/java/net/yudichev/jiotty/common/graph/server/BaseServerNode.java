@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
@@ -78,18 +79,26 @@ public abstract class BaseServerNode extends BaseNode implements ServerNode {
     @Override
     @OverridingMethodsMustInvokeSuper
     public void close() {
-        logger.debug("{}: closing {} pending scheduled tasks", name, schedulesById.size());
-        schedulesById.values().forEach(closeable -> Closeable.closeSafelyIfNotNull(logger, closeable));
-        schedulesById.clear();
+        if (!schedulesById.isEmpty()) {
+            logger.debug("{}: closing {} pending scheduled tasks", name, schedulesById.size());
+            schedulesById.values().forEach(closeable -> Closeable.closeSafelyIfNotNull(logger, closeable));
+            schedulesById.clear();
+        }
         super.close();
     }
 
-    private void triggerInNewWave(String triggeredBy, Runnable trigger) {
+    private void triggerInNewWave(String triggeredBy, BooleanSupplier trigger) {
         if (runner.graph().inWave()) {
-            trigger.run();
+            trigger.getAsBoolean();
         } else {
-            runner.executor().execute(trigger);
+            runner.executor().execute(() -> {
+                boolean wasNotAlreadyTriggered = trigger.getAsBoolean();
+                if (wasNotAlreadyTriggered) {
+                    runner.scheduleNewWave(triggeredBy);
+                } else {
+                    logger.debug("{}: not triggering as node is already pending trigger, tiggeredBy was: {}", name, triggeredBy);
+                }
+            });
         }
-        runner.scheduleNewWave(triggeredBy);
     }
 }

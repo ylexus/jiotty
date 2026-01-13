@@ -2,6 +2,7 @@ package net.yudichev.jiotty.user.ui;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.servlet.AsyncContext;
@@ -57,7 +58,7 @@ final class UIServerImpl extends BaseLifecycleComponent implements UIServer {
     private static final Logger logger = LoggerFactory.getLogger(UIServerImpl.class);
     private static final Pattern TAB_NAME_TO_ID_CONVERSION_PATTERN = Pattern.compile("[^A-Za-z0-9_-]");
     private static final ObjectMapper MAPPER = new ObjectMapper(new JsonFactory())
-            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            .registerModule(new JavaTimeModule());
     private final Map<String, Displayable> displayablesById = new LinkedHashMap<>();
     private final Map<String, List<Option<?>>> optionsByTabName = new HashMap<>();
     private final Map<String, Option<?>> optionsByKey = new HashMap<>();
@@ -112,7 +113,7 @@ final class UIServerImpl extends BaseLifecycleComponent implements UIServer {
             Closeable dataSubscription;
             @Nullable ThrottlingConsumer<Void> throttle;
             if (displayable.supportsData()) {
-                throttle = new ThrottlingConsumer<>(executor, Duration.ofSeconds(1), unused -> onNewData(displayable));
+                throttle = new ThrottlingConsumer<>(executor, Duration.ofSeconds(1), _ -> onNewData(displayable));
                 dataSubscription = displayable.subscribeForUpdates(() -> throttle.accept(null));
             } else {
                 dataSubscription = noop();
@@ -189,7 +190,7 @@ final class UIServerImpl extends BaseLifecycleComponent implements UIServer {
     }
 
     private List<Option<?>> getOptionsForTab(String tabName) {
-        return optionsByTabName.computeIfAbsent(tabName, s -> new ArrayList<>());
+        return optionsByTabName.computeIfAbsent(tabName, _ -> new ArrayList<>());
     }
 
     private static String toDomId(String raw) {
@@ -202,7 +203,7 @@ final class UIServerImpl extends BaseLifecycleComponent implements UIServer {
         resp.setContentType("application/json");
         Map<String, List<Option<?>>> optionsByTabNameCopy = whenStartedAndNotLifecycling(() -> {
             var copy = new HashMap<>(optionsByTabName);
-            copy.replaceAll((tabName, options) -> new ArrayList<>(options));
+            copy.replaceAll((_, options) -> new ArrayList<>(options));
             return copy;
         });
         var tabs = new ArrayList<Map<String, Object>>();
@@ -452,7 +453,7 @@ final class UIServerImpl extends BaseLifecycleComponent implements UIServer {
                                         Option<?> option = optionsByKey.get(optionKey);
                                         checkArgument(option != null, "Unknown optionKey: %s, known options are: %s", optionKey, optionsByKey.keySet());
                                         option.onFormSubmit(Optional.ofNullable(request.getParameter("value")))
-                                              .whenComplete((unused, throwable) -> {
+                                              .whenComplete((_, throwable) -> {
                                                   if (throwable != null) {
                                                       logger.info("Option form submission failed", throwable);
                                                       try {
@@ -510,7 +511,7 @@ final class UIServerImpl extends BaseLifecycleComponent implements UIServer {
                             asyncContext.complete();
                         } else {
                             displayable.handleDownload(downloadId, resp)
-                                       .whenCompleteAsync((unused, e) -> { // go off the displayable thread not to do I/O on it
+                                       .whenCompleteAsync((_, e) -> { // go off the displayable thread not to do I/O on it
                                            try {
                                                if (e != null) {
                                                    logger.debug("Displayable {} download {} failed", displayableId, downloadId, e);

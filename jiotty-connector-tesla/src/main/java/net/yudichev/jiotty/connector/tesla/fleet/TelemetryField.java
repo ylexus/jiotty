@@ -1,7 +1,13 @@
 package net.yudichev.jiotty.connector.tesla.fleet;
 
+import com.google.common.collect.ImmutableSet;
 import net.yudichev.jiotty.common.geo.LatLon;
 import net.yudichev.jiotty.common.lang.Json;
+import net.yudichev.jiotty.common.lang.MoreThrowables;
+
+import java.util.stream.Stream;
+
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 public sealed interface TelemetryField permits
         TelemetryField.TDetailedChargeState,
@@ -12,6 +18,12 @@ public sealed interface TelemetryField permits
         TelemetryField.TInsideTemp,
         TelemetryField.THvacLeftTemperatureRequest,
         TelemetryField.THvacRightTemperatureRequest {
+
+    @SuppressWarnings("PublicStaticCollectionField") // immutable
+    ImmutableSet<String> ALL_NAMES = Stream.of(TelemetryField.class.getPermittedSubclasses())
+                                           .map(clazz -> MoreThrowables.getAsUnchecked(() -> (String) clazz.getDeclaredField("NAME").get(null)))
+                                           .collect(toImmutableSet());
+
     String fieldName();
 
     enum THvacPower implements TelemetryField {
@@ -36,6 +48,12 @@ public sealed interface TelemetryField permits
         @Override
         public String fieldName() {
             return NAME;
+        }
+
+        @Override
+        public String toString() {
+            // To look consistent with the other fields
+            return "THvacPower[" + name() + ']';
         }
     }
 

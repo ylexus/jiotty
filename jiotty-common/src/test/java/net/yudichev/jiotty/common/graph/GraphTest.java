@@ -24,7 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
 class GraphTest {
-    private final Map<String, TestNode> triggeredNodeBySourceNodeName = new HashMap<>();
+    private final Map<String, TestNode> nodesToTriggerByTriggeringNodeName = new HashMap<>();
+    private final Map<String, TestNode> nodesToTriggerWithParentsByTriggeringNodeName = new HashMap<>();
     private final List<String> triggeredNodes = new ArrayList<>();
     @Mock
     private Consumer<RuntimeException> exceptionHandler;
@@ -169,6 +170,51 @@ class GraphTest {
 
         assertThat(graph.wave()).isFalse();
         assertThat(triggeredNodes).containsExactly("5", "3");
+        triggeredNodes.clear();
+        clearTriggers();
+    }
+
+    @Test
+    void nodesTriggeringOthersWithParentsAndNodeWaveReturningFalse() {
+        nodeWaveReturnValue = false;
+
+        createNodes();
+        assertThat(graph.wave()).isFalse();
+        triggeredNodes.clear();
+
+        // 2 will request 3 to be triggered with parents
+        // some of the parents will be satisfied in the same wave, but only those that have lower rank than the one already executed (2)
+        // these are 4 and 3; 1 and 5 will be scheduled for the next wave
+        willTriggerWithParents("2", node3);
+        node2.trigger();
+        assertThat(graph.wave()).isTrue();
+        assertThat(triggeredNodes).containsExactly("2", "4", "3");
+        triggeredNodes.clear();
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1", "5");
+    }
+
+    @Test
+    void nodesTriggeringOthersWithParentsAndNodeWaveReturningTrue() {
+        nodeWaveReturnValue = true;
+
+        createNodes();
+        assertThat(graph.wave()).isFalse();
+        triggeredNodes.clear();
+
+        // 2 will request 3 to be triggered with parents
+        // some of the parents will be satisfied in the same wave, but only those that have lower rank than the one already executed (2)
+        // these are 4 and 3; 1 and 5 will be scheduled for the next wave
+        willTriggerWithParents("2", node3);
+        node2.trigger();
+        assertThat(graph.wave()).isTrue();
+        assertThat(triggeredNodes).containsExactly("2", "4", "3");
+        triggeredNodes.clear();
+        clearTriggers();
+
+        // in this wave, 1 and 5 are scheduled, but since they resurnt true from the wave(), the whole graph is executed
+        assertThat(graph.wave()).isFalse();
+        assertThat(triggeredNodes).containsExactly("1", "5", "2", "4", "3");
     }
 
     @Test
@@ -186,11 +232,16 @@ class GraphTest {
     }
 
     private void clearTriggers() {
-        triggeredNodeBySourceNodeName.clear();
+        nodesToTriggerByTriggeringNodeName.clear();
+        nodesToTriggerWithParentsByTriggeringNodeName.clear();
     }
 
     private void willTrigger(String source, TestNode dest) {
-        triggeredNodeBySourceNodeName.put(source, dest);
+        nodesToTriggerByTriggeringNodeName.put(source, dest);
+    }
+
+    private void willTriggerWithParents(String source, TestNode dest) {
+        nodesToTriggerWithParentsByTriggeringNodeName.put(source, dest);
     }
 
     private void createNodes() {
@@ -198,25 +249,24 @@ class GraphTest {
     }
 
     private void createNodes(List<Integer> subscriptionOrder) {
-    /*
-    1---    5
-   / \  \ /
-  2   4  |
-       \/
-        3
-     */
+        /*
+        1---    5
+       / \  \ /
+      2   4  |
+           \/
+            3
+         */
         node1 = graph.registerNode("1", new TestNode("1"));
         node2 = graph.registerNode("2", new TestNode("2"));
         node3 = graph.registerNode("3", new TestNode("3"));
         node4 = graph.registerNode("4", new TestNode("4"));
         node5 = graph.registerNode("5", new TestNode("5"));
 
-        List<Runnable> subscriptions = List.of(
-                () -> node2.subscribeTo(node1),
-                () -> node4.subscribeTo(node1),
-                () -> node3.subscribeTo(node4),
-                () -> node3.subscribeTo(node1),
-                () -> node3.subscribeTo(node5));
+        List<Runnable> subscriptions = List.of(() -> node2.subscribeTo(node1),
+                                               () -> node4.subscribeTo(node1),
+                                               () -> node3.subscribeTo(node4),
+                                               () -> node3.subscribeTo(node1),
+                                               () -> node3.subscribeTo(node5));
         subscriptionOrder.forEach(i -> subscriptions.get(i).run());
     }
 
@@ -238,9 +288,15 @@ class GraphTest {
         public boolean wave() {
             assertThat(nodeContext().graph().waveTime()).isEqualTo(clock.currentInstant());
             triggeredNodes.add(name);
-            TestNode nodeToTrigger = triggeredNodeBySourceNodeName.get(name);
+            TestNode nodeToTrigger = nodesToTriggerByTriggeringNodeName.get(name);
             if (nodeToTrigger != null) {
-                nodeToTrigger.trigger();
+                assertThat(nodeToTrigger.trigger()).isTrue();
+                assertThat(nodeToTrigger.trigger()).isFalse();
+            }
+            TestNode nodeToTriggerWithParents = nodesToTriggerWithParentsByTriggeringNodeName.get(name);
+            if (nodeToTriggerWithParents != null) {
+                assertThat(nodeToTriggerWithParents.triggerMeAndParents()).isTrue();
+                assertThat(nodeToTriggerWithParents.triggerMeAndParents()).isFalse();
             }
             return nodeWaveReturnValue;
         }

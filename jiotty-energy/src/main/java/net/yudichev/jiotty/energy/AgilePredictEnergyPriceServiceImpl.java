@@ -90,6 +90,7 @@ final class AgilePredictEnergyPriceServiceImpl extends BaseLifecycleComponent im
 
     private void retrievePrices() {
         logger.info("Requesting AgilePredict prices for 13 days");
+        // TODO:commerce region must be a parameter, # of days must be a dynamic parameter of this serice (will need to change on the fly)
         priceService.getPrices("A", 13)
                     .thenAcceptAsync(prices -> listeners.notify(handleAgilePredictPrices(prices)), executor)
                     .whenCompleteAsync((_, throwable) -> {
