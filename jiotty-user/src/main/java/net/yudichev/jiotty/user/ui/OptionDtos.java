@@ -3,9 +3,7 @@ package net.yudichev.jiotty.user.ui;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Plain data records for Options to be serialized to JSON and rendered on the client.
- */
+/// Plain data records for Options to be serialized to JSON and rendered on the client.
 public final class OptionDtos {
     private OptionDtos() {
     }

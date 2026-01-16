@@ -17,9 +17,7 @@ this program. If not, see http://www.gnu.org/licenses/.
 
 package net.yudichev.jiotty.connector.ir.lirc;
 
-/**
- * This exception is thrown when the Lirc server returns an error, or otherwise rejects the command sent to it.
- */
+/// This exception is thrown when the Lirc server returns an error, or otherwise rejects the command sent to it.
 public class LircServerException extends RuntimeException {
     public LircServerException(String message) {
         super(message);

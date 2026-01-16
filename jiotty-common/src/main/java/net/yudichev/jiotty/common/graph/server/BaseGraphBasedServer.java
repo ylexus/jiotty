@@ -81,7 +81,7 @@ public abstract class BaseGraphBasedServer extends BaseLifecycleComponent {
         return graphRunner != null;
     }
 
-    /** For tests. */
+    /// For tests.
     protected void awaitShutdown(CompletableFuture<Void> nodeClosingFuture) {
         getAsUnchecked(() -> nodeClosingFuture.get(5, SECONDS));
     }

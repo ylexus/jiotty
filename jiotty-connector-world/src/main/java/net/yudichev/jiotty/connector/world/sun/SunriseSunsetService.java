@@ -5,9 +5,7 @@ import net.yudichev.jiotty.common.lang.Closeable;
 
 import java.util.concurrent.Executor;
 
-/**
- * Courtesy of sunrise-sunset.org.
- */
+/// Courtesy of sunrise-sunset.org.
 public interface SunriseSunsetService extends LifecycleComponent {
     Closeable onEverySunrise(Runnable action, Executor executor);
 

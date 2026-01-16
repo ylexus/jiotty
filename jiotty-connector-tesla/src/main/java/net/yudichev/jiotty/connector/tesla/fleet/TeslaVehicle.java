@@ -25,9 +25,7 @@ public interface TeslaVehicle {
 
     CompletableFuture<TelemetryFleetErrorsResponse> telemetryFleetErrors();
 
-    /**
-     * @return {@link Optional#empty()} if the vehicle is not online
-     */
+    /// @return [Optional#empty()] if the vehicle is not online
     CompletableFuture<Optional<VehicleData>> getData(Set<Endpoint> endpoints);
 
     String vin();

@@ -47,10 +47,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static org.immutables.value.Value.Immutable;
 import static org.immutables.value.Value.Parameter;
 
-/**
- * Abstract class for a <a href="http://www.lirc.org">LIRC</a> client.
- * Functionally, it resembles the command line program irsend.
- */
+/// Abstract class for a <a href="http://www.lirc.org">LIRC</a> client. Functionally, it resembles the command line program irsend.
 abstract class BaseLircClient extends BaseLifecycleComponent implements LircClient {
     public static final Charset CHARSET = StandardCharsets.US_ASCII;
     private static final Pattern COMMAND_LIST_CLEANUP_PATTERN = Pattern.compile("\\S*\\s+");

@@ -61,9 +61,7 @@ import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 import static net.yudichev.jiotty.connector.miele.MieleStreamConnected.STREAM_CONNECTED;
 import static net.yudichev.jiotty.connector.miele.MieleStreamDisconnected.STREAM_DISCONNECTED;
 
-/**
- * <a href="https://www.miele.com/developer/">Guide</a>
- */
+/// <a href="https://www.miele.com/developer/">Guide</a>
 final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleDishwasher {
     private static final Logger logger = LoggerFactory.getLogger(MieleDishwasherImpl.class);
 
@@ -205,15 +203,15 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
     @Override
     public CompletableFuture<Void> powerOn() {
         return getActions().thenCompose(actions -> actions.powerOnAvailable()
-                ? invokePut("actions", builder -> builder.setPowerOn(true))
-                : CompletableFuture.completedFuture(null));
+                                                   ? invokePut("actions", builder -> builder.setPowerOn(true))
+                                                   : CompletableFuture.completedFuture(null));
     }
 
     @Override
     public CompletableFuture<Void> powerOff() {
         return getActions().thenCompose(actions -> actions.powerOffAvailable()
-                ? invokePut("actions", builder -> builder.setPowerOff(true))
-                : CompletableFuture.completedFuture(null));
+                                                   ? invokePut("actions", builder -> builder.setPowerOff(true))
+                                                   : CompletableFuture.completedFuture(null));
     }
 
     private CompletableFuture<Void> invokePut(String endpoint, Consumer<MieleCommand.Builder> commandBuilder) {
@@ -279,9 +277,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             executor.execute(this::connect);
         }
 
-        /**
-         * @implNote executor thread
-         */
+        /// @implNote executor thread
         private void connect() {
             streamId = streamIdGenerator.incrementAndGet();
             var pingCheckInterval = Duration.ofSeconds(20);
@@ -376,9 +372,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             }
         }
 
-        /**
-         * @implSpec executor thread
-         */
+        /// @implSpec executor thread
         private void handleReadLoopFailure(IOException e) {
             if (call == null) {
                 logger.debug("[{}][{}] read loop failed while call or stream is closed : this is expected", deviceId, streamId, e);
@@ -388,9 +382,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             }
         }
 
-        /**
-         * @implSpec executor thread
-         */
+        /// @implSpec executor thread
         private void handleFailure(String failureReason) {
             if (connected) {
                 connected = false;
@@ -428,9 +420,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             executor.execute(this::closeStream);
         }
 
-        /**
-         * @implSpec executor thread
-         */
+        /// @implSpec executor thread
         private void closeStream() {
             Call callToCancel = null;
             if (call != null) {
@@ -447,9 +437,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             }
         }
 
-        /**
-         * @implSpec executor thread
-         */
+        /// @implSpec executor thread
         private void checkPings() {
             var pingAge = Duration.between(lastPingTime, dateTimeProvider.currentInstant());
             logger.debug("[{}][{}] lastPingTime: {}, pingAge: {}", deviceId, streamId, lastPingTime, pingAge);
@@ -466,9 +454,7 @@ final class MieleDishwasherImpl extends BaseLifecycleComponent implements MieleD
             listeners.notify(event);
         }
 
-        /**
-         * @implSpec executor thread
-         */
+        /// @implSpec executor thread
         private void handleSafely(MieleEvent event) {
             try {
                 listeners.notify(event);

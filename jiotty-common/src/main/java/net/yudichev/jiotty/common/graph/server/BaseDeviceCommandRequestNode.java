@@ -142,9 +142,7 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
         return request;
     }
 
-    /**
-     * Called in-wave before anything else - return true to immediately forget the request and reset to an idle state
-     */
+    /// Called in-wave before anything else - return true to immediately forget the request and reset to an idle state
     protected boolean shouldForgetRequest() {
         return false;
     }

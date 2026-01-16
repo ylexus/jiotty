@@ -192,7 +192,7 @@ public class Graph extends BaseIdempotentCloseable {
         private final String name;
         private final Node node;
         private final int id;
-        /** @implSpec negative -> non-final in process of computing, 0 - invalid and needs re-ranking, positive - final ranked */
+        /// @implSpec negative -> non-final in process of computing, 0 - invalid and needs re-ranking, positive - final ranked
         private int rank = 1; // node that jas just been created has a rank of 1 (as no parents)
 
         public NodeState(String name, Node node) {

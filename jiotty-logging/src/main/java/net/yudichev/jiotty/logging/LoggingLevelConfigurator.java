@@ -9,8 +9,6 @@ public interface LoggingLevelConfigurator {
 
     void resetLoggingLevel(String loggerName);
 
-    /**
-     * @return logging levels that were set via this service
-     */
+    /// @return logging levels that were set via this service
     Map<String, String> getLevelsByLoggerName();
 }

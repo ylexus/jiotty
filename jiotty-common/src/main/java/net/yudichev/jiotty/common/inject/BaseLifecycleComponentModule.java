@@ -21,23 +21,17 @@ public abstract class BaseLifecycleComponentModule extends PrivateModule {
         }
     }
 
-    /**
-     * Bind the target lifecycle component as a singleton and register it.
-     */
+    /// Bind the target lifecycle component as a singleton and register it.
     protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(Class<T> implClass) {
         return registerLifecycleComponent(Key.get(implClass));
     }
 
-    /**
-     * Bind the target lifecycle component as a singleton and register it.
-     */
+    /// Bind the target lifecycle component as a singleton and register it.
     protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(TypeLiteral<T> implType) {
         return registerLifecycleComponent(Key.get(implType));
     }
 
-    /**
-     * Bind the target lifecycle component as a singleton and register it.
-     */
+    /// Bind the target lifecycle component as a singleton and register it.
     protected final <T extends LifecycleComponent> Key<T> registerLifecycleComponent(Key<T> implKey) {
         bind(implKey).in(Singleton.class);
         Key<LifecycleComponent> lifecycleComponentKey = Key.get(LifecycleComponent.class, GuiceUtil.uniqueAnnotation());
@@ -46,9 +40,7 @@ public abstract class BaseLifecycleComponentModule extends PrivateModule {
         return implKey;
     }
 
-    /**
-     * Register the lifecycle component, that was already bound as a singleton.
-     */
+    /// Register the lifecycle component, that was already bound as a singleton.
     protected final <T extends LifecycleComponent> void registerBoundLifecycleComponent(Class<T> implClass) {
         Key<LifecycleComponent> lifecycleComponentKey = Key.get(LifecycleComponent.class, GuiceUtil.uniqueAnnotation());
         bind(lifecycleComponentKey).to(implClass);

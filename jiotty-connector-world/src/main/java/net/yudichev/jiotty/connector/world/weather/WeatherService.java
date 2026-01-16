@@ -11,9 +11,7 @@ public interface WeatherService {
 
     CompletableFuture<Weather> getCurrentWeather(LatLon worldCoordinates);
 
-    /**
-     * @return forecasted weather for the specified world coordinates at the specified instant.
-     * @throws IllegalStateException if {@code until} is in the past or too far in the future (more than {@link #MAX_FORECAST_DAYS} days).
-     */
+    /// @return forecasted weather for the specified world coordinates at the specified instant.
+    /// @throws IllegalStateException if `until` is in the past or too far in the future (more than [#MAX_FORECAST_DAYS] days).
     CompletableFuture<List<ForecastHour>> getForecastWeather(LatLon worldCoordinates, Instant until);
 }

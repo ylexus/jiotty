@@ -30,10 +30,8 @@ import static net.yudichev.jiotty.common.rest.RestClients.call;
 import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 
-/**
- * <a href="https://octopus.energy/blog/agile-smart-home-diy/">Guide 1</a>,
- * <a href="https://www.guylipman.com/octopus/api_guide.html">Guide 2</a>
- */
+/// <a href="https://octopus.energy/blog/agile-smart-home-diy/">Guide 1</a>,
+/// <a href="https://www.guylipman.com/octopus/api_guide.html">Guide 2</a>
 public final class OctopusEnergyImpl extends BaseLifecycleComponent implements OctopusEnergy {
     private static final Logger logger = LoggerFactory.getLogger(OctopusEnergyImpl.class);
 
@@ -77,8 +75,8 @@ public final class OctopusEnergyImpl extends BaseLifecycleComponent implements O
                     var tariffCode = tariff.tariffCode();
                     var productCode = tariffCode.substring(5, tariffCode.length() - 2);
                     return getStandardUnitRates(BASE_URL + "/products/" + productCode + "/electricity-tariffs/" + tariffCode + "/standard-unit-rates/" +
-                                                        "?period_from=" + periodFrom +
-                                                        "&period_to=" + periodTo);
+                                                "?period_from=" + periodFrom +
+                                                "&period_to=" + periodTo);
                 }).thenApply(StandardUnitRates::rates);
     }
 
@@ -89,7 +87,7 @@ public final class OctopusEnergyImpl extends BaseLifecycleComponent implements O
                         // if next page, recursively call it and concatenate
                         .nextUrl()
                         .map(nextUrl -> getStandardUnitRates(nextUrl)
-                                .<StandardUnitRates>thenApply(nextRates -> StandardUnitRates.of(
+                                .thenApply(nextRates -> StandardUnitRates.of(
                                         ImmutableList.<StandardUnitRate>builderWithExpectedSize(standardUnitRates.rates().size() + nextRates.rates().size())
                                                      .addAll(standardUnitRates.rates())
                                                      .addAll(nextRates.rates())

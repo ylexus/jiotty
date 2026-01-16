@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
-/** Basic in-memory {@link Mqtt} implementation for tests. */
+/// Basic in-memory [Mqtt] implementation for tests.
 public final class InMemoryMqtt implements Mqtt {
     private final Map<String, String> dataByTopic = new HashMap<>();
     private final Map<Pattern, Listeners<TopicAndData>> listenersByFilter = new HashMap<>();

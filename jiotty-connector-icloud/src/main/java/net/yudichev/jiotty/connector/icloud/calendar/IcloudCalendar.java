@@ -123,9 +123,7 @@ final class IcloudCalendar implements Calendar {
         });
     }
 
-    /**
-     * Build a new URL string by replacing the path portion of the given URL.
-     */
+    /// Build a new URL string by replacing the path portion of the given URL.
     private static String replacePath(String originalUrl, String newPath) {
         return MoreThrowables.getAsUnchecked(() -> {
             URI uri = new URI(originalUrl);

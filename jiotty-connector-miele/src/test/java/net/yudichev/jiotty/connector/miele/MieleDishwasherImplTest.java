@@ -34,9 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
-/**
- * Originally from <a href="https://chatgpt.com/c/6754cbf0-1374-800b-9e27-9ff9d91b33f0">here</a>
- */
+/// Originally from <a href="https://chatgpt.com/c/6754cbf0-1374-800b-9e27-9ff9d91b33f0">here</a>
 @WireMockTest
 class MieleDishwasherImplTest {
     private static final Logger logger = LoggerFactory.getLogger(MieleDishwasherImplTest.class);

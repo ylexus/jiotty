@@ -15,17 +15,17 @@ public interface Displayable {
         return getId();
     }
 
-    /** @return {@code true} if this displayable produces data or {@code false} if it only supports downloads */
+    /// @return `true` if this displayable produces data or `false` if it only supports downloads
     default boolean supportsData() {
         return false;
     }
 
-    /** @return {@code true} if needs to be displayed as a tab in the UI */
+    /// @return `true` if needs to be displayed as a tab in the UI
     default boolean visible() {
         return false;
     }
 
-    /** Subscribe for any updates on this displayable. Use {@link #toDto()} to obtain the latest data. */
+    /// Subscribe for any updates on this displayable. Use [#toDto()] to obtain the latest data.
     default Closeable subscribeForUpdates(Runnable updatesAvailable) {
         return () -> {};
     }

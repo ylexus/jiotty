@@ -27,210 +27,174 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.SpecifiedAnnotation.forAnnotation;
 import static net.yudichev.jiotty.common.inject.TypeLiterals.asTypeLiteral;
 
-/**
- * A reference to a binding of type {@link T} ("source" binding). The reference can be passed around and eventually bound to a different
- * {@link Key}{@code <T>} ("target" binding).
- * Source binding is represented in one of the ways listed below. To create a target binding, use {@link #bind(TypeLiteral)} or its overloads.
- * <p>Source and target bindings should have different annotations, otherwise binding conflict will occur.
- * <p>To reference the source binding, use one of the static factory methods:
- * <ol>
- * <li>If source binding is not a binding per se, but is
- * <ol>
- * <li>an actual instance of {@link T} — use {@link #literally(Object)}</li>
- * <li>supplied by a concrete {@link Provider}{@code <}{@link T}{@code >} instance, use {@link #providedBy(Provider)}</li>
- * </ol>
- * <li>If source binding is exposed elsewhere:
- * <ol>
- * <li>source binding is a binding of type {@link T} annotated with a specified binding annotation — use {@link #annotatedWith(Annotation)} )} or overloads</li>
- * <li>source binding is a binding to a {@link Provider} of type {@link T} - use {@link #providedBy(Key)} or overloads</li>
- * <li>source binding is a binding of a {@link Key} or a type — use {@link #boundTo(Key)} or overloads</li>
- * <li>source binding is a binding of type {@link T} exposed in a specified module — use {@link #exposedBy(ExposedKeyModule)}</li>
- * </ol>
- * </li>
- * </ol>
- *
- * @param <T> the value type
- **/
+/// A reference to a binding of type [T] ("source" binding). The reference can be passed around and eventually bound to a different [Key]`<T>` ("target"
+/// binding). Source binding is represented in one of the ways listed below. To create a target binding, use [#bind(TypeLiteral)] or its overloads.
+///
+/// Source and target bindings should have different annotations, otherwise binding conflict will occur.
+///
+/// To reference the source binding, use one of the static factory methods:
+/// <ol>
+///   - If source binding is not a binding per se, but is
+///     <ol>
+///   - an actual instance of [T] — use [#literally(Object)]
+///   - supplied by a concrete [Provider]`<`[T]`>` instance, use [#providedBy(Provider)]
+/// </ol>
+///   - If source binding is exposed elsewhere:
+///     <ol>
+///   - source binding is a binding of type [T] annotated with a specified binding annotation — use [#annotatedWith(Annotation)] )} or overloads
+///   - source binding is a binding to a [Provider] of type [T] - use [#providedBy(Key)] or overloads
+///   - source binding is a binding of a [Key] or a type — use [#boundTo(Key)] or overloads
+///   - source binding is a binding of type [T] exposed in a specified module — use [#exposedBy(ExposedKeyModule)]
+/// </ol>
+///
+/// </ol>
+///
+/// @param <T> the value type
 public abstract class BindingSpec<T> {
-    /**
-     * Refers to the specified instance.
-     *
-     * @param sourceValue the value
-     * @param <T>         the value type
-     * @return the binding
-     **/
+    /// Refers to the specified instance.
+    ///
+    /// @param sourceValue the value
+    /// @param <T>         the value type
+    /// @return the binding
     public static <T> BindingSpec<T> literally(T sourceValue) {
         return providedBy(() -> sourceValue);
     }
 
-    /**
-     * Refers to the specified provider.
-     *
-     * @param sourceValueProvider the provider
-     * @param <T>                 the value type
-     * @return the binding
-     */
+    /// Refers to the specified provider.
+    ///
+    /// @param sourceValueProvider the provider
+    /// @param <T>                 the value type
+    /// @return the binding
     public static <T> BindingSpec<T> providedBy(Provider<T> sourceValueProvider) {
         return new ProviderBindingSpec<>(sourceValueProvider);
     }
 
-    /**
-     * Refers to the specified provider type.
-     *
-     * @param sourceValueProviderType the provider type
-     * @param <T>                     the value type
-     * @return the binding
-     **/
+    /// Refers to the specified provider type.
+    ///
+    /// @param sourceValueProviderType the provider type
+    /// @param <T>                     the value type
+    /// @return the binding
     public static <T> BindingSpec<T> providedBy(Class<? extends Provider<T>> sourceValueProviderType) {
         return providedBy(Key.get(sourceValueProviderType));
     }
 
-    /**
-     * Refers to the specified provider type.
-     *
-     * @param sourceValueProviderType the provider type
-     * @param <T>                     the value type
-     * @return the binding
-     **/
+    /// Refers to the specified provider type.
+    ///
+    /// @param sourceValueProviderType the provider type
+    /// @param <T>                     the value type
+    /// @return the binding
     public static <T> BindingSpec<T> providedBy(TypeLiteral<? extends Provider<T>> sourceValueProviderType) {
         return providedBy(Key.get(sourceValueProviderType));
     }
 
-    /**
-     * Refers to the specified provider hey.
-     *
-     * @param sourceValueProviderKey the provider hey
-     * @param <T>                    the value type
-     * @return the binding
-     **/
+    /// Refers to the specified provider hey.
+    ///
+    /// @param sourceValueProviderKey the provider hey
+    /// @param <T>                    the value type
+    /// @return the binding
     public static <T> BindingSpec<T> providedBy(Key<? extends Provider<T>> sourceValueProviderKey) {
         return new ProviderKeyBindingSpec<>(sourceValueProviderKey);
     }
 
-    /**
-     * Refers to another binding of {@link T} annotated with a specified annotation class.
-     *
-     * @param sourceAnnotationClass the binding annotation class
-     * @param <T>                   the value type
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] annotated with a specified annotation class.
+    ///
+    /// @param sourceAnnotationClass the binding annotation class
+    /// @param <T>                   the value type
+    /// @return the binding
     public static <T> BindingSpec<T> annotatedWith(Class<? extends Annotation> sourceAnnotationClass) {
         return annotatedWith(forAnnotation(sourceAnnotationClass));
     }
 
-    /**
-     * Refers to another binding of {@link T} annotated with a specified annotation.
-     *
-     * @param sourceAnnotation the binding annotation
-     * @param <T>              the value type
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] annotated with a specified annotation.
+    ///
+    /// @param sourceAnnotation the binding annotation
+    /// @param <T>              the value type
+    /// @return the binding
     public static <T> BindingSpec<T> annotatedWith(Annotation sourceAnnotation) {
         return annotatedWith(forAnnotation(sourceAnnotation));
     }
 
-    /**
-     * Refers to another binding of {@link T} annotated with a specified annotation.
-     *
-     * @param sourceSpecifiedAnnotation the binding annotation
-     * @param <T>                       the value type
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] annotated with a specified annotation.
+    ///
+    /// @param sourceSpecifiedAnnotation the binding annotation
+    /// @param <T>                       the value type
+    /// @return the binding
     public static <T> BindingSpec<T> annotatedWith(SpecifiedAnnotation sourceSpecifiedAnnotation) {
         return new AnnotationBindingSpec<>(sourceSpecifiedAnnotation);
     }
 
-    /**
-     * Refers to another binding of {@link T} with a specified type and no annotation.
-     *
-     * @param sourceType the binding type literal
-     * @param <T>        the value type
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] with a specified type and no annotation.
+    ///
+    /// @param sourceType the binding type literal
+    /// @param <T>        the value type
+    /// @return the binding
     public static <T> BindingSpec<T> boundTo(Class<? extends T> sourceType) {
         return boundTo(Key.get(sourceType));
     }
 
-    /**
-     * Refers to another binding of {@link T} with a specified type literal and no annotation.
-     *
-     * @param sourceType the binding type literal
-     * @param <T>        the value type
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] with a specified type literal and no annotation.
+    ///
+    /// @param sourceType the binding type literal
+    /// @param <T>        the value type
+    /// @return the binding
     public static <T> BindingSpec<T> boundTo(TypeLiteral<? extends T> sourceType) {
         return boundTo(Key.get(sourceType));
     }
 
-    /**
-     * Refers to another binding of {@link T} with the specified key.
-     * :4:
-     *
-     * @param sourceKey the binding hey
-     * @param <T>       the value type
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] with the specified key. :4:
+    ///
+    /// @param sourceKey the binding hey
+    /// @param <T>       the value type
+    /// @return the binding
     public static <T> BindingSpec<T> boundTo(Key<? extends T> sourceKey) {
         return new KeyBindingSpec<>(sourceKey);
     }
 
-    /**
-     * Refers to another binding of {@link T} exposed by the specified module's {@link ExposedKeyModule#getExposedKey() exposed key}.
-     *
-     * @param <T>    the value type
-     * @param module the module exposing {@link T}.
-     * @return the binding
-     **/
+    /// Refers to another binding of [T] exposed by the specified module's [exposed key][ExposedKeyModule#getExposedKey()].
+    ///
+    /// @param <T>    the value type
+    /// @param module the module exposing [T].
+    /// @return the binding
     public static <T> BindingSpec<T> exposedBy(ExposedKeyModule<? extends T> module) {
         return new ModuleBindingSpec<>(module);
     }
 
-    /**
-     * Create a new binding specification that Changes the target type to {@link U} by applying a mapping function to the source value.
-     * This is achieved by binding the type {@link T} and a provider of type {@link U} which injects {@link T} and provides {@link U} by applying the
-     * specified mapping function.
-     *
-     * @param fromType        target type of this binding spec
-     * @param toType          target type of the mapped binding spec
-     * @param mappingFunction the mapping function
-     * @param <U>             the type of the resulting binding spec
-     * @return the mapped binding spec
-     **/
+    /// Create a new binding specification that Changes the target type to [U] by applying a mapping function to the source value. This is achieved by binding
+    /// the type [T] and a provider of type [U] which injects [T] and provides [U] by applying the specified mapping function.
+    ///
+    /// @param fromType        target type of this binding spec
+    /// @param toType          target type of the mapped binding spec
+    /// @param mappingFunction the mapping function
+    /// @param <U>             the type of the resulting binding spec
+    /// @return the mapped binding spec
     public <U> BindingSpec<U> map(TypeToken<T> fromType, TypeToken<U> toType, BindingSpec<Function<? super T, ? extends U>> mappingFunction) {
         return exposedBy(new MapModule<>(fromType, toType, this, mappingFunction));
     }
 
-    /**
-     * Create a new binding specification that changes the target type to {@link U} by applying a mapping_fUnction to the source value.
-     * This is achieved by binding the type {@link T} and a provider of type {@link U} which injects {@link T} and provides {@link U} by apptying the
-     * specified mapping function.
-     *
-     * @param fromType        target type bf this binding spec
-     * @param toType          target type of the mapped binding spec
-     * @param mappingFunction the mapping function
-     * @param <U>             the type of the resulting binding spec
-     * @return the mapped binding spec
-     **/
+    /// Create a new binding specification that changes the target type to [U] by applying a mapping_fUnction to the source value. This is achieved by binding
+    /// the type [T] and a provider of type [U] which injects [T] and provides [U] by apptying the specified mapping function.
+    ///
+    /// @param fromType        target type bf this binding spec
+    /// @param toType          target type of the mapped binding spec
+    /// @param mappingFunction the mapping function
+    /// @param <U>             the type of the resulting binding spec
+    /// @return the mapped binding spec
     public <U> BindingSpec<U> map(TypeToken<T> fromType, TypeToken<U> toType, Function<? super T, ? extends U> mappingFunction) {
         return map(fromType, toType, literally(mappingFunction));
     }
 
-    /**
-     * Starts a builder style chain that allows to create the target binding.
-     *
-     * @param type the type literal of the target binding
-     * @return the binding method choice stage
-     **/
+    /// Starts a builder style chain that allows to create the target binding.
+    ///
+    /// @param type the type literal of the target binding
+    /// @return the binding method choice stage
     public final AnnotatedBindingMethodChoice<T> bind(TypeLiteral<T> type) {
         return new DefaultBindingMethodChoice(type);
     }
 
-    /**
-     * Starts 0 builder style chain that allows to create the target binding.
-     *
-     * @param type the type of the target binding
-     * @return the binding method choice stage
-     **/
+    /// Starts 0 builder style chain that allows to create the target binding.
+    ///
+    /// @param type the type of the target binding
+    /// @return the binding method choice stage
     public final AnnotatedBindingMethodChoice<T> bind(Class<T> type) {
         return bind(TypeLiteral.get(type));
     }
@@ -238,68 +202,54 @@ public abstract class BindingSpec<T> {
     protected abstract TargetBindingServiceModule<T> createTargetBindingServiceModule(Key<T> targetKey, Consumer<ScopedBindingBuilder> scopeSpecifier);
 
     public interface BindingMethodChoice<T> {
-        /**
-         * Creates the target binding in the current module by installing an inner module exposing the target hey.
-         *
-         * @param moduleInstaller installer of the inner module, typically, when called from a module's {@code configure()} method,
-         *                        it's a method reference that installs the module:
-         *                        {@code this::}{@link BaseLifecycleComponentModule#installLifecycleComponentModule(Module) installLifecycleComponentModule}.
-         * @return the key of the target binding
-         **/
+        /// Creates the target binding in the current module by installing an inner module exposing the target hey.
+        ///
+        /// @param moduleInstaller installer of the inner module, typically, when called from a module's `configure()` method, it's a method reference that
+        ///                        installs the module:
+        ///                        `this::`[installLifecycleComponentModule][BaseLifecycleComponentModule#installLifecycleComponentModule(Module)].
+        /// @return the key of the target binding
         Key<T> installedBy(Consumer<Module> moduleInstaller);
     }
 
     public interface ScopedBindingMethodChoice<T> extends BindingMethodChoice<T> {
-        /**
-         * Create target binding in the specified scope.
-         *
-         * @param scopeAnnotation the scope
-         * @return the choice of binding methods
-         * @see ScopedBindingBuilder#in(Class)
-         **/
+        /// Create target binding in the specified scope.
+        ///
+        /// @param scopeAnnotation the scope
+        /// @return the choice of binding methods
+        /// @see ScopedBindingBuilder#in(Class)
         BindingMethodChoice<T> in(Class<? extends Annotation> scopeAnnotation);
 
-        /**
-         * Create target binding in the specified scope.
-         *
-         * @param scope the scope
-         * @return the choice of binding methods
-         * @see ScopedBindingBuilder#in(Scope)
-         **/
+        /// Create target binding in the specified scope.
+        ///
+        /// @param scope the scope
+        /// @return the choice of binding methods
+        /// @see ScopedBindingBuilder#in(Scope)
         BindingMethodChoice<T> in(Scope scope);
 
-        /**
-         * Create target binding as eager singleton.
-         *
-         * @return the choice of binding methods
-         * @see ScopedBindingBuilder#asEagerSingleton()
-         **/
+        /// Create target binding as eager singleton.
+        ///
+        /// @return the choice of binding methods
+        /// @see ScopedBindingBuilder#asEagerSingleton()
         BindingMethodChoice<T> asEagerSingleton();
     }
 
     public interface AnnotatedBindingMethodChoice<T> extends ScopedBindingMethodChoice<T> {
-        /**
-         * Specifies the annotation of the target binding.
-         *
-         * @param targetAnnotationClass target annotation class¡
-         * @return the Choice of scope and binding methods
-         **/
+        /// Specifies the annotation of the target binding.
+        ///
+        /// @param targetAnnotationClass target annotation class¡
+        /// @return the Choice of scope and binding methods
         ScopedBindingMethodChoice<T> annotatedWith(Class<? extends Annotation> targetAnnotationClass);
 
-        /**
-         * Specifies the annotation of the target binding.
-         *
-         * @param targetAnnotation target annotation
-         * @return the choice of scope and binding methods
-         **/
+        /// Specifies the annotation of the target binding.
+        ///
+        /// @param targetAnnotation target annotation
+        /// @return the choice of scope and binding methods
         ScopedBindingMethodChoice<T> annotatedWith(Annotation targetAnnotation);
 
-        /**
-         * Specifies the annotation of the target binding.
-         *
-         * @param specifiedAnnotation target annotation
-         * @return the choice of scope and binding methods
-         **/
+        /// Specifies the annotation of the target binding.
+        ///
+        /// @param specifiedAnnotation target annotation
+        /// @return the choice of scope and binding methods
         ScopedBindingMethodChoice<T> annotatedWith(SpecifiedAnnotation specifiedAnnotation);
     }
 

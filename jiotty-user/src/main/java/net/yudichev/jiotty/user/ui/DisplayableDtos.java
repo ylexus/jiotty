@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/** DTOs for Displayables to be rendered on the client */
+/// DTOs for Displayables to be rendered on the client
 public final class DisplayableDtos {
     private DisplayableDtos() {
     }
@@ -15,7 +15,7 @@ public final class DisplayableDtos {
         String type();
     }
 
-    /** @param groups history groups by a 'what' key, each with a list of entries (time + text) */
+    /// @param groups history groups by a 'what' key, each with a list of entries (time + text)
     public record History(Map<String, List<HistoryEntry>> groups) implements DisplayableDto {
         @Override
         @JsonProperty("type")

@@ -14,46 +14,33 @@
 
 package net.yudichev.jiotty.common.lang.backoff;
 
-/**
- * Back-off policy when retrying an operation.
- *
- * @author Ravi Mistry
- */
+/// Back-off policy when retrying an operation.
+///
+/// @author Ravi Mistry
 public interface BackOff {
 
-    /**
-     * Indicates that no more retries should be made for use in {@link #nextBackOffMillis()}.
-     */
+    /// Indicates that no more retries should be made for use in [#nextBackOffMillis()].
     long STOP = -1L;
 
-    /**
-     * Reset to initial state.
-     */
+    /// Reset to initial state.
     void reset();
 
-    /**
-     * Gets the number of milliseconds to wait before retrying the operation or {@link #STOP} to
-     * indicate that no retries should be made.
-     *
-     * <p>Example usage:
-     *
-     * <pre>
-     * long backOffMillis = backoff.nextBackOffMillis();
-     * if (backOffMillis == Backoff.STOP) {
-     * // do not retry operation
-     * } else {
-     * // sleep for backOffMillis milliseconds and retry operation
-     * }
-     * </pre>
-     */
+    /// Gets the number of milliseconds to wait before retrying the operation or [#STOP] to indicate that no retries should be made.
+    ///
+    /// Example usage:
+    /// <pre>
+    /// long backOffMillis = backoff.nextBackOffMillis();
+    /// if (backOffMillis == Backoff.STOP) {
+    /// // do not retry operation
+    /// } else {
+    /// // sleep for backOffMillis milliseconds and retry operation
+    /// }
+    /// </pre>
     long nextBackOffMillis();
 
-    /**
-     * Returns the maximum elapsed time in milliseconds.
-     *
-     * <p>If the time elapsed since this instance is created or {@link #reset() reset} goes past the
-     * this value then the method {@link #nextBackOffMillis()} starts returning {@link
-     * BackOff#STOP}.
-     */
+    /// Returns the maximum elapsed time in milliseconds.
+    ///
+    /// If the time elapsed since this instance is created or [reset][#reset()] goes past the this value then the method [#nextBackOffMillis()] starts returning
+    /// [BackOff#STOP].
     long getMaxElapsedTimeMillis();
 }

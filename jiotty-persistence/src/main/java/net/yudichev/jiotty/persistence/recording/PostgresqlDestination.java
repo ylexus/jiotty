@@ -28,9 +28,7 @@ public interface PostgresqlDestination extends Destination {
     interface Migrator {
         Migrator NO_OP = (toVersion) -> Set.of();
 
-        /**
-         * @param toVersion migrate from ({@code toVersion} - 1) to ({@code toVersion})
-         */
+        /// @param toVersion migrate from (`toVersion` - 1) to (`toVersion`)
         Set<String> getMigrationStatements(int toVersion);
     }
 

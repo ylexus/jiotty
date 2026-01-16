@@ -14,10 +14,7 @@ final class DelayedExecutors {
         return new DelayedExecutor(millis, TimeUnit.MILLISECONDS, ForkJoinPool.commonPool());
     }
 
-    /**
-     * Singleton delay scheduler, used only for starting and
-     * cancelling tasks.
-     */
+    /// Singleton delay scheduler, used only for starting and cancelling tasks.
     static final class Delayer {
         static final ScheduledThreadPoolExecutor delayer;
 
@@ -47,19 +44,17 @@ final class DelayedExecutors {
     private record DelayedExecutor(long delay, TimeUnit unit, Executor executor) implements Executor {
 
         @Override
-            public void execute(Runnable command) {
-                Delayer.delay(new TaskSubmitter(executor, command), delay, unit);
-            }
+        public void execute(Runnable command) {
+            Delayer.delay(new TaskSubmitter(executor, command), delay, unit);
         }
+    }
 
-    /**
-         * Action to submit user task
-         */
-        private record TaskSubmitter(Executor executor, Runnable action) implements Runnable {
+    /// Action to submit user task
+    private record TaskSubmitter(Executor executor, Runnable action) implements Runnable {
 
         @Override
-            public void run() {
-                executor.execute(action);
-            }
+        public void run() {
+            executor.execute(action);
         }
+    }
 }

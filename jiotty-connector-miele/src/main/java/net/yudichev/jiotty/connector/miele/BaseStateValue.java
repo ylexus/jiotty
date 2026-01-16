@@ -16,9 +16,7 @@ interface BaseStateValue extends MieleEvent {
     @JsonProperty("value_raw")
     int id();
 
-    /**
-     * @throws IllegalArgumentException if this state value does not represent an appliance status
-     */
+    /// @throws IllegalArgumentException if this state value does not represent an appliance status
     default MieleStatus asStatus() {
         return MieleStatus.forId(id());
     }

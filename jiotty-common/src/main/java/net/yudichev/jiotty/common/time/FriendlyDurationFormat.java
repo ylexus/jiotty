@@ -7,9 +7,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Utility for human-friendly duration formatting and flexible parsing.
- */
+/// Utility for human-friendly duration formatting and flexible parsing.
 public final class FriendlyDurationFormat {
     private static final Pattern DAYS_TOKEN = Pattern.compile("(\\d+)\\s*d");
     private static final Pattern CLOCK_TOKEN = Pattern.compile("(\\d+):(\\d{1,2})(?::(\\d{1,2}))?");
@@ -21,13 +19,11 @@ public final class FriendlyDurationFormat {
     private FriendlyDurationFormat() {
     }
 
-    /**
-     * Parse a human-friendly duration string. Accepted formats include: - HH:MM or HH:MM:SS (e.g., 02:30 or 12:05:10) - Nd HH:MM[:SS] (e.g., 1d 02:30 or 2d
-     * 00:00:15) - Unit tokens: "2h 30m", "90m", "3600s", "1d 2h", etc. - ISO-8601 like PT2H30M (case-insensitive)
-     *
-     * @throws NullPointerException     if {@code raw} is null
-     * @throws IllegalArgumentException for invalid input (including blank input)
-     */
+    /// Parse a human-friendly duration string. Accepted formats include: - HH:MM or HH:MM:SS (e.g., 02:30 or 12:05:10) - Nd HH:MM[:SS] (e.g., 1d 02:30 or 2d
+    /// 00:00:15) - Unit tokens: "2h 30m", "90m", "3600s", "1d 2h", etc. - ISO-8601 like PT2H30M (case-insensitive)
+    ///
+    /// @throws NullPointerException     if `raw` is null
+    /// @throws IllegalArgumentException for invalid input (including blank input)
     public static Duration parseHuman(String raw) {
         Preconditions.checkNotNull(raw, "raw");
         String s = raw.trim();
@@ -97,12 +93,10 @@ public final class FriendlyDurationFormat {
                        .plusSeconds(seconds);
     }
 
-    /**
-     * Formats duration to human-friendly compact form like "2h 30m", "1d 2h 5s", "0s" for zero.
-     *
-     * @throws NullPointerException     if {@code duration} is null
-     * @throws IllegalArgumentException if {@code duration} is negative
-     */
+    /// Formats duration to human-friendly compact form like "2h 30m", "1d 2h 5s", "0s" for zero.
+    ///
+    /// @throws NullPointerException     if `duration` is null
+    /// @throws IllegalArgumentException if `duration` is negative
     public static String formatHuman(Duration duration) {
         Preconditions.checkNotNull(duration, "duration");
         if (duration.isNegative()) {

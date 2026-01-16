@@ -69,9 +69,7 @@ public class OAuth2TokenManagerImpl extends BaseLifecycleComponent implements OA
 
     private OauthAccessToken currentToken;
     private SchedulingExecutor executor;
-    /**
-     * Non-nullness of this field means we are in the process of obtaining the initial token.
-     */
+    /// Non-nullness of this field means we are in the process of obtaining the initial token.
     @Nullable
     private HttpServer httpServer;
 

@@ -34,9 +34,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.connector.tplinksmartplug.Bindings.Dependency;
 import static net.yudichev.jiotty.connector.tplinksmartplug.Bindings.Name;
 
-/**
- * Based on <a href="https://github.com/ggeorgovassilis/linuxscripts/blob/master/tp-link-hs100-smartplug/hs100.sh">this script</a>.
- */
+/// Based on <a href="https://github.com/ggeorgovassilis/linuxscripts/blob/master/tp-link-hs100-smartplug/hs100.sh">this script</a>.
 final class LocalTpLinkSmartPlug extends BaseLifecycleComponent implements Appliance {
     private static final Logger logger = LoggerFactory.getLogger(LocalTpLinkSmartPlug.class);
     private static final Map<Command<?>, byte[]> COMMAND_TO_BINARY_PACKET = ImmutableMap.of(

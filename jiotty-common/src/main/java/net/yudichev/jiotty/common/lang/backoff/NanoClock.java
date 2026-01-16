@@ -14,24 +14,17 @@
 
 package net.yudichev.jiotty.common.lang.backoff;
 
-/**
- * Nano clock which can be used to measure elapsed time in nanoseconds.
- *
- * <p>The default system implementation can be accessed at {@link #SYSTEM}. Alternative
- * implementations may be used for testing.
- *
- * @author Yaniv Inbar
- */
+/// Nano clock which can be used to measure elapsed time in nanoseconds.
+///
+/// The default system implementation can be accessed at [#SYSTEM]. Alternative implementations may be used for testing.
+///
+/// @author Yaniv Inbar
 public interface NanoClock {
 
-    /**
-     * Provides the default System implementation of a nano clock by using {@link System#nanoTime()}.
-     */
+    /// Provides the default System implementation of a nano clock by using [System#nanoTime()].
     NanoClock SYSTEM = System::nanoTime;
 
-    /**
-     * Returns the current value of the most precise available system timer, in nanoseconds for use to
-     * measure elapsed time, to match the behavior of {@link System#nanoTime()}.
-     */
+    /// Returns the current value of the most precise available system timer, in nanoseconds for use to measure elapsed time, to match the behavior of
+    /// [System#nanoTime()].
     long nanoTime();
 }

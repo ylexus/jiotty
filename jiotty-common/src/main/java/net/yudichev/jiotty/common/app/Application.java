@@ -2,8 +2,11 @@ package net.yudichev.jiotty.common.app;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.*;
+import com.google.inject.TypeLiteral;
 import net.yudichev.jiotty.common.inject.LifecycleComponent;
 import net.yudichev.jiotty.common.lang.MoreThrowables;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
@@ -125,13 +128,11 @@ public final class Application {
         injector = Guice.createInjector(new ApplicationSupportModule(applicationLifecycleControl), moduleSupplier.get());
     }
 
-    /**
-     * Start all {@link LifecycleComponent}s.
-     *
-     * @throws InterruptedException if the thread was interrupted while starting
-     * @throws RuntimeException     if one of the components failed to start; note components that are already started won't be stopped, use
-     *                              {@link #stop()} for that.
-     */
+    /// Start all [LifecycleComponent]s.
+    ///
+    /// @throws InterruptedException if the thread was interrupted while starting
+    /// @throws RuntimeException     if one of the components failed to start; note components that are already started won't be stopped, use [#stop()] for
+    ///                              that.
     public void start() throws InterruptedException {
         startedAllComponentsSuccessfully.set(false);
         componentsAttemptedToStart.clear();
@@ -146,7 +147,7 @@ public final class Application {
         for (LifecycleComponent component : allComponents) {
             if (Thread.interrupted()) {
                 throw new InterruptedException(String.format("Interrupted while starting; components attempted to start: %s out of %s",
-                        componentsAttemptedToStart.size(), allComponents.size()));
+                                                             componentsAttemptedToStart.size(), allComponents.size()));
             }
             componentsAttemptedToStart.add(component);
             start(component);
@@ -160,9 +161,7 @@ public final class Application {
         return injector;
     }
 
-    /**
-     * Stop all components that have been started - must be called on same thread that called {@link #start()}.
-     */
+    /// Stop all components that have been started - must be called on same thread that called [#start()].
     public void stop() {
         logger.info("Shutting down");
         stop(componentsAttemptedToStart);
@@ -170,9 +169,7 @@ public final class Application {
         logger.info("Shut down");
     }
 
-    /**
-     * Run as a daemon: start and blocks until application initiates shutdown (or JVM is requested to shut down) and all components are stopped.
-     */
+    /// Run as a daemon: start and blocks until application initiates shutdown (or JVM is requested to shut down) and all components are stopped.
     public void run() {
         checkState(runCalled.compareAndSet(false, true), "Application.run() can only be called once");
         runThread = Thread.currentThread();
@@ -262,8 +259,8 @@ public final class Application {
                 @Override
                 protected void configure() {
                     moduleSuppliers.stream()
-                            .map(Supplier::get)
-                            .forEach(this::install);
+                                   .map(Supplier::get)
+                                   .forEach(this::install);
                 }
             };
             return new Application(() -> module);

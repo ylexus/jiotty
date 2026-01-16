@@ -41,9 +41,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
-/**
- * An implementation of the LircClient using an TCP port, per default localhost at port 8765.
- */
+/// An implementation of the LircClient using an TCP port, per default localhost at port 8765.
 final class TcpLircClient extends BaseLircClient {
     public static final String DEFAULTLIRCIP = "127.0.0.1"; // localhost
     private final int port;

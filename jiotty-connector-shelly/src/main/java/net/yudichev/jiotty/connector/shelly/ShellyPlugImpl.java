@@ -41,9 +41,7 @@ import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 import static net.yudichev.jiotty.common.rest.RestClients.shutdown;
 import static net.yudichev.jiotty.connector.shelly.ShellyPlugImpl.SampleAggregator.MAX_SAMPLE_COUNT;
 
-/**
- * <a href="https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch">Guide</a>
- */
+/// <a href="https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch">Guide</a>
 class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
     private static final Logger logger = LoggerFactory.getLogger(ShellyPlugImpl.class);
 
@@ -82,9 +80,7 @@ class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
         httpClient = createHttpClient();
     }
 
-    /**
-     * for tests
-     */
+    /// for tests
     OkHttpClient createHttpClient() {
         return newClient();
     }
@@ -149,9 +145,7 @@ class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
         private final Consumer<String> errorHandler;
 
         private final Lock lock = new ReentrantLock();
-        /**
-         * {@code null} means we are stopped
-         */
+        /// `null` means we are stopped
         @Nullable
         private SampleAggregator sampleAggregator = new SampleAggregator();
         private Instant sampleStartTime;
@@ -218,9 +212,7 @@ class ShellyPlugImpl extends BaseLifecycleComponent implements ShellyPlug {
             }
         }
 
-        /**
-         * @return {@code true} if can processed, otherwise indicates we are stopped
-         */
+        /// @return `true` if can processed, otherwise indicates we are stopped
         private boolean processResponse(SwitchEnergyStatus switchEnergyStatus) {
             enum Outcome {EXCEEDED_MAX_SIZE, OK, ALREADY_STOPPED}
             Outcome outcome = inLock(lock, () -> {

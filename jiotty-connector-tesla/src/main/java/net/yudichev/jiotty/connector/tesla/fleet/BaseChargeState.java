@@ -35,10 +35,8 @@ interface BaseChargeState {
     @JsonProperty("charge_limit_soc")
     int chargeLimitSoC();
 
-    /**
-     * Logic taken from
-     * <a href="https://github.com/home-assistant/core/tree/dev/homeassistant/components/tesla_fleet/binary_sensor.py">Home Assistant Tesla Fleet</a>.
-     */
+    /// Logic taken from
+    /// <a href="https://github.com/home-assistant/core/tree/dev/homeassistant/components/tesla_fleet/binary_sensor.py">Home Assistant Tesla Fleet</a>.
     class ChargingStateDeserialiser extends JsonDeserializer<Boolean> {
         @Override
         public Boolean deserialize(JsonParser parser, DeserializationContext context) throws IOException {

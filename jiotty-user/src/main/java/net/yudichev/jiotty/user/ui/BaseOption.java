@@ -70,12 +70,10 @@ public abstract class BaseOption<T> implements Option<T> {
         setValueSync(defaultValue);
     }
 
-    /**
-     * Process value change, validate it and return a new, enriched value
-     *
-     * @return a new updated value
-     * @throws IllegalArgumentException if value validation fails
-     */
+    /// Process value change, validate it and return a new, enriched value
+    ///
+    /// @return a new updated value
+    /// @throws IllegalArgumentException if value validation fails
     @Nullable
     public abstract T onChanged();
 

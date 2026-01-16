@@ -10,35 +10,13 @@ import java.nio.file.Path;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.inject.BindingSpec.literally;
 
-/**
- * To create keystore:
- * <pre>{@code
- * keytool -genkeypair \
- *   -alias init              \
- *   -keyalg RSA              \
- *   -keysize 2048            \
- *   -dname "CN=init"         \
- *   -keystore secrets.p12    \
- *   -storetype PKCS12        \
- *   -storepass ChangeMe123   \
- *   -keypass ChangeMe123     \
- *   -validity 1
- *
- *   keytool -delete \
- *   -alias init      \
- *   -keystore secrets.p12 \
- *   -storepass ChangeMe123
- * }</pre>
- * <p>
- * To import entries:
- * <pre>{@code
- * keytool -importpass \
- *   -alias my-service      \
- *   -keystore secrets.p12  \
- *   -storetype PKCS12      \
- *   -storepass ChangeMe123
- * }</pre>
- */
+/// To create keystore:
+/// <pre>
+/// `keytool -genkeypair \-alias init\-keyalg RSA\-keysize 2048\-dname "CN=init"\-keystore secrets.p12\-storetype PKCS12\-storepass ChangeMe123\-keypass ChangeMe123\-validity 1keytool -delete \-alias init\-keystore secrets.p12 \-storepass ChangeMe123`</pre>
+///
+/// To import entries:
+/// <pre>
+/// `keytool -importpass \-alias my-service\-keystore secrets.p12\-storetype PKCS12\-storepass ChangeMe123`</pre>
 public final class KeyStoreAccessModule extends BaseLifecycleComponentModule implements ExposedKeyModule<KeyStoreAccess> {
     private final BindingSpec<Path> pathToKeystoreSpec;
     private final BindingSpec<String> keystorePassSpec;
