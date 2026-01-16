@@ -15,21 +15,26 @@ import static java.util.Objects.requireNonNullElse;
 
 public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode implements DeviceCommandRequestNode<R> {
     private final Duration retryDelay;
-    private final boolean panicOnFailure;
-    private final int maxRetriesBeforePanic;
+    private final boolean panicOnFatalFailure;
+    private final int maxRetriesBeforeFatalFailure;
     private @Nullable DeviceRequest<R> request;
     private @Nullable Closeable pendingRequestRetrySchedule;
     private boolean retryDue;
+    /// `-1` means a trigger based retry is due
     private int retryCount;
     @Nullable
     private String lastFailure;
 
-    protected BaseDeviceCommandRequestNode(GraphRunner runner, String name, Duration retryDelay, int maxRetriesBeforePanic, boolean panicOnFailure) {
+    protected BaseDeviceCommandRequestNode(GraphRunner runner,
+                                           String name,
+                                           Duration retryDelay,
+                                           int maxRetriesBeforeFatalFailure,
+                                           boolean panicOnFatalFailure) {
         super(runner, name);
         this.retryDelay = checkNotNull(retryDelay);
-        this.panicOnFailure = panicOnFailure;
-        checkArgument(maxRetriesBeforePanic >= 0);
-        this.maxRetriesBeforePanic = maxRetriesBeforePanic;
+        this.panicOnFatalFailure = panicOnFatalFailure;
+        checkArgument(maxRetriesBeforeFatalFailure >= 0);
+        this.maxRetriesBeforeFatalFailure = maxRetriesBeforeFatalFailure;
     }
 
     @Override
@@ -55,18 +60,36 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
             } else {
                 if (retryDue) {
                     retryDue = false;
-                    if (++retryCount > maxRetriesBeforePanic) {
-                        onCommandFailedFatally(lastFailure);
-                        var failure = requireNonNullElse(lastFailure,
-                                                         "Retry count exceeded: device state did not confirm that the command was successful");
-                        request = request.asFailed(failure);
-                        if (panicOnFailure) {
-                            runner.panic(request + " retried " + (retryCount - 1) + " times, last failure: " + failure);
+                    if (++retryCount == 0) {
+                        logger.debug("Trigger-based retry of {}", request);
+                        doExecuteRequest(retryCount);
+                    } else if (retryCount > maxRetriesBeforeFatalFailure) {
+                        logger.debug("Request fatally failed: {}", request);
+                        boolean shouldKeepRetrying = onCommandFailedFatally(lastFailure, () -> runner.executor().execute(() -> {
+                            logger.debug("Retry trigger for {} fired", request);
+                            retryCount = -1; // mark
+                            retryDue = true;
+                            triggerMeAndParentsInNewWave("Retry trigger for " + request);
+                        }));
+                        if (shouldKeepRetrying) {
+                            logger.info("Retry {}/{} of {} failed, will await retry trigger to restart", retryCount, maxRetriesBeforeFatalFailure, request);
+                            resetRetryState();
+                        } else {
+                            var failure = requireNonNullElse(lastFailure,
+                                                             "Retry count exceeded: device state did not confirm that the command was successful");
+                            request = request.asFailed(failure);
+                            if (panicOnFatalFailure) {
+                                runner.panic(request + " retried " + (retryCount - 1) + " times, last failure: " + failure);
+                            } else {
+                                logger.debug("Retry {}/{} of {} failed fatally, but configured not to panic",
+                                             retryCount,
+                                             maxRetriesBeforeFatalFailure,
+                                             request);
+                            }
                         }
                     } else if (deviceStateValidForRequestToBeSent()) {
-                        logger.info("Retry {}/{} of {}", retryCount, maxRetriesBeforePanic, request);
+                        logger.info("Retry {}/{} of {}", retryCount, maxRetriesBeforeFatalFailure, request);
                         doExecuteRequest(retryCount);
-                        return true;
                     } else {
                         logger.debug("Awaiting valid device state before retrying the request");
                         return false;
@@ -126,7 +149,10 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
         return false;
     }
 
-    protected void onCommandFailedFatally(String lastFailure) {
+    /// @param retryTrigger invoke this to request the retry, must be used in combination with returning `true` from this method
+    /// @return `true` to reset the retry counter and keep retrying, otherwise panic (unless configured not to via `panicOnFailure=false`)
+    protected boolean onCommandFailedFatally(String lastFailure, Runnable retryTrigger) {
+        return false;
     }
 
     protected @Nullable Object additionalLoggingStateKey() {
@@ -168,6 +194,7 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
     private void doExecuteRequest(int retryNumber) {
         assert request != null;
         DeviceRequest<R> requestSent = request;
+        logger.debug("Request {}: sending command", request);
         sendCommand(retryNumber, request.payload(), failure -> {
             if (request != null) {
                 logger.info("{} failure, will be retried: {}", request, failure);
@@ -177,6 +204,7 @@ public abstract class BaseDeviceCommandRequestNode<R> extends BaseServerNode imp
             }
         });
         assert pendingRequestRetrySchedule == null;
+        logger.debug("Scheduling possible retry of {} in {}", request, retryDelay);
         pendingRequestRetrySchedule = runner.executor().schedule(retryDelay, () -> {
             pendingRequestRetrySchedule = null;
             retryDue = true;

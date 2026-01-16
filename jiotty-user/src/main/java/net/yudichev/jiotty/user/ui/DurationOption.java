@@ -42,7 +42,7 @@ public abstract class DurationOption extends BaseOption<Duration> {
         try {
             Duration parsed = value.map(String::trim)
                                    .filter(s -> !s.isEmpty())
-                                   .map(FriendlyDurationFormat::parseFlexible)
+                                   .map(FriendlyDurationFormat::parseHuman)
                                    .orElse(null);
             return setValue(parsed);
         } catch (IllegalArgumentException e) {

@@ -22,17 +22,13 @@ public final class FriendlyDurationFormat {
     }
 
     /**
-     * Parse a human-friendly duration string.
-     * Accepted formats include:
-     * - HH:MM or HH:MM:SS (e.g., 02:30 or 12:05:10)
-     * - Nd HH:MM[:SS] (e.g., 1d 02:30 or 2d 00:00:15)
-     * - Unit tokens: "2h 30m", "90m", "3600s", "1d 2h", etc.
-     * - ISO-8601 like PT2H30M (case-insensitive)
+     * Parse a human-friendly duration string. Accepted formats include: - HH:MM or HH:MM:SS (e.g., 02:30 or 12:05:10) - Nd HH:MM[:SS] (e.g., 1d 02:30 or 2d
+     * 00:00:15) - Unit tokens: "2h 30m", "90m", "3600s", "1d 2h", etc. - ISO-8601 like PT2H30M (case-insensitive)
      *
      * @throws NullPointerException     if {@code raw} is null
      * @throws IllegalArgumentException for invalid input (including blank input)
      */
-    public static Duration parseFlexible(String raw) {
+    public static Duration parseHuman(String raw) {
         Preconditions.checkNotNull(raw, "raw");
         String s = raw.trim();
         if (s.isEmpty()) {
@@ -138,14 +134,13 @@ public final class FriendlyDurationFormat {
         // Assumption: up to 4 tokens (d, h, m, s), each roughly up to ~7 characters incl. space and suffix.
         var sb = new StringBuilder(4 * 8);
         for (int i = first; i <= last; i++) {
-            if (values[i] == 0) {
-                // Skip zero components in the middle to keep it concise
-                continue;
+            // Skip zero components in the middle to keep it concise
+            if (values[i] != 0) {
+                if (!sb.isEmpty()) {
+                    sb.append(' ');
+                }
+                sb.append(values[i]).append(FORMATTING_SUFFIXES[i]);
             }
-            if (!sb.isEmpty()) {
-                sb.append(' ');
-            }
-            sb.append(values[i]).append(FORMATTING_SUFFIXES[i]);
         }
         return sb.toString();
     }

@@ -86,6 +86,9 @@ public abstract class BaseGraphBasedServer extends BaseLifecycleComponent {
         getAsUnchecked(() -> nodeClosingFuture.get(5, SECONDS));
     }
 
+    protected void handlePanic(String reason) {
+    }
+
     private void createGraph() {
         logger.info("Creating graph");
         var graph = new Graph(timeProvider, this::panic);
@@ -155,6 +158,7 @@ public abstract class BaseGraphBasedServer extends BaseLifecycleComponent {
             try {
                 logger.info("Panic: {}, resetting", reason);
                 panicReason = checkNotNull(reason);
+                handlePanic(reason);
                 if (++panicCount == PANIC_COUNT_BEFORE_ALERT) {
                     closeIfNotNull(panicResetSchedule);
                     panicResetSchedule = executor.schedule(Duration.ofHours(1), () -> {

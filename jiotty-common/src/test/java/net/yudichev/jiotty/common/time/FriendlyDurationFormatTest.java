@@ -16,7 +16,7 @@ class FriendlyDurationFormatTest {
     @ParameterizedTest
     @MethodSource
     void parsesValid(String input, Duration expected) {
-        assertThat(FriendlyDurationFormat.parseFlexible(input)).isEqualTo(expected);
+        assertThat(FriendlyDurationFormat.parseHuman(input)).isEqualTo(expected);
     }
 
     // -------------------- Parsing: valid inputs --------------------
@@ -48,7 +48,7 @@ class FriendlyDurationFormatTest {
     @ParameterizedTest
     @MethodSource
     void parsesInvalid(String input, String expectedMessagePart) {
-        assertThatThrownBy(() -> FriendlyDurationFormat.parseFlexible(input))
+        assertThatThrownBy(() -> FriendlyDurationFormat.parseHuman(input))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(expectedMessagePart);
     }
@@ -66,16 +66,16 @@ class FriendlyDurationFormatTest {
 
     @Test
     void parseNullThrowsNpe() {
-        assertThatThrownBy(() -> FriendlyDurationFormat.parseFlexible(null))
+        assertThatThrownBy(() -> FriendlyDurationFormat.parseHuman(null))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void parseEmptyThrowsIae() {
-        assertThatThrownBy(() -> FriendlyDurationFormat.parseFlexible(""))
+        assertThatThrownBy(() -> FriendlyDurationFormat.parseHuman(""))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("empty input");
-        assertThatThrownBy(() -> FriendlyDurationFormat.parseFlexible("  \t  "))
+        assertThatThrownBy(() -> FriendlyDurationFormat.parseHuman("  \t  "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("empty input");
     }
